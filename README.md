@@ -1,5 +1,14 @@
 # Fathom related experiments
 
+A repository of Fathom-related binary parsing experiments.
+
+## Language projects
+
+- [**ll1-combinators**](./lang-ll1-combinators):
+  Linear-time parser combinators based on Neel Krishnaswami’s blog post.
+- [**llk-simple**](./lang-llk-simple):
+  LL(k) parser DSL.
+
 ## Development setup
 
 ### With Nix

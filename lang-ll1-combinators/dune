@@ -1,0 +1,5 @@
+(library
+  (name LL1)
+  (public_name ll1-combinators)
+  (libraries
+    byte-set))
