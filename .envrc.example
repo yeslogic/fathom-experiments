@@ -1,0 +1,13 @@
+# To use this as your `.envrc`, run:
+#
+#     $ echo "source_env .envrc.example" > .envrc
+#     $ direnv allow
+#
+
+use flake
+
+# Reload the environment when opam files update
+watch_file opam/*.opam
+
+# Add dune executables to the PATH
+PATH_add _build/install/default/bin/
