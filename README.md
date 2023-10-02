@@ -6,6 +6,8 @@ A repository of Fathom-related binary parsing experiments.
 
 - [**ll1-combinators**](./lang-ll1-combinators):
   Linear-time parser combinators based on Neel Krishnaswami’s blog post.
+- [**ll1-dsl**](./lang-ll1-dsl):
+  Linear-time parser combinators implemented as an external DSL.
 - [**llk-simple**](./lang-llk-simple):
   LL(k) parser DSL.
 

@@ -1,0 +1,5 @@
+(cram
+  (package ll1-dsl)
+  (deps
+    %{bin:ll1-dsl}
+    (glob_files ./*.txt)))

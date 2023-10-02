@@ -1,0 +1,19 @@
+def ranges :=
+  | {0} | {23} | !{23} | {..}
+  | {128..} | {..255}
+  | {128>..} | {..<256}
+  | {128>..<255}
+  ;
+
+/- ASCII Characters -/
+def ascii-null := {0x00};
+def ascii-printable := {0x20..0x7E};
+def ascii-number := {0x30..0x39};
+def ascii-letter := {0x41..0x5A} | {0x61..0x7A};
+
+def test-items :=
+  | ascii-null
+  | ascii-printable
+  | ascii-number
+  | ascii-letter
+  ;

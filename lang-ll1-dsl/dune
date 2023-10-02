@@ -1,0 +1,14 @@
+(executable
+  (name Main)
+  (public_name ll1-dsl)
+  (package ll1-dsl)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    byte-set
+    menhirLib
+    sedlex))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))

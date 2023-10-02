@@ -1,0 +1,3 @@
+def fail := !{..};
+def unit := ();
+def any-byte := {..};
