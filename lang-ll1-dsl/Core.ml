@@ -8,12 +8,31 @@ type expr =
   | ByteIntro of char
   | PairIntro of expr * expr
 
-type format =
+type format_info = {
+  nullable : bool;
+  (** The {i nullability predicate}, i.e. whether the parser might succeed
+      while consuming no input. *)
+
+  first : ByteSet.t;
+  (** The {i first set}, i.e. the set of byte that can appear as the first
+      byte of this parser. *)
+
+  follow_last : ByteSet.t;
+  (** The {i follow set}, i.e. the set of byte that can appear at the first
+      byte of each suffix. *)
+}
+
+type format_node =
   | Item of int
   | Empty
   | Byte of ByteSet.t
   | Cat of format * format
   | Alt of format * format
+and format = {
+  node : format_node;
+  repr : ty;
+  info : format_info;
+}
 
 type program = {
   items : (string * format) list;
@@ -26,27 +45,27 @@ let rec pp_print_format item_names ppf f =
   pp_print_alt_format item_names ppf f
 
 and pp_print_alt_format item_names ppf f =
-  match f with
+  match f.node with
   | Alt (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
         (pp_print_cat_format item_names) f0
         (pp_print_alt_format item_names) f1
-  | f -> Format.fprintf ppf "%a" (pp_print_cat_format item_names) f
+  | _ -> Format.fprintf ppf "%a" (pp_print_cat_format item_names) f
 
 and pp_print_cat_format item_names ppf f =
-  match f with
+  match f.node with
   | Cat (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
         (pp_print_atomic_format item_names) f0
         (pp_print_cat_format item_names) f1
-  | f -> Format.fprintf ppf "%a" (pp_print_atomic_format item_names) f
+  | _ -> Format.fprintf ppf "%a" (pp_print_atomic_format item_names) f
 
 and pp_print_atomic_format item_names ppf f =
-  match f with
+  match f.node with
   | Item level -> Format.fprintf ppf "%s" (List.nth item_names (List.length item_names - level - 1))
   | Empty -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s
-  | f -> Format.fprintf ppf "(%a)" (pp_print_format item_names) f
+  | _ -> Format.fprintf ppf "(%a)" (pp_print_format item_names) f
 
 let pp_print_program ppf p =
   let rec go item_names ppf items =
@@ -65,7 +84,7 @@ let pp_print_program ppf p =
 
 module Refiner = struct
 
-  type item_context = string list
+  type item_context = (ty * format_info) list
 
   type item_var = {
     level : int;
@@ -93,39 +112,92 @@ module Refiner = struct
       fun items ->
         let level = List.length items in
         let f = f items in
-        let program = body { level } (name :: items) in
+        let program = body { level } ((f.repr, f.info) :: items) in
         { items = (name, f) :: program.items }
 
   end
 
   module Format = struct
 
+    (** [separate i0 i1] checks that the follow set of [i0] type does not
+        overlap with the first set of [i0]. This is important to ensure that we
+        know for certain when to stop parsing a parser with type [i0], and to
+        start parsing a parser of type [i1] without needing to backtrack. *)
+    let separate i0 i1 =
+      not i0.nullable && ByteSet.disjoint i0.follow_last i1.first
+
+    (** [non_overlapping i0 i1] checks if the two types can be uniquely
+        distinguished based on their first sets. This is important to avoid
+        ambiguities in alternation and hence avoid backtracking. *)
+    let non_overlapping i0 i1 =
+      not (i0.nullable && i1.nullable) && ByteSet.disjoint i0.first i1.first
+
+
     let empty : is_format =
-      fun _ -> Empty
+      fun _ ->
+        { node = Empty;
+          repr = UnitTy;
+          info = {
+            nullable = true;
+            first = ByteSet.empty;
+            follow_last = ByteSet.empty;
+          };
+        }
 
     let item (var : item_var) : is_format =
       fun items ->
-        match List.nth_opt items var.level with
-        | Some _ -> Item var.level
+        let index = List.length items - var.level - 1 in
+        match List.nth_opt items index with
+        | Some (repr, info) -> { node = Item var.level; repr; info }
         | None -> invalid_arg "unbound item variable"
 
     let byte (s : ByteSet.t) : is_format =
       fun _ ->
-        Byte s
+        { node = Byte s;
+          repr = ByteTy;
+          info = {
+            nullable = false;
+            first = s;
+            follow_last = ByteSet.empty;
+          };
+        }
 
     let cat (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
         let f0 = f0 items in
         let f1 = f1 items in
-        (* TODO: check separate *)
-        Cat (f0, f1)
+        if separate f0.info f1.info then
+          { node = Cat (f0, f1);
+            repr = PairTy (f0.repr, f1.repr);
+            info = {
+              nullable = false;
+              first = f0.info.first;
+              follow_last =
+                ByteSet.union
+                  f1.info.follow_last
+                  (if f1.info.nullable
+                    then ByteSet.union f1.info.first f0.info.follow_last
+                    else ByteSet.empty);
+            };
+          }
+        else
+          failwith "ambiguous sequencing"
 
     let alt (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
         let f0 = f0 items in
         let f1 = f1 items in
-        (* TODO: check non-overlapping *)
-        Alt (f0, f1)
+        if non_overlapping f0.info f1.info && f0.repr = f1.repr  then
+          { node = Alt (f0, f1);
+            repr = f0.repr;
+            info = {
+              nullable = f0.info.nullable || f1.info.nullable;
+              first = ByteSet.union f0.info.first f1.info.first;
+              follow_last = ByteSet.union f0.info.follow_last f1.info.follow_last;
+            };
+          }
+        else
+          failwith "ambiguous alternation"
 
   end
 
@@ -171,7 +243,7 @@ module Decode = struct
   let run p f input pos =
     let size = List.length p.items in
     let rec go f pos =
-      match f with
+      match f.node with
       | Item level -> begin
           match List.nth_opt p.items (size - level - 1) with
           | Some (_, f) -> go f pos
@@ -187,10 +259,14 @@ module Decode = struct
           let (pos, e0) = go f0 pos in
           let (pos, e1) = go f1 pos in
           pos, PairIntro (e0, e1)
-      | Alt (f0, f1) ->
-          (* TODO: Use FIRST *)
-          try go f0 pos with
-          | DecodeFailure _ -> go f1 pos
+      | Alt (f0, f1) -> begin
+          match get_byte input pos with
+          | Some b when ByteSet.mem b f0.info.first -> go f0 pos
+          | Some b when ByteSet.mem b f1.info.first -> go f1 pos
+          | _ when f0.info.nullable -> go f0 pos
+          | _ when f1.info.nullable -> go f1 pos
+          | _ -> raise (DecodeFailure pos)
+      end
     in
     go f pos
 

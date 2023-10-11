@@ -32,9 +32,9 @@ Top-level definitions:
 
 Static analysis:
 
-- [ ] LL(1) ambiguity analysis
+- [x] LL(1) ambiguity analysis
 - [ ] LL(k) ambiguity analysis (prefix trees?)
-- [ ] Representation type checking
+- [x] Representation type checking
 
 Parsing:
 

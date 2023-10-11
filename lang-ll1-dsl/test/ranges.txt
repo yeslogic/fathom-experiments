@@ -1,6 +1,6 @@
-def ranges :=
-  | {0} | {23} | !{23} | {..}
-  | {128..} | {..255}
-  | {128>..} | {..<256}
-  | {128>..<255}
-  ;
+def singletons := {0} | {23};
+def neg := !{23};
+def full := {..};
+def inclusive_open := {128..} | {..127};
+def exclusive_open := {128>..} | {..<128};
+def exclusive_closed := {128>..<255};

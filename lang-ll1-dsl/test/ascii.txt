@@ -5,7 +5,6 @@ def ascii-letter := {0x41..0x5A} | {0x61..0x7A};
 
 def test-items :=
   | ascii-null
-  | ascii-printable
   | ascii-number
   | ascii-letter
   ;

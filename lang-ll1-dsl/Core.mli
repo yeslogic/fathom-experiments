@@ -165,6 +165,7 @@ module Refiner : sig
           S ⊢ format(f₀)
           S ⊢ format(f₁)
           non-overlapping(f₀, f₁)
+          repr(f₀) ≡ repr(f₁)
         ───────────────────────────────
           S ⊢ format(f₀ | f₁)
         ]}
