@@ -22,33 +22,33 @@ type program = {
 
 (* Pretty printing *)
 
-let rec pp_print_format item_names ppf format =
-  pp_print_alt_format item_names ppf format
+let rec pp_print_format item_names ppf f =
+  pp_print_alt_format item_names ppf f
 
-and pp_print_alt_format item_names ppf format =
-  match format with
+and pp_print_alt_format item_names ppf f =
+  match f with
   | Alt (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
         (pp_print_cat_format item_names) f0
         (pp_print_alt_format item_names) f1
   | f -> Format.fprintf ppf "%a" (pp_print_cat_format item_names) f
 
-and pp_print_cat_format item_names ppf format =
-  match format with
+and pp_print_cat_format item_names ppf f =
+  match f with
   | Cat (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
         (pp_print_atomic_format item_names) f0
         (pp_print_cat_format item_names) f1
   | f -> Format.fprintf ppf "%a" (pp_print_atomic_format item_names) f
 
-and pp_print_atomic_format item_names ppf format =
-  match format with
+and pp_print_atomic_format item_names ppf f =
+  match f with
   | Item level -> Format.fprintf ppf "%s" (List.nth item_names (List.length item_names - level - 1))
   | Unit -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s
   | f -> Format.fprintf ppf "(%a)" (pp_print_format item_names) f
 
-let pp_print_program ppf program =
+let pp_print_program ppf p =
   let rec go item_names ppf items =
     match items with
     | [] -> Format.fprintf ppf ""
@@ -60,7 +60,7 @@ let pp_print_program ppf program =
         Format.pp_force_newline ppf ();
         (go [@tailcall]) (name:: item_names) ppf items
   in
-  go [] ppf program.items
+  go [] ppf p.items
 
 
 module Refiner = struct
@@ -89,12 +89,12 @@ module Refiner = struct
       fun _ ->
         { items = [] }
 
-    let def_format (name, format) (body : item_var -> is_program) : is_program =
+    let def_format (name, f) (body : item_var -> is_program) : is_program =
       fun items ->
         let level = List.length items in
-        let format = format items in
+        let f = f items in
         let program = body { level } (name :: items) in
-        { items = (name, format) :: program.items }
+        { items = (name, f) :: program.items }
 
   end
 
@@ -168,12 +168,12 @@ module Decode = struct
     else
       None
 
-  let run program f input pos =
-    let size = List.length program.items in
+  let run p f input pos =
+    let size = List.length p.items in
     let rec go f pos =
       match f with
       | Item level -> begin
-          match List.nth_opt program.items (size - level - 1) with
+          match List.nth_opt p.items (size - level - 1) with
           | Some (_, f) -> go f pos
           | None -> invalid_arg "unbound item variable"
       end
