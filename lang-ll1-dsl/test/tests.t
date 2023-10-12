@@ -10,12 +10,15 @@ Elaborate base
   def any-byte : Format := {0..255};
   
 
-Elaborate ASCII
-  $ cat ascii.txt | ll1-dsl
+Elaborate ranges
+  $ cat ranges.txt | ll1-dsl
   def ranges : Format :=
     {0} | {23} | {0..22, 25..255} | {0..255} | {128..255} | {0..255} |
     {129..255} | {0..255} | {129..254};
   
+
+Elaborate ASCII
+  $ cat ascii.txt | ll1-dsl
   def ascii-null : Format := {0};
   
   def ascii-printable : Format := {32..126};
