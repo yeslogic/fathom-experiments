@@ -42,6 +42,7 @@ let elements s : char Seq.t =
   |> Seq.filter (fun c -> mem c s)
 
 let ranges s : (char * char) Seq.t =
+  (* FIXME: Skipping lower bound+1 in subsequent ranges *)
   let[@tail_mod_cons] rec go range (cs : _ Seq.t) () : _ Seq.node =
     match cs (), range with
     (* Reached the end, with no more byte ranges to yield *)
@@ -60,6 +61,8 @@ let ranges s : (char * char) Seq.t =
     end
   in
   go None (elements s)
+  (* elements s
+  |> Seq.map (fun c -> c, c) *)
 
 let pp_print ppf s =
   let pp_sep ppf () = Format.fprintf ppf ",@ " in

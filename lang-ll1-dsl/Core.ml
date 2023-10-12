@@ -491,3 +491,44 @@ module Refiner = struct
   end
 
 end
+
+module Optimise = struct
+
+  let rec flatten_unions (f : format) : format =
+    match f.node with
+    | Item _ -> f
+    | Empty -> f
+    | Byte _ -> f
+    | Seq (f0, f1) ->
+        { f with node = Seq (flatten_unions f0, flatten_unions f1) }
+    | Union (f0, f1) -> begin
+        match f0.node, f1.node with
+        (* Flatten unions on byte formats. This _should_ not affect the well-
+           formedness of sequences and unions (we hope?). *)
+        | Byte s0, Byte s1 ->
+            let s = ByteSet.union s0 s1 in
+            { node = Byte s;
+              repr = ByteTy;
+              info = FormatInfo.byte s;
+            }
+        | _, _ ->
+            let f0' = flatten_unions f0 in
+            let f1' = flatten_unions f1 in
+            if f0 = f0' && f1 = f1' then
+              { f with node = Union (f0, f1) }
+            else
+              flatten_unions { f with node = Union (f0', f1') }
+    end
+    | Map (t, (n, e), f') ->
+        { f with node = Map (t, (n, e), flatten_unions f') }
+
+  let run_format (f : format) : format =
+    flatten_unions f
+
+  let run_program (p : program) : program =
+    { items =
+        p.items
+        |> List.map (fun (name, f) -> name, run_format f)
+    }
+
+end

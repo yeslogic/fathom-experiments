@@ -129,3 +129,10 @@ module Refiner : sig
   end
 
 end
+
+module Optimise : sig
+
+  val run_format : format -> format
+  val run_program : program -> program
+
+end

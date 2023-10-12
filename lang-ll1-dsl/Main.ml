@@ -15,6 +15,7 @@ let () =
       |> Sedlexing.with_tokenizer Lexer.token
       |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
       |> Surface.elab_program
+      |> Core.Optimise.run_program
     in
     Format.printf "@[%a@]" Core.pp_print_program program;
   with

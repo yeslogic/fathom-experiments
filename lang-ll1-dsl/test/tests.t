@@ -12,15 +12,15 @@ Elaborate base
 
 Elaborate ranges
   $ cat ranges.txt | ll1-dsl
-  def singletons : Format := {0} | {23};
+  def singletons : Format := {0, 23};
   
   def neg : Format := {0..22, 24..255};
   
   def full : Format := {0..255};
   
-  def inclusive-open : Format := {128..255} | {0..127};
+  def inclusive-open : Format := {0..255};
   
-  def exclusive-open : Format := {129..255} | {0..127};
+  def exclusive-open : Format := {0..127, 129..255};
   
   def exclusive-closed : Format := {129..254};
   
@@ -33,7 +33,7 @@ Elaborate ASCII
   
   def ascii-number : Format := {48..57};
   
-  def ascii-letter : Format := {65..90} | {97..122};
+  def ascii-letter : Format := {65..90, 97..122};
   
   def test-items : Format := ascii-null | ascii-number | ascii-letter;
   
