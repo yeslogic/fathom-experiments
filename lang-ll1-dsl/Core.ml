@@ -156,3 +156,42 @@ module Refiner = struct
   end
 
 end
+
+
+module Decode = struct
+
+  exception DecodeFailure of int
+
+  let get_byte input pos =
+    if pos < Bytes.length input then
+      Some (Bytes.unsafe_get input pos)
+    else
+      None
+
+  let run program f input pos =
+    let size = List.length program.items in
+    let rec go f pos =
+      match f with
+      | Item level -> begin
+          match List.nth_opt program.items (size - level - 1) with
+          | Some (_, f) -> go f pos
+          | None -> failwith "unbound item variable"
+      end
+      | Unit -> pos, UnitIntro
+      | Byte s -> begin
+          match get_byte input pos with
+          | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
+          | _ -> raise (DecodeFailure pos)
+      end
+      | Cat (f0, f1) ->
+          let (pos, e0) = go f0 pos in
+          let (pos, e1) = go f1 pos in
+          pos, PairIntro (e0, e1)
+      | Alt (f0, f1) ->
+          (* TODO: Use FIRST *)
+          try go f0 pos with
+          | DecodeFailure _ -> go f1 pos
+    in
+    go f pos
+
+end

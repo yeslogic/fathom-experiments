@@ -214,3 +214,12 @@ module Refiner : sig
   end
 
 end
+
+module Decode : sig
+  (** Tree-walking parser interpreter. *)
+
+  exception DecodeFailure of int
+
+  val run : program -> format -> bytes -> int -> int * expr
+
+end

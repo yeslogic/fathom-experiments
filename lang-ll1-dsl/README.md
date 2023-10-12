@@ -38,7 +38,7 @@ Static analysis:
 
 Parsing:
 
-- [ ] Tree-walking parser
+- [x] Tree-walking parser
 - [ ] Rust parser compiler
 
 ## References
