@@ -107,7 +107,7 @@ module Refiner = struct
       fun items ->
         match List.nth_opt items var.level with
         | Some _ -> Item var.level
-        | None -> failwith "unbound item variable"
+        | None -> invalid_arg "unbound item variable"
 
     let byte (s : ByteSet.t) : is_format =
       fun _ ->
@@ -175,7 +175,7 @@ module Decode = struct
       | Item level -> begin
           match List.nth_opt program.items (size - level - 1) with
           | Some (_, f) -> go f pos
-          | None -> failwith "unbound item variable"
+          | None -> invalid_arg "unbound item variable"
       end
       | Unit -> pos, UnitIntro
       | Byte s -> begin
