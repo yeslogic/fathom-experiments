@@ -17,11 +17,11 @@ module Tp : sig
         while consuming no input. *)
 
     first : ByteSet.t;
-    (** The {i first set}, i.e. the set of byte that can appear as the first
+    (** The {i first set}, i.e. the set of bytes that can appear as the first
         byte of this parser. *)
 
     follow : ByteSet.t;
-    (** The {i follow set}, i.e. the set of byte that can appear at the first
+    (** The {i follow set}, i.e. the set of bytes that can appear at the first
         byte of each suffix. *)
   }
 

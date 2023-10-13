@@ -1,3 +1,66 @@
+module FormatInfo = struct
+  (** Semantic information about a binary format. *)
+
+  type t = {
+    nullable : bool;
+    (** The {i nullability predicate}, i.e. whether the parser might succeed
+        while consuming no input. *)
+
+    first : ByteSet.t;
+    (** The {i first set}, i.e. the set of bytes that can appear as the first
+        byte of this parser. *)
+
+    follow_last : ByteSet.t;
+    (** The {i follow set}, i.e. the set of bytes that can appear at the first
+        byte of each suffix. *)
+  }
+
+  let empty = {
+    nullable = true; (* Never consumes any input *)
+    first = ByteSet.empty;
+    follow_last = ByteSet.empty;
+  }
+
+  let byte s = {
+    nullable = false; (* Always consumes exactly one byte from the input *)
+    first = s;
+    follow_last = ByteSet.empty;
+  }
+
+  (** [separate i1 i2] checks that the follow set of [i1] type does not
+      overlap with the first set of [i1]. This is important to ensure that we
+      know for certain when to stop parsing a parser with type [i1], and to
+      start parsing a parser of type [i2] without needing to backtrack. *)
+  let separate i1 i2 =
+    (* TODO: Could it be ok for either [i1] or [i2] to be nullable? *)
+    not i1.nullable && ByteSet.disjoint i1.follow_last i2.first
+
+  (** [non_overlapping i1 i2] checks if the two types can be uniquely
+      distinguished based on their first sets. This is important to avoid
+      ambiguities in alternation and hence avoid backtracking. *)
+  let non_overlapping i1 i2 =
+    not (i1.nullable && i2.nullable) && ByteSet.disjoint i1.first i2.first
+
+  let cat i1 i2 = {
+    nullable = false;
+    first = i1.first;
+    follow_last =
+      ByteSet.union
+        i2.follow_last
+        (if i2.nullable
+          then ByteSet.union i2.first i1.follow_last
+          else ByteSet.empty);
+  }
+
+  let alt i1 i2 = {
+    nullable = i1.nullable || i2.nullable;
+    first = ByteSet.union i1.first i2.first;
+    follow_last = ByteSet.union i1.follow_last i2.follow_last;
+  }
+
+end
+
+
 type ty =
   | UnitTy
   | ByteTy
@@ -8,20 +71,6 @@ type expr =
   | ByteIntro of char
   | PairIntro of expr * expr
 
-type format_info = {
-  nullable : bool;
-  (** The {i nullability predicate}, i.e. whether the parser might succeed
-      while consuming no input. *)
-
-  first : ByteSet.t;
-  (** The {i first set}, i.e. the set of byte that can appear as the first
-      byte of this parser. *)
-
-  follow_last : ByteSet.t;
-  (** The {i follow set}, i.e. the set of byte that can appear at the first
-      byte of each suffix. *)
-}
-
 type format_node =
   | Item of int
   | Empty
@@ -31,7 +80,7 @@ type format_node =
 and format = {
   node : format_node;
   repr : ty;
-  info : format_info;
+  info : FormatInfo.t;
 }
 
 type program = {
@@ -84,7 +133,7 @@ let pp_print_program ppf p =
 
 module Refiner = struct
 
-  type item_context = (ty * format_info) list
+  type item_context = (ty * FormatInfo.t) list
 
   type item_var = {
     level : int;
@@ -119,29 +168,11 @@ module Refiner = struct
 
   module Format = struct
 
-    (** [separate i0 i1] checks that the follow set of [i0] type does not
-        overlap with the first set of [i0]. This is important to ensure that we
-        know for certain when to stop parsing a parser with type [i0], and to
-        start parsing a parser of type [i1] without needing to backtrack. *)
-    let separate i0 i1 =
-      not i0.nullable && ByteSet.disjoint i0.follow_last i1.first
-
-    (** [non_overlapping i0 i1] checks if the two types can be uniquely
-        distinguished based on their first sets. This is important to avoid
-        ambiguities in alternation and hence avoid backtracking. *)
-    let non_overlapping i0 i1 =
-      not (i0.nullable && i1.nullable) && ByteSet.disjoint i0.first i1.first
-
-
     let empty : is_format =
       fun _ ->
         { node = Empty;
           repr = UnitTy;
-          info = {
-            nullable = true;
-            first = ByteSet.empty;
-            follow_last = ByteSet.empty;
-          };
+          info = FormatInfo.empty;
         }
 
     let item (var : item_var) : is_format =
@@ -155,46 +186,29 @@ module Refiner = struct
       fun _ ->
         { node = Byte s;
           repr = ByteTy;
-          info = {
-            nullable = false;
-            first = s;
-            follow_last = ByteSet.empty;
-          };
+          info = FormatInfo.byte s;
         }
 
     let cat (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
         let f0 = f0 items in
         let f1 = f1 items in
-        if separate f0.info f1.info then
+        if FormatInfo.separate f0.info f1.info then
           { node = Cat (f0, f1);
             repr = PairTy (f0.repr, f1.repr);
-            info = {
-              nullable = false;
-              first = f0.info.first;
-              follow_last =
-                ByteSet.union
-                  f1.info.follow_last
-                  (if f1.info.nullable
-                    then ByteSet.union f1.info.first f0.info.follow_last
-                    else ByteSet.empty);
-            };
+            info = FormatInfo.cat f0.info f1.info;
           }
         else
-          failwith "ambiguous sequencing"
+          failwith "ambiguous concatenation"
 
     let alt (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
         let f0 = f0 items in
         let f1 = f1 items in
-        if non_overlapping f0.info f1.info && f0.repr = f1.repr  then
+        if FormatInfo.non_overlapping f0.info f1.info then
           { node = Alt (f0, f1);
             repr = f0.repr;
-            info = {
-              nullable = f0.info.nullable || f1.info.nullable;
-              first = ByteSet.union f0.info.first f1.info.first;
-              follow_last = ByteSet.union f0.info.follow_last f1.info.follow_last;
-            };
+            info = FormatInfo.alt f0.info f1.info;
           }
         else
           failwith "ambiguous alternation"
