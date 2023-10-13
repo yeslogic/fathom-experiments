@@ -10,7 +10,7 @@ type expr =
 
 type format =
   | Item of int
-  | Unit
+  | Empty
   | Byte of ByteSet.t
   | Cat of format * format
   | Alt of format * format
@@ -44,7 +44,7 @@ and pp_print_cat_format item_names ppf f =
 and pp_print_atomic_format item_names ppf f =
   match f with
   | Item level -> Format.fprintf ppf "%s" (List.nth item_names (List.length item_names - level - 1))
-  | Unit -> Format.fprintf ppf "()"
+  | Empty -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s
   | f -> Format.fprintf ppf "(%a)" (pp_print_format item_names) f
 
@@ -100,8 +100,8 @@ module Refiner = struct
 
   module Format = struct
 
-    let unit : is_format =
-      fun _ -> Unit
+    let empty : is_format =
+      fun _ -> Empty
 
     let item (var : item_var) : is_format =
       fun items ->
@@ -177,7 +177,7 @@ module Decode = struct
           | Some (_, f) -> go f pos
           | None -> invalid_arg "unbound item variable"
       end
-      | Unit -> pos, UnitIntro
+      | Empty -> pos, UnitIntro
       | Byte s -> begin
           match get_byte input pos with
           | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c

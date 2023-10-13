@@ -12,7 +12,7 @@ type sign =
   | Neg
 
 type tm =
-  | Unit
+  | Empty
   | Name of string
   | Byte of sign * int
   | ByteRange of sign * range
@@ -57,7 +57,7 @@ module Elab = struct
 
   let rec elab_format context tm : Core.Refiner.is_format =
     match tm with
-    | Unit -> Core.Refiner.Format.unit
+    | Empty -> Core.Refiner.Format.empty
     | Name name -> begin
         match List.assoc_opt name context with
         | Some var -> Core.Refiner.Format.item var

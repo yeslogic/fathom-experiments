@@ -118,8 +118,8 @@ module Refiner : sig
   module Format : sig
     (** Rules for constructing format descriptions. *)
 
-    val unit : is_format
-    (** Unit formats.
+    val empty : is_format
+    (** The empty format.
 
         {@text[
         ───────────────────

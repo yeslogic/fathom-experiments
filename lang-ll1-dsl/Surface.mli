@@ -12,7 +12,7 @@ type sign =
   | Neg
 
 type tm =
-  | Unit
+  | Empty
   | Name of string
   | Byte of sign * int
   | ByteRange of sign * range

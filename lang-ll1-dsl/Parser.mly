@@ -54,7 +54,7 @@ let atomic_term :=
   | n = NAME;
       { Name n }
   | "("; ")";
-      { Unit }
+      { Empty }
   | "("; t = term; ")";
       { t }
   | "{"; i = INT; "}";

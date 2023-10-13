@@ -12,7 +12,7 @@ trees, as explored in [yeslogic/doodle](https://github.com/yeslogic/doodle).
 
 Formats:
 
-- [x] Unit formats
+- [x] Empty formats
 - [x] Byte formats
 - [x] Byte range formats
 - [x] Concatenation formats
