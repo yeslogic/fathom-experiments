@@ -72,7 +72,7 @@ type expr =
   | PairIntro of expr * expr
 
 type format_node =
-  | Item of int
+  | Item of string
   | Empty
   | Byte of ByteSet.t
   | Cat of format * format
@@ -90,53 +90,53 @@ type program = {
 
 (* Pretty printing *)
 
-let rec pp_print_format item_names ppf f =
-  pp_print_alt_format item_names ppf f
+let rec pp_print_format ppf f =
+  pp_print_alt_format ppf f
 
-and pp_print_alt_format item_names ppf f =
+and pp_print_alt_format ppf f =
   match f.node with
   | Alt (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
-        (pp_print_cat_format item_names) f0
-        (pp_print_alt_format item_names) f1
-  | _ -> Format.fprintf ppf "%a" (pp_print_cat_format item_names) f
+        pp_print_cat_format f0
+        pp_print_alt_format f1
+  | _ -> Format.fprintf ppf "%a" pp_print_cat_format f
 
-and pp_print_cat_format item_names ppf f =
+and pp_print_cat_format ppf f =
   match f.node with
   | Cat (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
-        (pp_print_atomic_format item_names) f0
-        (pp_print_cat_format item_names) f1
-  | _ -> Format.fprintf ppf "%a" (pp_print_atomic_format item_names) f
+        pp_print_atomic_format f0
+        pp_print_cat_format f1
+  | _ -> Format.fprintf ppf "%a" pp_print_atomic_format f
 
-and pp_print_atomic_format item_names ppf f =
+and pp_print_atomic_format ppf f =
   match f.node with
-  | Item level -> Format.fprintf ppf "%s" (List.nth item_names (List.length item_names - level - 1))
+  | Item name -> Format.fprintf ppf "%s" name
   | Empty -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s
-  | _ -> Format.fprintf ppf "(%a)" (pp_print_format item_names) f
+  | _ -> Format.fprintf ppf "(%a)" pp_print_format f
 
 let pp_print_program ppf p =
-  let rec go item_names ppf items =
+  let rec go ppf items =
     match items with
     | [] -> Format.fprintf ppf ""
     | (name, format) :: items ->
         Format.fprintf ppf "@[<2>@[def@ %s@ :@ Format@ :=@]@ @[%a;@]@]"
           name
-          (pp_print_format item_names) format;
+          pp_print_format format;
         Format.pp_force_newline ppf ();
         Format.pp_force_newline ppf ();
-        (go [@tailcall]) (name:: item_names) ppf items
+        (go [@tailcall]) ppf items
   in
-  go [] ppf p.items
+  go ppf p.items
 
 
 module Refiner = struct
 
-  type item_context = (ty * FormatInfo.t) list
+  type item_context = (string * (ty * FormatInfo.t)) list
 
   type item_var = {
-    level : int;
+    name : string;
   }
 
   type is_format = item_context -> format
@@ -159,9 +159,8 @@ module Refiner = struct
 
     let def_format (name, f) (body : item_var -> is_program) : is_program =
       fun items ->
-        let level = List.length items in
         let f = f items in
-        let program = body { level } ((f.repr, f.info) :: items) in
+        let program = body { name } ((name, (f.repr, f.info)) :: items) in
         { items = (name, f) :: program.items }
 
   end
@@ -180,9 +179,8 @@ module Refiner = struct
 
     let item (var : item_var) : is_format =
       fun items ->
-        let index = List.length items - var.level - 1 in
-        match List.nth_opt items index with
-        | Some (repr, info) -> { node = Item var.level; repr; info }
+        match List.assoc_opt var.name items with
+        | Some (repr, info) -> { node = Item var.name; repr; info }
         | None -> invalid_arg "unbound item variable"
 
     let byte (s : ByteSet.t) : is_format =
@@ -259,12 +257,11 @@ module Decode = struct
       None
 
   let run p f input pos =
-    let size = List.length p.items in
     let rec go f pos =
       match f.node with
-      | Item level -> begin
-          match List.nth_opt p.items (size - level - 1) with
-          | Some (_, f) -> go f pos
+      | Item name -> begin
+          match List.assoc_opt name p.items with
+          | Some f -> go f pos
           | None -> invalid_arg "unbound item variable"
       end
       | Empty -> pos, UnitIntro
