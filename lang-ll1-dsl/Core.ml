@@ -168,6 +168,9 @@ module Refiner = struct
 
   module Format = struct
 
+    exception AmbiguousConcatenation
+    exception AmbiguousAlternation
+
     let empty : is_format =
       fun _ ->
         { node = Empty;
@@ -199,7 +202,7 @@ module Refiner = struct
             info = FormatInfo.cat f0.info f1.info;
           }
         else
-          failwith "ambiguous concatenation"
+          raise AmbiguousConcatenation
 
     let alt (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
@@ -211,7 +214,7 @@ module Refiner = struct
             info = FormatInfo.alt f0.info f1.info;
           }
         else
-          failwith "ambiguous alternation"
+          raise AmbiguousAlternation
 
   end
 

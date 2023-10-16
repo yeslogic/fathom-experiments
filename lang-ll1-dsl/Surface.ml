@@ -61,12 +61,25 @@ module Elab = struct
     | Name name -> begin
         match List.assoc_opt name context with
         | Some var -> Core.Refiner.Format.item var
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`")
+        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
     | Byte (sign, i) -> Core.Refiner.Format.byte (byte_set_of_int i |> apply_sign sign)
     | ByteRange (sign, r) -> Core.Refiner.Format.byte (byte_set_of_range r |> apply_sign sign)
-    | Cat (t0, t1) -> Core.Refiner.Format.cat (elab_format context t0) (elab_format context t1)
-    | Alt (t0, t1) -> Core.Refiner.Format.alt (elab_format context t0) (elab_format context t1)
+    | Cat (t0, t1) -> begin
+        try
+          Core.Refiner.Format.cat (elab_format context t0) (elab_format context t1)
+        with
+        | Core.Refiner.Format.AmbiguousConcatenation ->
+            failwith "ambiguous concatenation" (* TODO: improve diagnostics *)
+    end
+    | Alt (t0, t1) -> begin
+        try
+          Core.Refiner.Format.alt (elab_format context t0) (elab_format context t1)
+        with
+        | Core.Refiner.Format.AmbiguousAlternation ->
+            failwith "ambiguous alternation" (* TODO: improve diagnostics *)
+    end
+
 
   let elab_program context program : Core.Refiner.is_program =
     let rec go context =

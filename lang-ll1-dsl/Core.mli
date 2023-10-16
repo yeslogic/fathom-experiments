@@ -118,6 +118,12 @@ module Refiner : sig
   module Format : sig
     (** Rules for constructing format descriptions. *)
 
+    exception AmbiguousConcatenation
+    (** Thrown if calling {!cat} results in an ambiguity. *)
+
+    exception AmbiguousAlternation
+    (** Thrown if calling {!alt} results in an ambiguity. *)
+
     val empty : is_format
     (** The empty format.
 
@@ -156,6 +162,8 @@ module Refiner : sig
         ────────────────────────
           S ⊢ format(f₀, f₁)
         ]}
+
+        @raise AmbiguousConcatenation if the formats are not separate
     *)
 
     val alt : is_format -> is_format -> is_format
@@ -169,6 +177,8 @@ module Refiner : sig
         ───────────────────────────────
           S ⊢ format(f₀ | f₁)
         ]}
+
+        @raise AmbiguousAlternation if the formats overlap
     *)
 
   end
