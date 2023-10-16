@@ -29,6 +29,7 @@ type format
       | bs
       | f, f
       | f | f
+      | map @t (x => e) f
     ]}
 *)
 
@@ -45,15 +46,35 @@ type program
 val pp_print_program : Format.formatter -> program -> unit
 (** Pretty print a program *)
 
+module Semantics : sig
+
+  type vexpr
+
+  type local_env
+
+  val eval : local_env -> expr -> vexpr
+  val quote : vexpr -> expr
+  val normalise : local_env -> expr -> expr
+
+end
+
 module Refiner : sig
   (** Trusted interface for constructing programs in the core language. *)
 
 
-  type item_var
-  (** A reference to a top-level item. *)
-
-
   (** {1 Forms of judgement} *)
+
+  type item_var
+  (** A reference to a top-level item.
+
+      {@text[i : Format ∈ S]}
+  *)
+
+  type local_var
+  (** A reference to a local binding.
+
+      {@text[x : t ∈ L]}
+  *)
 
   type is_program
   (** Well-formed programs.
@@ -70,13 +91,13 @@ module Refiner : sig
   type synth_ty
   (** Synthesise the type of an expression.
 
-      {@text[S ⊢ synth(e) ⇒ t]}
+      {@text[S; L ⊢ synth(e) ⇒ t]}
   *)
 
   type check_ty
   (** Check an expression against a type annotation.
 
-      {@text[S ⊢ check(e) ⇐ t]}
+      {@text[S; L ⊢ check(e) ⇐ t]}
   *)
 
 
@@ -181,6 +202,31 @@ module Refiner : sig
         @raise AmbiguousAlternation if the formats overlap
     *)
 
+    val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
+    (**  Map formats.
+
+        {@text[
+          S ⊢ format(f)
+          S; x : repr(f), L ⊢ synth-ty(e) ⇒ t
+        ───────────────────────────────────────
+          S ⊢ format(map @t (x => e) f)
+        ]}
+    *)
+
+  end
+
+  module Structural : sig
+
+    val local : local_var -> synth_ty
+    (** Local variables.
+
+        {@text[
+          x : t ∈ L
+        ───────────────────────
+          S; L ⊢ synth(x) ⇒ t
+        ]}
+    *)
+
   end
 
   module Unit : sig
@@ -190,7 +236,7 @@ module Refiner : sig
 
         {@text[
         ─────────────────────────
-          S ⊢ synth(()) ⇒ Unit
+          S; L ⊢ synth(()) ⇒ Unit
         ]}
     *)
 
@@ -203,7 +249,7 @@ module Refiner : sig
 
         {@text[
         ────────────────────────
-          S ⊢ synth(b) ⇒ Byte
+          S; L ⊢ synth(b) ⇒ Byte
         ]}
     *)
 
@@ -215,10 +261,10 @@ module Refiner : sig
     (** Pair introduction.
 
         {@text[
-          S ⊢ synth(e₀) ⇒ t₀
-          S ⊢ synth(e₁) ⇒ t₁
+          S; L ⊢ synth(e₀) ⇒ t₀
+          S; L ⊢ synth(e₁) ⇒ t₁
         ────────────────────────────────────
-          S ⊢ synth(e₀, e₁) ⇒ Pair t₀ t₁
+          S; L ⊢ synth(e₀, e₁) ⇒ Pair t₀ t₁
         ]}
     *)
 
@@ -231,6 +277,6 @@ module Decode : sig
 
   exception DecodeFailure of int
 
-  val run : program -> format -> bytes -> int -> int * expr
+  val run : program -> format -> bytes -> int -> int * Semantics.vexpr
 
 end

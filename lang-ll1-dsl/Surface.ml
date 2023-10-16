@@ -6,6 +6,8 @@ type tm =
   | Not of tm
   | Cat of tm * tm
   | Alt of tm * tm
+  | Action of tm * (string * tm)
+
 and bound =
   | Open
   | Inclusive of tm
@@ -18,6 +20,7 @@ let range start stop = Range (start, stop)
 let not t = Not t
 let cat t0 t1 = Cat (t0, t1)
 let alt t0 t1 = Alt (t0, t1)
+let action t0 (n, t1) = Action (t0, (n, t1))
 
 type program = {
   items : (string * tm) list;
@@ -38,15 +41,19 @@ module Elab : sig
 
 end = struct
 
-  type item_context = (string * Core.Refiner.item_var) list
+  type item_context =
+    (string * Core.Refiner.item_var) list
 
   let empty_item_context = []
 
-  let byte_set_of_int i =
+  let byte_of_int i =
     if 0 <= i && i <= 255 then
-      ByteSet.singleton (Char.chr i)
+      Char.chr i
     else
       failwith ("error: integer `" ^ string_of_int i ^ "` is outside the range `0..255`")
+
+  let byte_set_of_int i =
+    ByteSet.singleton (byte_of_int i)
 
   let byte_set_of_range start stop =
     let start =
@@ -65,11 +72,27 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_format context tm : Core.Refiner.is_format =
-    match tm with
+  let rec elab_expr items locals t : Core.Refiner.synth_ty =
+    match t with
+    | Empty -> Core.Refiner.Unit.intro
+    | Name name -> begin
+        match List.assoc_opt name locals with
+        | Some var -> Core.Refiner.Structural.local var
+        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+    end
+    | Int i ->
+        Core.Refiner.Byte.intro (byte_of_int i)
+    | Cat (t0, t1) ->
+        Core.Refiner.Pair.intro
+          (elab_expr items locals t0)
+          (elab_expr items locals t1)
+    | _ -> failwith "TODO"
+
+  let rec elab_format items t : Core.Refiner.is_format =
+    match t with
     | Empty -> Core.Refiner.Format.empty
     | Name name -> begin
-        match List.assoc_opt name context with
+        match List.assoc_opt name items with
         | Some var -> Core.Refiner.Format.item var
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
@@ -80,29 +103,33 @@ end = struct
     | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
     | Cat (t0, t1) -> begin
         try
-          Core.Refiner.Format.cat (elab_format context t0) (elab_format context t1)
+          Core.Refiner.Format.cat (elab_format items t0) (elab_format items t1)
         with
         | Core.Refiner.Format.AmbiguousConcatenation ->
             failwith "error: ambiguous concatenation" (* TODO: improve diagnostics *)
     end
     | Alt (t0, t1) -> begin
         try
-          Core.Refiner.Format.alt (elab_format context t0) (elab_format context t1)
+          Core.Refiner.Format.alt (elab_format items t0) (elab_format items t1)
         with
         | Core.Refiner.Format.AmbiguousAlternation ->
             failwith "error: ambiguous alternation" (* TODO: improve diagnostics *)
     end
+    | Action (f, (name, e)) ->
+        Core.Refiner.Format.map
+          (name, fun x -> elab_expr items [name, x] e)
+          (elab_format items f)
 
-
-  let elab_program context program : Core.Refiner.is_program =
-    let rec go context =
+  let elab_program items program : Core.Refiner.is_program =
+    let rec go items =
       function
       | [] -> Core.Refiner.Program.empty
-      | (name, format) :: items ->
-          Core.Refiner.Program.def_format (name, elab_format context format)
-            (fun var -> go ((name, var) :: context) items)
+      | (name, format) :: rest ->
+          Core.Refiner.Program.def_format (name, elab_format items format)
+            (fun var -> go ((name, var) :: items) rest)
+            (* FIXME:   ^^ tailcall? *)
     in
-    go context program.items
+    go items program.items
 
 end
 

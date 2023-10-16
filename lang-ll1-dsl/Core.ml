@@ -67,6 +67,7 @@ type ty =
   | PairTy of ty * ty
 
 type expr =
+  | Local of int
   | UnitIntro
   | ByteIntro of char
   | PairIntro of expr * expr
@@ -77,6 +78,7 @@ type format_node =
   | Byte of ByteSet.t
   | Cat of format * format
   | Alt of format * format
+  | Map of ty * (string * expr) * format
 and format = {
   node : format_node;
   repr : ty;
@@ -89,6 +91,35 @@ type program = {
 
 
 (* Pretty printing *)
+
+let rec pp_print_ty ppf t =
+  match t with
+  | PairTy (t0, t1) ->
+      Format.fprintf ppf "Pair@ %a@ %a"
+        pp_print_atomic_ty t0
+        pp_print_atomic_ty t1
+  | t -> pp_print_atomic_ty ppf t
+
+and pp_print_atomic_ty ppf t =
+  match t with
+  | UnitTy -> Format.fprintf ppf "Unit"
+  | ByteTy -> Format.fprintf ppf "Byte"
+  | t -> Format.fprintf ppf "(%a)" pp_print_ty t
+
+let rec pp_print_expr names ppf e =
+  match e with
+  | PairIntro (e0, e1) ->
+      Format.fprintf ppf "%a,@ %a"
+        (pp_print_atomic_expr names) e0
+        (pp_print_expr names) e1
+  | e -> pp_print_atomic_expr names ppf e
+
+and pp_print_atomic_expr names ppf e =
+  match e with
+  | Local index -> Format.pp_print_string ppf (List.nth names index)
+  | UnitIntro -> Format.fprintf ppf "()"
+  | ByteIntro c -> Format.fprintf ppf "%i" (Char.code c)
+  | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
 let rec pp_print_format ppf f =
   pp_print_alt_format ppf f
@@ -105,15 +136,25 @@ and pp_print_cat_format ppf f =
   match f.node with
   | Cat (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
-        pp_print_atomic_format f0
+        pp_print_range_format f0
         pp_print_cat_format f1
+  | _ -> Format.fprintf ppf "%a" pp_print_range_format f
+
+and pp_print_range_format ppf f =
+  match f.node with
+  | Map (t, (n, e), f) ->
+      Format.fprintf ppf "@[map@ @@%a@ (%s@ =>@ %a)@ %a@]"
+        pp_print_atomic_ty t
+        n
+        (pp_print_expr [n]) e
+        pp_print_atomic_format f
   | _ -> Format.fprintf ppf "%a" pp_print_atomic_format f
 
 and pp_print_atomic_format ppf f =
   match f.node with
   | Item name -> Format.fprintf ppf "%s" name
   | Empty -> Format.fprintf ppf "()"
-  | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s
+  | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s (* TODO: Custom printing *)
   | _ -> Format.fprintf ppf "(%a)" pp_print_format f
 
 let pp_print_program ppf p =
@@ -131,9 +172,47 @@ let pp_print_program ppf p =
   go ppf p.items
 
 
+module Semantics = struct
+
+  type vexpr =
+    | UnitIntro
+    | ByteIntro of char
+    | PairIntro of vexpr * vexpr
+
+  type local_env =
+    vexpr list
+
+  let rec eval (locals : local_env) (e : expr) : vexpr =
+    match e with
+    | Local x -> begin
+        match List.nth_opt locals x with
+        | Some v -> v
+        | None -> invalid_arg "unbound local variable"
+    end
+    | UnitIntro -> UnitIntro
+    | ByteIntro c -> ByteIntro c
+    | PairIntro (e0, e1) -> PairIntro (eval locals e0, eval locals e1)
+
+  let rec quote (ev : vexpr) : expr =
+    match ev with
+    | UnitIntro -> UnitIntro
+    | ByteIntro c -> ByteIntro c
+    | PairIntro (e0, e1) -> PairIntro (quote e0, quote e1)
+
+  let normalise (locals : local_env) (e : expr) : expr =
+    quote (eval locals e)
+
+end
+
+
 module Refiner = struct
 
   type item_context = (string * (ty * FormatInfo.t)) list
+  type local_context = ty list
+
+  type local_var = {
+    level : int;
+  }
 
   type item_var = {
     name : string;
@@ -141,8 +220,8 @@ module Refiner = struct
 
   type is_format = item_context -> format
   type is_program = item_context -> program
-  type synth_ty = item_context (* TODO: -> local_context *) -> expr * ty
-  type check_ty = item_context (* TODO: -> local_context *) -> ty -> expr
+  type synth_ty = item_context -> local_context -> expr * ty
+  type check_ty = item_context -> local_context -> ty -> expr
 
 
   let run_is_program (p : is_program) : program =
@@ -215,12 +294,32 @@ module Refiner = struct
         else
           raise AmbiguousAlternation
 
+    let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
+      fun items ->
+        let f = f items in
+        let e, t = e { level = 0 } items [f.repr] in
+        { node = Map (t, (x, e), f);
+          repr = t;
+          info = f.info;
+        }
+
+  end
+
+  module Structural = struct
+
+    let local (var : local_var) : synth_ty =
+      fun _ locals ->
+        let index = List.length locals - var.level - 1 in
+        match List.nth_opt locals index with
+        | Some ty -> (Local index, ty)
+        | None -> invalid_arg "unbound item variable"
+
   end
 
   module Unit = struct
 
     let intro : synth_ty =
-      fun _ ->
+      fun _ _ ->
         UnitIntro, UnitTy
 
   end
@@ -228,17 +327,17 @@ module Refiner = struct
   module Byte = struct
 
     let intro c : synth_ty =
-      fun _ ->
+      fun _ _ ->
         ByteIntro c, ByteTy
 
   end
 
   module Pair = struct
 
-    let intro e0 e1 : synth_ty =
-      fun items ->
-        let e0, t0 = e0 items in
-        let e1, t1 = e1 items in
+    let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
+      fun items locals ->
+        let e0, t0 = e0 items locals in
+        let e1, t1 = e1 items locals in
         PairIntro (e0, e1), PairTy (t0, t1)
 
   end
@@ -256,8 +355,8 @@ module Decode = struct
     else
       None
 
-  let run p f input pos =
-    let rec go f pos =
+  let run p f input pos : int * Semantics.vexpr =
+    let rec go f pos : int * Semantics.vexpr =
       match f.node with
       | Item name -> begin
           match List.assoc_opt name p.items with
@@ -271,8 +370,8 @@ module Decode = struct
           | _ -> raise (DecodeFailure pos)
       end
       | Cat (f0, f1) ->
-          let (pos, e0) = go f0 pos in
-          let (pos, e1) = go f1 pos in
+          let pos, e0 = go f0 pos in
+          let pos, e1 = go f1 pos in
           pos, PairIntro (e0, e1)
       | Alt (f0, f1) -> begin
           match get_byte input pos with
@@ -282,6 +381,9 @@ module Decode = struct
           | _ when f1.info.nullable -> go f1 pos
           | _ -> raise (DecodeFailure pos)
       end
+      | Map (_, (_, e), f) ->
+          let pos, ev = go f pos in
+          pos, Semantics.eval [ev] e
     in
     go f pos
 

@@ -33,12 +33,15 @@ let rec token lexbuf =
   | "!" -> BANG
   | ":=" -> COLON_EQUALS
   | "," -> COMMA
+  | "=>" -> EQUALS_GREATER
   | "|" -> PIPE
   | ";" -> SEMI
   | ".." -> DOT_DOT
   | "..<" -> DOT_DOT_LESS
   | ">.." -> GREATER_DOT_DOT
   | ">..<" -> GREATER_DOT_DOT_LESS
+  | '{' -> LBRACE
+  | '}' -> RBRACE
   | '(' -> LPAREN
   | ')' -> RPAREN
   | eof -> END

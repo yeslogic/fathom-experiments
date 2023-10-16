@@ -20,7 +20,7 @@ Formats:
 - [ ] String formats
 - [ ] Repeat formats
 - [ ] Fixpoint formats
-- [ ] Map formats
+- [x] Map formats
 - [ ] Bind formats
 - [ ] Record formats
 

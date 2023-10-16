@@ -37,3 +37,10 @@ Elaborate ASCII
   
   def test-items : Format := ascii-null | ascii-number | ascii-letter;
   
+Elaborate actions
+  $ cat actions.txt | ll1-dsl
+  def test-actions : Format := map @(Pair Byte Byte) (x => x, x) {0};
+  
+  def test-actions : Format :=
+    map @Unit (x => ()) {0} | map @Unit (y => ()) {1};
+  

@@ -6,6 +6,7 @@
 %token BANG "!"
 %token COLON_EQUALS ":="
 %token COMMA ","
+%token EQUALS_GREATER "=>"
 %token PIPE "|"
 %token SEMI ";"
 
@@ -14,6 +15,8 @@
 %token GREATER_DOT_DOT ">.."
 %token GREATER_DOT_DOT_LESS ">..<"
 
+%token LBRACE "{"
+%token RBRACE "}"
 %token LPAREN "("
 %token RPAREN ")"
 
@@ -32,8 +35,8 @@ let item :=
       { n, t }
 
 let tm :=
-  | "|"; t0 = cat_tm; "|"; t1 = alt_tm;
-      { Surface.alt t0 t1 }
+  | "|"; t = alt_tm;
+      { t }
   | t0 = cat_tm; "|"; t1 = alt_tm;
       { Surface.alt t0 t1 }
   | cat_tm
@@ -49,6 +52,7 @@ let cat_tm :=
   | range_tm
 
 let range_tm :=
+  | t = range_tm; "{"; n = NAME; "=>"; b = tm; "}"; { Surface.action t (n, b) }
   | start = inclusive; ".."; stop = inclusive; { Surface.range start stop }
   | start = inclusive; "..<"; stop = exclusive; { Surface.range start stop }
   | start = exclusive; ">.."; stop = inclusive; { Surface.range start stop }

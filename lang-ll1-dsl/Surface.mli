@@ -18,6 +18,7 @@ val range : bound -> bound -> tm
 val not : tm -> tm
 val cat : tm -> tm -> tm
 val alt : tm -> tm -> tm
+val action : tm -> (string * tm) -> tm
 
 (** {2 Programs} *)
 
