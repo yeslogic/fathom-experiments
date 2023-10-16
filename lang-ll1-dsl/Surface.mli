@@ -7,15 +7,12 @@ type range = {
   stop : bound option;
 }
 
-type sign =
-  | Pos
-  | Neg
-
 type tm =
   | Empty
   | Name of string
-  | Byte of sign * int
-  | ByteRange of sign * range
+  | Byte of int
+  | ByteRange of range
+  | Not of tm
   | Cat of tm * tm
   | Alt of tm * tm
 

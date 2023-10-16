@@ -7,15 +7,12 @@ type range = {
   stop : bound option;
 }
 
-type sign =
-  | Pos
-  | Neg
-
 type tm =
   | Empty
   | Name of string
-  | Byte of sign * int
-  | ByteRange of sign * range
+  | Byte of int
+  | ByteRange of range
+  | Not of tm
   | Cat of tm * tm
   | Alt of tm * tm
 
@@ -50,11 +47,6 @@ module Elab = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let apply_sign sign s =
-    match sign with
-    | Pos -> s
-    | Neg -> ByteSet.neg s
-
   let rec elab_format context tm : Core.Refiner.is_format =
     match tm with
     | Empty -> Core.Refiner.Format.empty
@@ -63,21 +55,24 @@ module Elab = struct
         | Some var -> Core.Refiner.Format.item var
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
-    | Byte (sign, i) -> Core.Refiner.Format.byte (byte_set_of_int i |> apply_sign sign)
-    | ByteRange (sign, r) -> Core.Refiner.Format.byte (byte_set_of_range r |> apply_sign sign)
+    | Byte i -> Core.Refiner.Format.byte (byte_set_of_int i)
+    | ByteRange r -> Core.Refiner.Format.byte (byte_set_of_range r)
+    | Not (Byte i) -> Core.Refiner.Format.byte (byte_set_of_int i |> ByteSet.neg)
+    | Not (ByteRange r) -> Core.Refiner.Format.byte (byte_set_of_range r |> ByteSet.neg)
+    | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
     | Cat (t0, t1) -> begin
         try
           Core.Refiner.Format.cat (elab_format context t0) (elab_format context t1)
         with
         | Core.Refiner.Format.AmbiguousConcatenation ->
-            failwith "ambiguous concatenation" (* TODO: improve diagnostics *)
+            failwith "error: ambiguous concatenation" (* TODO: improve diagnostics *)
     end
     | Alt (t0, t1) -> begin
         try
           Core.Refiner.Format.alt (elab_format context t0) (elab_format context t1)
         with
         | Core.Refiner.Format.AmbiguousAlternation ->
-            failwith "ambiguous alternation" (* TODO: improve diagnostics *)
+            failwith "error: ambiguous alternation" (* TODO: improve diagnostics *)
     end
 
 

@@ -57,14 +57,12 @@ let atomic_term :=
       { Empty }
   | "("; t = term; ")";
       { t }
+  | "!"; t = atomic_term;
+      { Surface.Not t }
   | "{"; i = INT; "}";
-      { Surface.Byte (Pos, i) }
-  | "!"; "{"; i = INT; "}";
-      { Surface.Byte (Neg, i) }
+      { Surface.Byte i }
   | "{"; r = range; "}";
-      { Surface.ByteRange (Pos, r) }
-  | "!"; "{"; r = range; "}";
-      { Surface.ByteRange (Neg, r) }
+      { Surface.ByteRange r }
 
 let range :=
   | start = option(inclusive); ".."; stop = option(inclusive); { Surface.{ start; stop } }
