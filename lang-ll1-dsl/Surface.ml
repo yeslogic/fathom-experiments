@@ -16,9 +16,20 @@ type tm =
   | Cat of tm * tm
   | Alt of tm * tm
 
+let empty = Empty
+let name n = Name n
+let byte i = Byte i
+let byte_range start stop = ByteRange { start; stop }
+let not t = Not t
+let cat t0 t1 = Cat (t0, t1)
+let alt t0 t1 = Alt (t0, t1)
+
 type program = {
   items : (string * tm) list;
 }
+
+let program items =
+  { items }
 
 module Elab = struct
 
