@@ -56,7 +56,7 @@ dune test --display=short
 To enable IDE support with the [OCaml Platform extension], add the following to
 your [`./.vscode/settings.json`] file:
 
-```json
+```jsonc
 {
     // https://github.com/ocamllabs/vscode-ocaml-platform/issues/984
     "ocaml.sandbox": {
