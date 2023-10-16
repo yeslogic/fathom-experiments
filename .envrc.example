@@ -4,6 +4,8 @@
 #     $ direnv allow
 #
 
+# shellcheck shell=bash
+
 use flake
 
 # Reload the environment when opam files update
