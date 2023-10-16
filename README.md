@@ -49,6 +49,24 @@ dune test --display=short
 [Nix flakes]: https://nixos.wiki/wiki/Flakes
 [nix-direnv]: https://github.com/nix-community/nix-direnv
 
+#### VS Code
+
+To enable IDE support with the [OCaml Platform extension], add the following to
+your [`./.vscode/settings.json`] file:
+
+```json
+{
+    // https://github.com/ocamllabs/vscode-ocaml-platform/issues/984
+    "ocaml.sandbox": {
+        "kind": "custom",
+        "template": "nix develop ${firstWorkspaceFolder} --command $prog $args",
+    },
+}
+```
+
+[OCaml Platform extension]: https://marketplace.visualstudio.com/items?itemName=ocamllabs.ocaml-platform
+[`./.vscode/settings.json`]: https://code.visualstudio.com/docs/getstarted/settings#_workspace-settingsjson-location
+
 ### With opam
 
 Alternatively, [opam] package definitions are provided in the [`./opam`](./opam)
