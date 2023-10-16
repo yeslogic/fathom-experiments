@@ -1,6 +1,6 @@
 # To use this as your `.envrc`, run:
 #
-#     $ echo "source_env .envrc.example" > .envrc
+#     $ echo "source_env .envrc.sample" > .envrc
 #     $ direnv allow
 #
 

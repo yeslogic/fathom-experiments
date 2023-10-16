@@ -26,12 +26,12 @@ echo "use flake" > .envrc
 direnv allow
 ```
 
-The [`.envrc.example`](.envrc.example) file contains some additional commands to
+The [`.envrc.sample`](.envrc.sample) file contains some additional commands to
 watch opam files and load compiled executables onto the PATH. To use it instead,
 run the following commands in your shell:
 
 ```sh
-echo "source_env .envrc.example" > .envrc
+echo "source_env .envrc.sample" > .envrc
 direnv allow
 ```
 
