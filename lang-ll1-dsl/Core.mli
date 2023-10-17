@@ -56,6 +56,13 @@ module Semantics : sig
   val quote : vexpr -> expr
   val normalise : local_env -> expr -> expr
 
+
+  (** {1 Decode semantics} *)
+
+  exception DecodeFailure of int
+
+  val decode : program -> format -> bytes -> int -> int * vexpr
+
 end
 
 module Refiner : sig
@@ -269,14 +276,5 @@ module Refiner : sig
     *)
 
   end
-
-end
-
-module Decode : sig
-  (** Tree-walking parser interpreter. *)
-
-  exception DecodeFailure of int
-
-  val run : program -> format -> bytes -> int -> int * Semantics.vexpr
 
 end

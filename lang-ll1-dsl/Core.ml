@@ -202,6 +202,46 @@ module Semantics = struct
   let normalise (locals : local_env) (e : expr) : expr =
     quote (eval locals e)
 
+
+  (* Decode semantics *)
+
+  exception DecodeFailure of int
+
+  let get_byte input pos =
+    if pos < Bytes.length input then
+      Some (Bytes.unsafe_get input pos)
+    else
+      None
+
+  let rec decode p f input pos : int * vexpr =
+    match f.node with
+    | Item name -> begin
+        match List.assoc_opt name p.items with
+        | Some f -> decode p f input pos
+        | None -> invalid_arg "unbound item variable"
+    end
+    | Empty -> pos, UnitIntro
+    | Byte s -> begin
+        match get_byte input pos with
+        | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
+        | _ -> raise (DecodeFailure pos)
+    end
+    | Cat (f0, f1) ->
+        let pos, e0 = decode p f0 input pos in
+        let pos, e1 = decode p f1 input pos in
+        pos, PairIntro (e0, e1)
+    | Alt (f0, f1) -> begin
+        match get_byte input pos with
+        | Some b when ByteSet.mem b f0.info.first -> decode p f0 input pos
+        | Some b when ByteSet.mem b f1.info.first -> decode p f1 input pos
+        | _ when f0.info.nullable -> decode p f0 input pos
+        | _ when f1.info.nullable -> decode p f1 input pos
+        | _ -> raise (DecodeFailure pos)
+    end
+    | Map (_, (_, e), f) ->
+        let pos, ev = decode p f input pos in
+        pos, eval [ev] e
+
 end
 
 
@@ -341,50 +381,5 @@ module Refiner = struct
         PairIntro (e0, e1), PairTy (t0, t1)
 
   end
-
-end
-
-
-module Decode = struct
-
-  exception DecodeFailure of int
-
-  let get_byte input pos =
-    if pos < Bytes.length input then
-      Some (Bytes.unsafe_get input pos)
-    else
-      None
-
-  let run p f input pos : int * Semantics.vexpr =
-    let rec go f pos : int * Semantics.vexpr =
-      match f.node with
-      | Item name -> begin
-          match List.assoc_opt name p.items with
-          | Some f -> go f pos
-          | None -> invalid_arg "unbound item variable"
-      end
-      | Empty -> pos, UnitIntro
-      | Byte s -> begin
-          match get_byte input pos with
-          | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
-          | _ -> raise (DecodeFailure pos)
-      end
-      | Cat (f0, f1) ->
-          let pos, e0 = go f0 pos in
-          let pos, e1 = go f1 pos in
-          pos, PairIntro (e0, e1)
-      | Alt (f0, f1) -> begin
-          match get_byte input pos with
-          | Some b when ByteSet.mem b f0.info.first -> go f0 pos
-          | Some b when ByteSet.mem b f1.info.first -> go f1 pos
-          | _ when f0.info.nullable -> go f0 pos
-          | _ when f1.info.nullable -> go f1 pos
-          | _ -> raise (DecodeFailure pos)
-      end
-      | Map (_, (_, e), f) ->
-          let pos, ev = go f pos in
-          pos, Semantics.eval [ev] e
-    in
-    go f pos
 
 end
