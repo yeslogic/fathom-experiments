@@ -49,8 +49,10 @@ let cat_tm :=
   | range_tm
 
 let range_tm :=
-  | (start, stop) = range;
-      { Surface.byte_range start stop }
+  | start = inclusive; ".."; stop = inclusive; { Surface.range start stop }
+  | start = inclusive; "..<"; stop = exclusive; { Surface.range start stop }
+  | start = exclusive; ">.."; stop = inclusive; { Surface.range start stop }
+  | start = exclusive; ">..<"; stop = exclusive; { Surface.range start stop }
   | atomic_tm
 
 let atomic_tm :=
@@ -63,16 +65,11 @@ let atomic_tm :=
   | "!"; t = atomic_tm;
       { Surface.not t }
   | i = INT;
-      { Surface.byte i }
+      { Surface.int i }
 
-let range :=
-  | start = option(inclusive); ".."; stop = option(inclusive); { start, stop }
-  | start = option(inclusive); "..<"; stop = some(exclusive); { start, stop }
-  | start = some(exclusive); ">.."; stop = option(inclusive); { start, stop }
-  | start = some(exclusive); ">..<"; stop = some(exclusive); { start, stop }
+let inclusive ==
+  | t = atomic_tm; { Surface.Inclusive t }
+  | { Surface.Open }
 
-let inclusive == i = INT; { Surface.Inclusive i }
-let exclusive == i = INT; { Surface.Exclusive i }
-
-let some(A) ==
-  x = A; { Some x }
+let exclusive ==
+  | t = atomic_tm; { Surface.Exclusive t }

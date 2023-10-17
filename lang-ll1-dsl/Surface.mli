@@ -7,13 +7,14 @@
 type tm
 
 type bound =
-  | Inclusive of int
-  | Exclusive of int
+  | Open
+  | Inclusive of tm
+  | Exclusive of tm
 
 val empty : tm
 val name : string -> tm
-val byte : int -> tm
-val byte_range : bound option -> bound option -> tm
+val int : int -> tm
+val range : bound -> bound -> tm
 val not : tm -> tm
 val cat : tm -> tm -> tm
 val alt : tm -> tm -> tm
