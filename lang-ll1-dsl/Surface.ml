@@ -31,11 +31,21 @@ type program = {
 let program items =
   { items }
 
-module Elab = struct
 
-  type context = (string * Core.Refiner.item_var) list
+module Elab : sig
+  (** Elaboration of the surface language into the core language. *)
 
-  let empty_context = []
+  type item_context
+
+  val empty_item_context : item_context
+
+  val elab_program : item_context -> program -> Core.Refiner.is_program
+
+end = struct
+
+  type item_context = (string * Core.Refiner.item_var) list
+
+  let empty_item_context = []
 
   let byte_set_of_int i =
     if 0 <= i && i <= 255 then
@@ -98,3 +108,6 @@ module Elab = struct
     go context program.items
 
 end
+
+let elab_program p =
+  Elab.elab_program Elab.empty_item_context p

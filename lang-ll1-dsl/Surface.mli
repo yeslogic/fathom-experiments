@@ -25,14 +25,6 @@ type program
 val program : (string * tm) list -> program
 
 
-module Elab : sig
-  (** Elaboration of the surface language into the core language. *)
+(** {1 Elaboration} *)
 
-  type context
-
-  val empty_context : context
-
-  val elab_program : context -> program -> Core.Refiner.is_program
-  val elab_format : context -> tm -> Core.Refiner.is_format
-
-end
+val elab_program : program -> Core.Refiner.is_program

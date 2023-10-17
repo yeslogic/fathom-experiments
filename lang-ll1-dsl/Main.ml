@@ -14,7 +14,7 @@ let () =
       lexbuf
       |> Sedlexing.with_tokenizer Lexer.token
       |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
-      |> Surface.Elab.(elab_program empty_context)
+      |> Surface.elab_program
       |> Core.Refiner.run_is_program
     in
     Format.printf "@[%a@]" Core.pp_print_program program;
