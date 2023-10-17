@@ -208,7 +208,8 @@ module Refiner = struct
       fun items ->
         let f0 = f0 items in
         let f1 = f1 items in
-        if FormatInfo.non_overlapping f0.info f1.info then
+        (* TODO: Separate type mismatch error *)
+        if FormatInfo.non_overlapping f0.info f1.info && f0.repr = f1.repr then
           { node = Alt (f0, f1);
             repr = f0.repr;
             info = FormatInfo.alt f0.info f1.info;
