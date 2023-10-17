@@ -14,8 +14,6 @@
 %token GREATER_DOT_DOT ">.."
 %token GREATER_DOT_DOT_LESS ">..<"
 
-%token LBRACE "{"
-%token RBRACE "}"
 %token LPAREN "("
 %token RPAREN ")"
 
@@ -46,8 +44,13 @@ let alt_tm :=
   | cat_tm
 
 let cat_tm :=
-  | t0 = atomic_tm; ","; t1 = cat_tm;
+  | t0 = range_tm; ","; t1 = cat_tm;
       { Surface.cat t0 t1 }
+  | range_tm
+
+let range_tm :=
+  | (start, stop) = range;
+      { Surface.byte_range start stop }
   | atomic_tm
 
 let atomic_tm :=
@@ -59,10 +62,8 @@ let atomic_tm :=
       { t }
   | "!"; t = atomic_tm;
       { Surface.not t }
-  | "{"; i = INT; "}";
+  | i = INT;
       { Surface.byte i }
-  | "{"; (start, stop) = range; "}";
-      { Surface.byte_range start stop }
 
 let range :=
   | start = option(inclusive); ".."; stop = option(inclusive); { start, stop }

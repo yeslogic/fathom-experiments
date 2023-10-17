@@ -39,8 +39,6 @@ let rec token lexbuf =
   | "..<" -> DOT_DOT_LESS
   | ">.." -> GREATER_DOT_DOT
   | ">..<" -> GREATER_DOT_DOT_LESS
-  | '{' -> LBRACE
-  | '}' -> RBRACE
   | '(' -> LPAREN
   | ')' -> RPAREN
   | eof -> END
