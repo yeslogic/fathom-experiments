@@ -30,34 +30,34 @@ let program :=
       { Surface.program is }
 
 let item :=
-  | "def"; n = NAME; ":="; t = term; ";";
+  | "def"; n = NAME; ":="; t = tm; ";";
       { n, t }
 
-let term :=
-  | "|"; t0 = cat_term; "|"; t1 = alt_term;
+let tm :=
+  | "|"; t0 = cat_tm; "|"; t1 = alt_tm;
       { Surface.alt t0 t1 }
-  | t0 = cat_term; "|"; t1 = alt_term;
+  | t0 = cat_tm; "|"; t1 = alt_tm;
       { Surface.alt t0 t1 }
-  | cat_term
+  | cat_tm
 
-let alt_term :=
-  | t0 = cat_term; "|"; t1 = alt_term;
+let alt_tm :=
+  | t0 = cat_tm; "|"; t1 = alt_tm;
       { Surface.alt t0 t1 }
-  | cat_term
+  | cat_tm
 
-let cat_term :=
-  | t0 = atomic_term; ","; t1 = cat_term;
+let cat_tm :=
+  | t0 = atomic_tm; ","; t1 = cat_tm;
       { Surface.cat t0 t1 }
-  | atomic_term
+  | atomic_tm
 
-let atomic_term :=
+let atomic_tm :=
   | n = NAME;
       { Surface.name n }
   | "("; ")";
       { Surface.empty }
-  | "("; t = term; ")";
+  | "("; t = tm; ")";
       { t }
-  | "!"; t = atomic_term;
+  | "!"; t = atomic_tm;
       { Surface.not t }
   | "{"; i = INT; "}";
       { Surface.byte i }
