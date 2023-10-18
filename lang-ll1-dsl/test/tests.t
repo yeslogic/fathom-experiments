@@ -18,11 +18,11 @@ Elaborate ranges
   
   def full : Format := {0..255};
   
-  def inclusive_open : Format := {128..255} | {0..127};
+  def inclusive-open : Format := {128..255} | {0..127};
   
-  def exclusive_open : Format := {129..255} | {0..127};
+  def exclusive-open : Format := {129..255} | {0..127};
   
-  def exclusive_closed : Format := {129..254};
+  def exclusive-closed : Format := {129..254};
   
 
 Elaborate ASCII

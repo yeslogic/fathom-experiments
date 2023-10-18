@@ -1,6 +1,6 @@
 def singletons := 0 | 23;
 def neg := !23;
 def full := ..;
-def inclusive_open := 128.. | ..127;
-def exclusive_open := 128>.. | ..<128;
-def exclusive_closed := 128>..<255;
+def inclusive-open := 128.. | ..127;
+def exclusive-open := 128>.. | ..<128;
+def exclusive-closed := 128>..<255;
