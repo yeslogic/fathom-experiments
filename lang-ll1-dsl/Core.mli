@@ -47,14 +47,23 @@ val pp_print_program : Format.formatter -> program -> unit
 (** Pretty print a program *)
 
 module Semantics : sig
+  (** The semantics of the core language. *)
+
+  (** {1 Expression semantics} *)
 
   type vexpr
+  (** Evaluated expressions (i.e. values). *)
 
   type local_env
 
   val eval : local_env -> expr -> vexpr
+  (** Evaluate an expression. *)
+
   val quote : vexpr -> expr
+  (** Quote a value back into an expression. *)
+
   val normalise : local_env -> expr -> expr
+  (** Normalisation by evaluation. *)
 
 
   (** {1 Decode semantics} *)
