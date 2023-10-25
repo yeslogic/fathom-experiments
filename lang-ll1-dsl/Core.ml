@@ -352,7 +352,7 @@ module Refiner = struct
         let index = List.length locals - var.level - 1 in
         match List.nth_opt locals index with
         | Some ty -> (Local index, ty)
-        | None -> invalid_arg "unbound item variable"
+        | None -> invalid_arg "unbound local variable"
 
   end
 
