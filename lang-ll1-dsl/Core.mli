@@ -106,6 +106,9 @@ module Refiner : sig
       {@text[S ⊢ format(f)]}
   *)
 
+  val handle_is_format : (exn -> is_format) -> is_format -> is_format
+  val fail_is_format : exn -> is_format
+
   type is_ty
   (** Well-formed types.
 
@@ -127,7 +130,7 @@ module Refiner : sig
 
   (** {1 Running rules} *)
 
-  val run_is_program : is_program -> program
+  val run_is_program : is_program -> (program, exn) result
   (** Check that a program is well-formed, if successful returning the program
       in the core language.
   *)

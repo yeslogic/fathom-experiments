@@ -101,20 +101,20 @@ end = struct
     | Not (Int i) -> Core.Refiner.Format.byte (byte_set_of_int i |> ByteSet.neg)
     | Not (Range (start, stop)) -> Core.Refiner.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
     | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
-    | Cat (t0, t1) -> begin
-        try
-          Core.Refiner.Format.cat (elab_format items t0) (elab_format items t1)
-        with
-        | Core.Refiner.Format.AmbiguousConcatenation ->
-            failwith "error: ambiguous concatenation" (* TODO: improve diagnostics *)
-    end
-    | Alt (t0, t1) -> begin
-        try
-          Core.Refiner.Format.alt (elab_format items t0) (elab_format items t1)
-        with
-        | Core.Refiner.Format.AmbiguousAlternation ->
-            failwith "error: ambiguous alternation" (* TODO: improve diagnostics *)
-    end
+    | Cat (t0, t1) ->
+        Core.Refiner.Format.cat (elab_format items t0) (elab_format items t1)
+          |> Core.Refiner.handle_is_format
+              (function
+                | Core.Refiner.Format.AmbiguousConcatenation ->
+                    failwith "error: ambiguous concatenation" (* TODO: improve diagnostics *)
+                | e -> Core.Refiner.fail_is_format e)
+    | Alt (t0, t1) ->
+        Core.Refiner.Format.alt (elab_format items t0) (elab_format items t1)
+          |> Core.Refiner.handle_is_format
+              (function
+                | Core.Refiner.Format.AmbiguousAlternation ->
+                    failwith "error: ambiguous alternation" (* TODO: improve diagnostics *)
+                | e -> Core.Refiner.fail_is_format e)
     | Action (f, (name, e)) ->
         Core.Refiner.Format.map
           (name, fun x -> elab_expr items [name, x] e)

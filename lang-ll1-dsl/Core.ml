@@ -260,14 +260,25 @@ module Refiner = struct
     name : string;
   }
 
-  type is_format = item_context -> format
-  type is_program = item_context -> program
+  type is_format = item_context -> (format, exn) result
+
+  let handle_is_format (handler : exn -> is_format) (f : is_format) : is_format =
+    fun items ->
+      match f items with
+      | Ok f -> Ok f
+      | Error e -> (handler e) items
+
+  let fail_is_format (e : exn) : is_format =
+    fun _ ->
+      Error e
+
+  type is_program = item_context -> (program, exn) result
   type is_ty = item_context -> ty
   type synth_ty = item_context -> local_context -> expr * ty
   type check_ty = item_context -> local_context -> ty -> expr
 
 
-  let run_is_program (p : is_program) : program =
+  let run_is_program (p : is_program) : (program, exn) result =
     p []
 
 
@@ -275,15 +286,17 @@ module Refiner = struct
 
   module Program = struct
 
+    let ( let* ) = Result.bind
+
     let empty : is_program =
       fun _ ->
-        { items = [] }
+        Ok { items = [] }
 
     let def_format (name, f) (body : item_var -> is_program) : is_program =
       fun items ->
-        let f = f items in
-        let program = body { name } ((name, (f.repr, f.info)) :: items) in
-        { items = (name, f) :: program.items }
+        let* f = f items in
+        let* program = body { name } ((name, (f.repr, f.info)) :: items) in
+        Ok { items = (name, f) :: program.items }
 
   end
 
@@ -292,9 +305,12 @@ module Refiner = struct
     exception AmbiguousConcatenation
     exception AmbiguousAlternation
 
+    let ( let* ) = Result.bind
+
     let empty : is_format =
       fun _ ->
-        { node = Empty;
+        Ok {
+          node = Empty;
           repr = UnitTy;
           info = FormatInfo.empty;
         }
@@ -302,46 +318,50 @@ module Refiner = struct
     let item (var : item_var) : is_format =
       fun items ->
         match List.assoc_opt var.name items with
-        | Some (repr, info) -> { node = Item var.name; repr; info }
+        | Some (repr, info) -> Ok { node = Item var.name; repr; info }
         | None -> invalid_arg "unbound item variable"
 
     let byte (s : ByteSet.t) : is_format =
       fun _ ->
-        { node = Byte s;
+        Ok {
+          node = Byte s;
           repr = ByteTy;
           info = FormatInfo.byte s;
         }
 
     let cat (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
-        let f0 = f0 items in
-        let f1 = f1 items in
+        let* f0 = f0 items in
+        let* f1 = f1 items in
         if FormatInfo.separate f0.info f1.info then
-          { node = Cat (f0, f1);
+          Ok {
+            node = Cat (f0, f1);
             repr = PairTy (f0.repr, f1.repr);
             info = FormatInfo.cat f0.info f1.info;
           }
         else
-          raise AmbiguousConcatenation
+          Error AmbiguousConcatenation
 
     let alt (f0 : is_format) (f1 : is_format) : is_format =
       fun items ->
-        let f0 = f0 items in
-        let f1 = f1 items in
+        let* f0 = f0 items in
+        let* f1 = f1 items in
         (* TODO: Separate type mismatch error *)
         if FormatInfo.non_overlapping f0.info f1.info && f0.repr = f1.repr then
-          { node = Alt (f0, f1);
+          Ok {
+            node = Alt (f0, f1);
             repr = f0.repr;
             info = FormatInfo.alt f0.info f1.info;
           }
         else
-          raise AmbiguousAlternation
+          Error AmbiguousAlternation
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
       fun items ->
-        let f = f items in
+        let* f = f items in
         let e, t = e { level = 0 } items [f.repr] in
-        { node = Map (t, (x, e), f);
+        Ok {
+          node = Map (t, (x, e), f);
           repr = t;
           info = f.info;
         }
