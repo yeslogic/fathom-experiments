@@ -37,11 +37,12 @@ module Elab : sig
 
   val empty_item_context : item_context
 
-  val elab_program : item_context -> program -> Core.Refiner.is_program
+  val elab_program : item_context -> program -> Basis.Void.t Core.Refiner.is_program
 
 end = struct
 
   module R = Core.Refiner
+  module Void = Basis.Void
 
   type item_context =
     (string * Core.Refiner.item_var) list
@@ -74,7 +75,7 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr items locals t : R.synth_ty =
+  let rec elab_expr items locals t : Void.t R.synth_ty =
     match t with
     | Empty -> R.Unit.intro
     | Name name -> begin
@@ -90,7 +91,7 @@ end = struct
           (elab_expr items locals t1)
     | _ -> failwith "TODO"
 
-  let rec elab_format items t : R.is_format =
+  let rec elab_format items t : Void.t R.is_format =
     match t with
     | Empty -> R.Format.empty
     | Name name -> begin
@@ -105,22 +106,21 @@ end = struct
     | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
     | Cat (t0, t1) ->
         R.Format.cat (elab_format items t0) (elab_format items t1)
-        |> R.handle_is_format (function
+        |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
-            | R.Format.AmbiguousConcatenation -> failwith "error: ambiguous concatenation"
-            | e -> R.fail_is_format e)
+            | `AmbiguousFormat -> failwith "error: ambiguous concatenation")
     | Alt (t0, t1) ->
         R.Format.alt (elab_format items t0) (elab_format items t1)
-        |> R.handle_is_format (function
+        |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
-            | R.Format.AmbiguousAlternation -> failwith "error: ambiguous alternation"
-            | e -> R.fail_is_format e)
+            | `AmbiguousFormat -> failwith "error: ambiguous alternation"
+            | `ReprMismatch (_, _) -> failwith "error: mismatched represenations")
     | Action (f, (name, e)) ->
         R.Format.map
           (name, fun x -> elab_expr items [name, x] e)
           (elab_format items f)
 
-  let elab_program items program : R.is_program =
+  let elab_program items program : Void.t R.is_program =
     let rec go items =
       function
       | [] -> R.Program.empty
@@ -135,3 +135,5 @@ end
 
 let elab_program p =
   Elab.elab_program Elab.empty_item_context p
+  |> Core.Refiner.ItemM.run
+  |> Result.fold ~ok:Fun.id ~error:Basis.Void.absurd

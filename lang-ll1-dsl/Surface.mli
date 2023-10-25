@@ -29,4 +29,4 @@ val program : (string * tm) list -> program
 
 (** {1 Elaboration} *)
 
-val elab_program : program -> Core.Refiner.is_program
+val elab_program : program -> Core.program

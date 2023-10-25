@@ -79,6 +79,33 @@ end
 module Refiner : sig
   (** Trusted interface for constructing programs in the core language. *)
 
+  module Void := Basis.Void
+
+
+  (** {1 Context monads} *)
+
+  module ItemM : sig
+
+    include Basis.IndexedMonad.S
+
+    val handle : ('e_in -> ('a, 'e_out) m) -> ('a, 'e_in) m -> ('a, 'e_out) m
+    val throw : 'e -> ('a, 'e) m
+
+    val run : ('a, 'e) m -> ('a, 'e) result
+
+  end
+
+  module LocalM : sig
+
+    include Basis.IndexedMonad.S
+
+    val handle : ('e_in -> ('a, 'e_out) m) -> ('a, 'e_in) m -> ('a, 'e_out) m
+    val throw : 'e -> ('a, 'e) m
+
+    val item_m : ('a, 'e) ItemM.m -> ('a, 'e) m
+
+  end
+
 
   (** {1 Forms of judgement} *)
 
@@ -94,45 +121,34 @@ module Refiner : sig
       {@text[x : t ∈ L]}
   *)
 
-  type is_program
+  type 'e is_program = (program, 'e) ItemM.m
   (** Well-formed programs.
 
       {@text[S ⊢ program(p)]}
   *)
 
-  type is_format
+  type 'e is_format = (format, 'e) ItemM.m
   (** Well-formed formats.
 
       {@text[S ⊢ format(f)]}
   *)
 
-  val handle_is_format : (exn -> is_format) -> is_format -> is_format
-  val fail_is_format : exn -> is_format
-
-  type is_ty
+  type 'e is_ty
   (** Well-formed types.
 
       {@text[⊢ type(t)]}
   *)
 
-  type synth_ty
+  type 'e synth_ty
   (** Synthesise the type of an expression.
 
       {@text[S; L ⊢ synth(e) ⇒ t]}
   *)
 
-  type check_ty
+  type 'e check_ty
   (** Check an expression against a type annotation.
 
       {@text[S; L ⊢ check(e) ⇐ t]}
-  *)
-
-
-  (** {1 Running rules} *)
-
-  val run_is_program : is_program -> (program, exn) result
-  (** Check that a program is well-formed, if successful returning the program
-      in the core language.
   *)
 
 
@@ -141,7 +157,7 @@ module Refiner : sig
   module Program : sig
     (** Rules for constructing programs. *)
 
-    val empty : is_program
+    val empty : 'e is_program
     (** The empty program.
 
         {@text[
@@ -150,7 +166,7 @@ module Refiner : sig
         ]}
     *)
 
-    val def_format : string * is_format -> (item_var -> is_program) -> is_program
+    val def_format : string * 'e is_format -> (item_var -> 'e is_program) -> 'e is_program
     (** A program with a format definition.
 
         {@text[
@@ -166,13 +182,7 @@ module Refiner : sig
   module Format : sig
     (** Rules for constructing format descriptions. *)
 
-    exception AmbiguousConcatenation
-    (** Thrown if calling {!cat} results in an ambiguity. *)
-
-    exception AmbiguousAlternation
-    (** Thrown if calling {!alt} results in an ambiguity. *)
-
-    val empty : is_format
+    val empty : 'e is_format
     (** The empty format.
 
         {@text[
@@ -181,7 +191,7 @@ module Refiner : sig
         ]}
     *)
 
-    val item : item_var -> is_format
+    val item : item_var -> 'e is_format
     (** Item formats.
 
         {@text[
@@ -191,7 +201,7 @@ module Refiner : sig
         ]}
     *)
 
-    val byte : ByteSet.t -> is_format
+    val byte : ByteSet.t -> 'e is_format
     (** Byte formats.
 
         {@text[
@@ -200,7 +210,7 @@ module Refiner : sig
         ]}
     *)
 
-    val cat : is_format -> is_format -> is_format
+    val cat : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat] is_format
     (** Concatenated formats.
 
         {@text[
@@ -214,7 +224,7 @@ module Refiner : sig
         @raise AmbiguousConcatenation if the formats are not separate
     *)
 
-    val alt : is_format -> is_format -> is_format
+    val alt : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format
     (** Alternation formats.
 
         {@text[
@@ -229,7 +239,7 @@ module Refiner : sig
         @raise AmbiguousAlternation if the formats overlap
     *)
 
-    val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
+    val map : (string * (local_var -> 'e synth_ty)) -> 'e is_format -> 'e is_format
     (**  Map formats.
 
         {@text[
@@ -244,7 +254,7 @@ module Refiner : sig
 
   module Structural : sig
 
-    val local : local_var -> synth_ty
+    val local : local_var -> 'e synth_ty
     (** Local variables.
 
         {@text[
@@ -254,7 +264,7 @@ module Refiner : sig
         ]}
     *)
 
-    val conv : synth_ty -> check_ty
+    val conv : Void.t synth_ty ->  [`TypeMismatch of ty * ty] check_ty
     (** Conversion checking.
 
         {@text[
@@ -265,7 +275,7 @@ module Refiner : sig
         ]}
     *)
 
-    val ann : check_ty -> is_ty -> synth_ty
+    val ann : 'e check_ty -> 'e is_ty -> 'e synth_ty
     (** Annotation rule.
 
         {@text[
@@ -279,10 +289,10 @@ module Refiner : sig
 
   module Unit : sig
 
-    val form : is_ty
+    val form : 'e is_ty
     (** Unit formation. **)
 
-    val intro : synth_ty
+    val intro : 'e synth_ty
     (** Unit introduction.
 
         {@text[
@@ -295,10 +305,10 @@ module Refiner : sig
 
   module Byte : sig
 
-    val form : is_ty
+    val form : 'e is_ty
     (** Byte formation. **)
 
-    val intro : char -> synth_ty
+    val intro : char -> 'e synth_ty
     (** Byte introduction.
 
         {@text[
@@ -311,10 +321,10 @@ module Refiner : sig
 
   module Pair : sig
 
-    val form : is_ty -> is_ty -> is_ty
+    val form : 'e is_ty -> 'e is_ty -> 'e is_ty
     (** Pair formation. **)
 
-    val intro : synth_ty -> synth_ty -> synth_ty
+    val intro : 'e synth_ty -> 'e synth_ty -> 'e synth_ty
     (** Pair introduction.
 
         {@text[
