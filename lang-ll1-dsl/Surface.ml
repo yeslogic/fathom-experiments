@@ -41,6 +41,8 @@ module Elab : sig
 
 end = struct
 
+  module R = Core.Refiner
+
   type item_context =
     (string * Core.Refiner.item_var) list
 
@@ -72,60 +74,58 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr items locals t : Core.Refiner.synth_ty =
+  let rec elab_expr items locals t : R.synth_ty =
     match t with
-    | Empty -> Core.Refiner.Unit.intro
+    | Empty -> R.Unit.intro
     | Name name -> begin
         match List.assoc_opt name locals with
-        | Some var -> Core.Refiner.Structural.local var
+        | Some var -> R.Structural.local var
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
     | Int i ->
-        Core.Refiner.Byte.intro (byte_of_int i)
+        R.Byte.intro (byte_of_int i)
     | Cat (t0, t1) ->
-        Core.Refiner.Pair.intro
+        R.Pair.intro
           (elab_expr items locals t0)
           (elab_expr items locals t1)
     | _ -> failwith "TODO"
 
-  let rec elab_format items t : Core.Refiner.is_format =
+  let rec elab_format items t : R.is_format =
     match t with
-    | Empty -> Core.Refiner.Format.empty
+    | Empty -> R.Format.empty
     | Name name -> begin
         match List.assoc_opt name items with
-        | Some var -> Core.Refiner.Format.item var
+        | Some var -> R.Format.item var
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
-    | Int i -> Core.Refiner.Format.byte (byte_set_of_int i)
-    | Range (start, stop) -> Core.Refiner.Format.byte (byte_set_of_range start stop)
-    | Not (Int i) -> Core.Refiner.Format.byte (byte_set_of_int i |> ByteSet.neg)
-    | Not (Range (start, stop)) -> Core.Refiner.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
+    | Int i -> R.Format.byte (byte_set_of_int i)
+    | Range (start, stop) -> R.Format.byte (byte_set_of_range start stop)
+    | Not (Int i) -> R.Format.byte (byte_set_of_int i |> ByteSet.neg)
+    | Not (Range (start, stop)) -> R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
     | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
     | Cat (t0, t1) ->
-        Core.Refiner.Format.cat (elab_format items t0) (elab_format items t1)
-          |> Core.Refiner.handle_is_format
-              (function
-                | Core.Refiner.Format.AmbiguousConcatenation ->
-                    failwith "error: ambiguous concatenation" (* TODO: improve diagnostics *)
-                | e -> Core.Refiner.fail_is_format e)
+        R.Format.cat (elab_format items t0) (elab_format items t1)
+        |> R.handle_is_format (function
+            (* TODO: improve diagnostics *)
+            | R.Format.AmbiguousConcatenation -> failwith "error: ambiguous concatenation"
+            | e -> R.fail_is_format e)
     | Alt (t0, t1) ->
-        Core.Refiner.Format.alt (elab_format items t0) (elab_format items t1)
-          |> Core.Refiner.handle_is_format
-              (function
-                | Core.Refiner.Format.AmbiguousAlternation ->
-                    failwith "error: ambiguous alternation" (* TODO: improve diagnostics *)
-                | e -> Core.Refiner.fail_is_format e)
+        R.Format.alt (elab_format items t0) (elab_format items t1)
+        |> R.handle_is_format (function
+            (* TODO: improve diagnostics *)
+            | R.Format.AmbiguousAlternation -> failwith "error: ambiguous alternation"
+            | e -> R.fail_is_format e)
     | Action (f, (name, e)) ->
-        Core.Refiner.Format.map
+        R.Format.map
           (name, fun x -> elab_expr items [name, x] e)
           (elab_format items f)
 
-  let elab_program items program : Core.Refiner.is_program =
+  let elab_program items program : R.is_program =
     let rec go items =
       function
-      | [] -> Core.Refiner.Program.empty
+      | [] -> R.Program.empty
       | (name, format) :: rest ->
-          Core.Refiner.Program.def_format (name, elab_format items format)
+          R.Program.def_format (name, elab_format items format)
             (fun var -> go ((name, var) :: items) rest)
             (* FIXME:   ^^ tailcall? *)
     in
