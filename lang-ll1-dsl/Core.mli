@@ -13,6 +13,8 @@ type expr
 
     {@text[
     e ::=
+      | x
+      | e : t
       | ()
       | b
       | e, e
@@ -102,6 +104,12 @@ module Refiner : sig
   (** Well-formed formats.
 
       {@text[S ⊢ format(f)]}
+  *)
+
+  type is_ty
+  (** Well-formed types.
+
+      {@text[⊢ type(t)]}
   *)
 
   type synth_ty
@@ -243,9 +251,33 @@ module Refiner : sig
         ]}
     *)
 
+    val conv : synth_ty -> check_ty
+    (** Conversion checking.
+
+        {@text[
+          S; L ⊢ synth(e) ⇒ t₁
+          t₀ ≡ t₁
+        ───────────────────────
+          S; L ⊢ check(e) ⇐ t₀
+        ]}
+    *)
+
+    val ann : check_ty -> is_ty -> synth_ty
+    (** Annotation rule.
+
+        {@text[
+          S; L ⊢ check(e) ⇐ t
+        ───────────────────────────
+          S; L ⊢ synth(e : t) ⇒ t
+        ]}
+    *)
+
   end
 
   module Unit : sig
+
+    val form : is_ty
+    (** Unit formation. **)
 
     val intro : synth_ty
     (** Unit introduction.
@@ -260,6 +292,9 @@ module Refiner : sig
 
   module Byte : sig
 
+    val form : is_ty
+    (** Byte formation. **)
+
     val intro : char -> synth_ty
     (** Byte introduction.
 
@@ -272,6 +307,9 @@ module Refiner : sig
   end
 
   module Pair : sig
+
+    val form : is_ty -> is_ty -> is_ty
+    (** Pair formation. **)
 
     val intro : synth_ty -> synth_ty -> synth_ty
     (** Pair introduction.

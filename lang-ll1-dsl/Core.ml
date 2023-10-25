@@ -68,6 +68,7 @@ type ty =
 
 type expr =
   | Local of int
+  | Ann of expr * ty
   | UnitIntro
   | ByteIntro of char
   | PairIntro of expr * expr
@@ -189,6 +190,7 @@ module Semantics = struct
         | Some v -> v
         | None -> invalid_arg "unbound local variable"
     end
+    | Ann (e, _) -> eval locals e
     | UnitIntro -> UnitIntro
     | ByteIntro c -> ByteIntro c
     | PairIntro (e0, e1) -> PairIntro (eval locals e0, eval locals e1)
@@ -260,6 +262,7 @@ module Refiner = struct
 
   type is_format = item_context -> format
   type is_program = item_context -> program
+  type is_ty = item_context -> ty
   type synth_ty = item_context -> local_context -> expr * ty
   type check_ty = item_context -> local_context -> ty -> expr
 
@@ -354,9 +357,24 @@ module Refiner = struct
         | Some ty -> (Local index, ty)
         | None -> invalid_arg "unbound local variable"
 
+    let conv (e : synth_ty) : check_ty =
+      fun items locals t ->
+        let e, t' = e items locals in
+        if t = t' then e else
+          failwith "type mismatch"
+
+    let ann (e : check_ty) (t : is_ty) : synth_ty =
+      fun items locals ->
+        let t = t items in
+        Ann (e items locals t, t), t
+
   end
 
   module Unit = struct
+
+    let form : is_ty =
+      fun _ ->
+        UnitTy
 
     let intro : synth_ty =
       fun _ _ ->
@@ -366,6 +384,10 @@ module Refiner = struct
 
   module Byte = struct
 
+    let form : is_ty =
+      fun _ ->
+        ByteTy
+
     let intro c : synth_ty =
       fun _ _ ->
         ByteIntro c, ByteTy
@@ -373,6 +395,10 @@ module Refiner = struct
   end
 
   module Pair = struct
+
+    let form (t0 : is_ty) (t1 : is_ty) : is_ty =
+      fun items ->
+        PairTy (t0 items, t1 items)
 
     let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
       fun items locals ->
