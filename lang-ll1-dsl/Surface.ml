@@ -45,9 +45,12 @@ end = struct
   module Void = Basis.Void
 
   type item_context =
-    (string * Core.Refiner.item_var) list
+    (string * R.item_var) list
 
   let empty_item_context = []
+
+  type local_context =
+    (string * R.local_var) list
 
   let byte_of_int i =
     if 0 <= i && i <= 255 then
@@ -75,7 +78,7 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr items locals t : Void.t R.synth_ty =
+  let rec elab_expr (items : item_context) (locals : local_context) (t : tm) : Void.t R.synth_ty =
     match t with
     | Empty -> R.Unit.intro
     | Name name -> begin
@@ -91,7 +94,7 @@ end = struct
           (elab_expr items locals t1)
     | _ -> failwith "TODO"
 
-  let rec elab_format items t : Void.t R.is_format =
+  let rec elab_format (items : item_context) (t : tm) : Void.t R.is_format =
     match t with
     | Empty -> R.Format.empty
     | Name name -> begin
@@ -120,7 +123,7 @@ end = struct
           (name, fun x -> elab_expr items [name, x] e)
           (elab_format items f)
 
-  let elab_program items program : Void.t R.is_program =
+  let elab_program (items : item_context) (p : program) : Void.t R.is_program =
     let rec go items =
       function
       | [] -> R.Program.empty
@@ -129,7 +132,7 @@ end = struct
             (fun var -> go ((name, var) :: items) rest)
             (* FIXME:   ^^ tailcall? *)
     in
-    go items program.items
+    go items p.items
 
 end
 
