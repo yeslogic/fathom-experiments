@@ -35,20 +35,20 @@ let item :=
       { n, t }
 
 let tm :=
-  | "|"; t = alt_tm;
+  | "|"; t = union_tm;
       { t }
-  | t0 = cat_tm; "|"; t1 = alt_tm;
-      { Surface.alt t0 t1 }
-  | cat_tm
+  | t0 = seq_tm; "|"; t1 = union_tm;
+      { Surface.union t0 t1 }
+  | seq_tm
 
-let alt_tm :=
-  | t0 = cat_tm; "|"; t1 = alt_tm;
-      { Surface.alt t0 t1 }
-  | cat_tm
+let union_tm :=
+  | t0 = seq_tm; "|"; t1 = union_tm;
+      { Surface.union t0 t1 }
+  | seq_tm
 
-let cat_tm :=
-  | t0 = range_tm; ","; t1 = cat_tm;
-      { Surface.cat t0 t1 }
+let seq_tm :=
+  | t0 = range_tm; ","; t1 = seq_tm;
+      { Surface.seq t0 t1 }
   | range_tm
 
 let range_tm :=

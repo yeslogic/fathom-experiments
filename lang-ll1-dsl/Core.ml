@@ -41,8 +41,8 @@ module FormatInfo = struct
   let non_overlapping i1 i2 =
     not (i1.nullable && i2.nullable) && ByteSet.disjoint i1.first i2.first
 
-  let cat i1 i2 = {
-    nullable = false;
+  let seq i1 i2 = {
+    nullable = i1.nullable && i2.nullable;
     first = i1.first;
     follow_last =
       ByteSet.union
@@ -52,7 +52,7 @@ module FormatInfo = struct
           else ByteSet.empty);
   }
 
-  let alt i1 i2 = {
+  let union i1 i2 = {
     nullable = i1.nullable || i2.nullable;
     first = ByteSet.union i1.first i2.first;
     follow_last = ByteSet.union i1.follow_last i2.follow_last;
@@ -77,8 +77,8 @@ type format_node =
   | Item of string
   | Empty
   | Byte of ByteSet.t
-  | Cat of format * format
-  | Alt of format * format
+  | Seq of format * format
+  | Union of format * format
   | Map of ty * (string * expr) * format
 and format = {
   node : format_node;
@@ -123,22 +123,22 @@ and pp_print_atomic_expr names ppf e =
   | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
 let rec pp_print_format ppf f =
-  pp_print_alt_format ppf f
+  pp_print_union_format ppf f
 
-and pp_print_alt_format ppf f =
+and pp_print_union_format ppf f =
   match f.node with
-  | Alt (f0, f1) ->
+  | Union (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
-        pp_print_cat_format f0
-        pp_print_alt_format f1
-  | _ -> Format.fprintf ppf "%a" pp_print_cat_format f
+        pp_print_seq_format f0
+        pp_print_union_format f1
+  | _ -> Format.fprintf ppf "%a" pp_print_seq_format f
 
-and pp_print_cat_format ppf f =
+and pp_print_seq_format ppf f =
   match f.node with
-  | Cat (f0, f1) ->
+  | Seq (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
         pp_print_range_format f0
-        pp_print_cat_format f1
+        pp_print_seq_format f1
   | _ -> Format.fprintf ppf "%a" pp_print_range_format f
 
 and pp_print_range_format ppf f =
@@ -228,11 +228,11 @@ module Semantics = struct
         | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
         | _ -> raise (DecodeFailure pos)
     end
-    | Cat (f0, f1) ->
+    | Seq (f0, f1) ->
         let pos, e0 = decode p f0 input pos in
         let pos, e1 = decode p f1 input pos in
         pos, PairIntro (e0, e1)
-    | Alt (f0, f1) -> begin
+    | Union (f0, f1) -> begin
         match get_byte input pos with
         | Some b when ByteSet.mem b f0.info.first -> decode p f0 input pos
         | Some b when ByteSet.mem b f1.info.first -> decode p f1 input pos
@@ -392,19 +392,19 @@ module Refiner = struct
         info = FormatInfo.byte s;
       }
 
-    let cat (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat] is_format =
+    let seq (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat] is_format =
       let* f0 = f0 |> ItemM.handle Void.absurd in
       let* f1 = f1 |> ItemM.handle Void.absurd in
       if not (FormatInfo.separate f0.info f1.info) then
         ItemM.throw `AmbiguousFormat
       else
         ItemM.pure {
-          node = Cat (f0, f1);
+          node = Seq (f0, f1);
           repr = PairTy (f0.repr, f1.repr);
-          info = FormatInfo.cat f0.info f1.info;
+          info = FormatInfo.seq f0.info f1.info;
         }
 
-    let alt (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format =
+    let union (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format =
       let* f0 = f0 |> ItemM.handle Void.absurd in
       let* f1 = f1 |> ItemM.handle Void.absurd in
       if not (FormatInfo.non_overlapping f0.info f1.info) then
@@ -413,9 +413,9 @@ module Refiner = struct
         ItemM.throw (`ReprMismatch (f0.repr, f1.repr))
       else
         ItemM.pure {
-          node = Alt (f0, f1);
+          node = Union (f0, f1);
           repr = f0.repr;
-          info = FormatInfo.alt f0.info f1.info;
+          info = FormatInfo.union f0.info f1.info;
         }
 
     let map (x, e : string * (local_var -> 'e synth_ty)) (f : 'e is_format) : 'e is_format =

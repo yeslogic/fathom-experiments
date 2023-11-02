@@ -93,8 +93,8 @@ module Refiner : sig
     val empty : 'e is_format
     val item : item_var -> 'e is_format
     val byte : ByteSet.t -> 'e is_format
-    val cat : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat] is_format
-    val alt : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format
+    val seq : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat] is_format
+    val union : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format
     val map : (string * (local_var -> 'e synth_ty)) -> 'e is_format -> 'e is_format
 
   end

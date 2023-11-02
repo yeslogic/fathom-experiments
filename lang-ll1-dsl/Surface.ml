@@ -4,8 +4,8 @@ type tm =
   | Int of int
   | Range of bound * bound
   | Not of tm
-  | Cat of tm * tm
-  | Alt of tm * tm
+  | Seq of tm * tm
+  | Union of tm * tm
   | Action of tm * (string * tm)
 
 and bound =
@@ -18,8 +18,8 @@ let name n = Name n
 let int i = Int i
 let range start stop = Range (start, stop)
 let not t = Not t
-let cat t0 t1 = Cat (t0, t1)
-let alt t0 t1 = Alt (t0, t1)
+let seq t0 t1 = Seq (t0, t1)
+let union t0 t1 = Union (t0, t1)
 let action t0 (n, t1) = Action (t0, (n, t1))
 
 type program = {
@@ -88,7 +88,7 @@ end = struct
     end
     | Int i ->
         R.Byte.intro (byte_of_int i)
-    | Cat (t0, t1) ->
+    | Seq (t0, t1) ->
         R.Pair.intro
           (elab_expr items locals t0)
           (elab_expr items locals t1)
@@ -107,13 +107,13 @@ end = struct
     | Not (Int i) -> R.Format.byte (byte_set_of_int i |> ByteSet.neg)
     | Not (Range (start, stop)) -> R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
     | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
-    | Cat (t0, t1) ->
-        R.Format.cat (elab_format items t0) (elab_format items t1)
+    | Seq (t0, t1) ->
+        R.Format.seq (elab_format items t0) (elab_format items t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> failwith "error: ambiguous concatenation")
-    | Alt (t0, t1) ->
-        R.Format.alt (elab_format items t0) (elab_format items t1)
+    | Union (t0, t1) ->
+        R.Format.union (elab_format items t0) (elab_format items t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> failwith "error: ambiguous alternation"
