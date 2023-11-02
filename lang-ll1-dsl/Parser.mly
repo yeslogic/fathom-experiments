@@ -37,9 +37,7 @@ let item :=
 let tm :=
   | "|"; t = union_tm;
       { t }
-  | t0 = seq_tm; "|"; t1 = union_tm;
-      { Surface.union t0 t1 }
-  | seq_tm
+  | union_tm
 
 let union_tm :=
   | t0 = seq_tm; "|"; t1 = union_tm;
