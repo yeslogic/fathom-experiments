@@ -37,21 +37,27 @@ let disjoint s1 s2 = is_empty (inter s1 s2)
 let of_string str = make (String.contains str)
 let of_bytes buf = make (Bytes.contains buf)
 
-let elements s =
+let elements s : char Seq.t =
   Seq.init 256 Char.chr
   |> Seq.filter (fun c -> mem c s)
 
 let ranges s : (char * char) Seq.t =
   let[@tail_mod_cons] rec go range (cs : _ Seq.t) () : _ Seq.node =
     match cs (), range with
+    (* Reached the end, with no more byte ranges to yield *)
     | Nil, None -> Nil
+    (* Reached the end, yielding the current byte range *)
     | Nil, Some range -> Cons (range, Seq.empty)
+    (* Start a new byte range with the current byte *)
     | Cons (c, next), None -> (go [@tailcall]) (Some (c, c)) next ()
-    | Cons (c, next), Some (r0, r1) ->
-        begin match Char.code c - Char.code r1 with
+    (* Either expand the current byte range or start a new one *)
+    | Cons (c, next), Some (r0, r1) -> begin
+        match Char.code c - Char.code r1 with
+        (* Expand the current range *)
         | 1 ->  (go [@tailcall]) (Some (r0, c)) next ()
-        | _ -> Cons ((r0, r1), go None next)
-        end
+        (* Yield the current range and start accumulating a new one *)
+        | _ -> Cons ((r0, r1), go (Some (c, c)) next)
+    end
   in
   go None (elements s)
 

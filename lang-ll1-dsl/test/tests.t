@@ -14,7 +14,7 @@ Elaborate ranges
   $ cat ranges.txt | ll1-dsl
   def singletons : Format := {0} | {23};
   
-  def neg : Format := {0..22, 25..255};
+  def neg : Format := {0..22, 24..255};
   
   def full : Format := {0..255};
   
