@@ -6,6 +6,7 @@ type tm =
   | Not of tm
   | Seq of tm * tm
   | Union of tm * tm
+  | Alt of tm * tm
   | Action of tm * (string * tm)
   | Proj of tm * string
 
@@ -21,6 +22,7 @@ let range start stop = Range (start, stop)
 let not t = Not t
 let seq t0 t1 = Seq (t0, t1)
 let union t0 t1 = Union (t0, t1)
+let alt t0 t1 = Alt (t0, t1)
 let action t0 (n, t1) = Action (t0, (n, t1))
 let proj t l = Proj (t, l)
 
@@ -187,9 +189,15 @@ end = struct
         R.Format.seq (elab_format context t0) (elab_format context t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
-            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
+            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous sequence"))
     | Union (t0, t1) ->
         R.Format.union (elab_format context t0) (elab_format context t1)
+        |> R.ItemM.handle (function
+            (* TODO: improve diagnostics *)
+            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous union")
+            | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
+    | Alt (t0, t1) ->
+        R.Format.alt (elab_format context t0) (elab_format context t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")

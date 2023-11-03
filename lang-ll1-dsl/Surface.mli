@@ -18,6 +18,7 @@ val range : bound -> bound -> tm
 val not : tm -> tm
 val seq : tm -> tm -> tm
 val union : tm -> tm -> tm
+val alt : tm -> tm -> tm
 val action : tm -> (string * tm) -> tm
 val proj : tm -> string -> tm
 

@@ -119,6 +119,7 @@ type format_node =
   | Byte of ByteSet.t
   | Seq of format * format
   | Union of format * format
+  | Alt of format * format
   | Map of ty * (string * expr) * format
 and format = {
   node : format_node;
@@ -175,6 +176,10 @@ and pp_print_union_format ppf f =
   match f.node with
   | Union (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
+        pp_print_seq_format f0
+        pp_print_union_format f1
+  | Alt (f0, f1) ->
+      Format.fprintf ppf "@[%a@]@ /@ %a"
         pp_print_seq_format f0
         pp_print_union_format f1
   | _ -> Format.fprintf ppf "%a" pp_print_seq_format f
@@ -307,6 +312,11 @@ module Semantics = struct
         | _ when f0.info.nullable -> decode p f0 input pos
         | _ when f1.info.nullable -> decode p f1 input pos
         | _ -> raise (DecodeFailure pos)
+    end
+    | Alt (f0, f1) -> begin
+        try decode p f0 input pos with
+        | DecodeFailure _ ->
+            decode p f1 input pos
     end
     | Map (_, (_, e), f) ->
         let pos, ev = decode p f input pos in
@@ -512,6 +522,20 @@ module Refiner = struct
       else
         ItemM.pure {
           node = Union (f0, f1);
+          repr = f0.repr;
+          info = FormatInfo.union f0.info f1.info;
+        }
+
+    let alt (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format =
+      let* f0 = f0 |> ItemM.handle Void.absurd in
+      let* f1 = f1 |> ItemM.handle Void.absurd in
+      if not f0.info.nullable then
+        ItemM.throw `AmbiguousFormat
+      else if f0.repr <> f1.repr then
+        ItemM.throw (`ReprMismatch (f0.repr, f1.repr))
+      else
+        ItemM.pure {
+          node = Alt (f0, f1);
           repr = f0.repr;
           info = FormatInfo.union f0.info f1.info;
         }

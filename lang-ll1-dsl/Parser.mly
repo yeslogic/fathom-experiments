@@ -8,6 +8,7 @@
 %token COLON_EQUALS ":="
 %token COMMA ","
 %token EQUALS_GREATER "=>"
+%token FORWARD_SLASH "/"
 %token FULL_STOP "."
 %token PIPE "|"
 %token SEMI ";"
@@ -39,11 +40,15 @@ let item :=
 let tm :=
   | "|"; t = union_tm;
       { t }
+  | "/"; t = union_tm;
+      { t }
   | union_tm
 
 let union_tm :=
   | t0 = seq_tm; "|"; t1 = union_tm;
       { Surface.union t0 t1 }
+  | t0 = seq_tm; "/"; t1 = union_tm;
+      { Surface.alt t0 t1 }
   | seq_tm
 
 let seq_tm :=
