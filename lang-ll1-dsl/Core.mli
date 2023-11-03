@@ -125,6 +125,8 @@ module Refiner : sig
 
     val form : 'e is_ty -> 'e is_ty -> 'e is_ty
     val intro : 'e synth_ty -> 'e synth_ty -> 'e synth_ty
+    val fst : Void.t synth_ty -> [`UnexpectedType] synth_ty
+    val snd : Void.t synth_ty -> [`UnexpectedType] synth_ty
 
   end
 

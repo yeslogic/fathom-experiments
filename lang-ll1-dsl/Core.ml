@@ -72,6 +72,8 @@ type expr =
   | UnitIntro
   | ByteIntro of char
   | PairIntro of expr * expr
+  | PairFst of expr
+  | PairSnd of expr
 
 type format_node =
   | Item of string
@@ -120,6 +122,8 @@ and pp_print_atomic_expr names ppf e =
   | Local index -> Format.pp_print_string ppf (List.nth names index)
   | UnitIntro -> Format.fprintf ppf "()"
   | ByteIntro c -> Format.fprintf ppf "%i" (Char.code c)
+  | PairFst e -> Format.fprintf ppf "%a.1" (pp_print_atomic_expr names) e
+  | PairSnd e -> Format.fprintf ppf "%a.2" (pp_print_atomic_expr names) e
   | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
 let rec pp_print_format ppf f =
@@ -194,6 +198,16 @@ module Semantics = struct
     | UnitIntro -> UnitIntro
     | ByteIntro c -> ByteIntro c
     | PairIntro (e0, e1) -> PairIntro (eval locals e0, eval locals e1)
+    | PairFst e -> begin
+        match eval locals e with
+        | PairIntro (e0, _) -> e0
+        | _ -> invalid_arg "expected pair"
+    end
+    | PairSnd e -> begin
+        match eval locals e with
+        | PairIntro (_, e1) -> e1
+        | _ -> invalid_arg "expected pair"
+    end
 
   let rec quote (ev : vexpr) : expr =
     match ev with
@@ -487,6 +501,18 @@ module Refiner = struct
       let* e0, t0 = e0 in
       let* e1, t1 = e1 in
       LocalM.pure (PairIntro (e0, e1), PairTy (t0, t1))
+
+    let fst (e : Void.t synth_ty) : [`UnexpectedType] synth_ty =
+      let* e, t = e |> LocalM.handle Void.absurd in
+      match t with
+      | PairTy (t0, _) -> LocalM.pure (PairFst e, t0)
+      | _ -> LocalM.throw `UnexpectedType
+
+    let snd (e : Void.t synth_ty) : [`UnexpectedType] synth_ty =
+      let* e, t = e |> LocalM.handle Void.absurd in
+      match t with
+      | PairTy (_, t1) -> LocalM.pure (PairSnd e, t1)
+      | _ -> LocalM.throw `UnexpectedType
 
   end
 
