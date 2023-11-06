@@ -31,6 +31,7 @@ let rec token lexbuf =
   | "def" -> KEWORD_DEF
   | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
   | "!" -> BANG
+  | ":" -> COLON
   | ":=" -> COLON_EQUALS
   | "," -> COMMA
   | "=>" -> EQUALS_GREATER

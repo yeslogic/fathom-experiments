@@ -4,6 +4,7 @@
 %token KEWORD_DEF "def"
 
 %token BANG "!"
+%token COLON ":"
 %token COLON_EQUALS ":="
 %token COMMA ","
 %token EQUALS_GREATER "=>"
@@ -31,8 +32,8 @@ let program :=
       { Surface.program is }
 
 let item :=
-  | "def"; n = NAME; ":="; t = tm; ";";
-      { n, t }
+  | "def"; n = NAME; t0 = option(":"; t = tm; { t }); ":="; t1 = tm; ";";
+      { n, t0, t1 }
 
 let tm :=
   | "|"; t = union_tm;

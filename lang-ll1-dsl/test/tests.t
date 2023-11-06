@@ -1,6 +1,13 @@
 Elaborate comments
   $ cat comments.txt | ll1-dsl
 
+Elaborate items
+  $ cat items.txt | ll1-dsl
+  def no-ann : Format := ();
+  
+  def format-ann : Format := ();
+  
+
 Elaborate base
   $ cat base.txt | ll1-dsl
   def fail : Format := {};

@@ -23,7 +23,7 @@ let union t0 t1 = Union (t0, t1)
 let action t0 (n, t1) = Action (t0, (n, t1))
 
 type program = {
-  items : (string * tm) list;
+  items : (string * tm option * tm) list;
 }
 
 let program items =
@@ -81,6 +81,11 @@ end = struct
   let rec elab_expr (items : item_context) (locals : local_context) (t : tm) : Void.t R.synth_ty =
     match t with
     | Empty -> R.Unit.intro
+    (* TODO: Handle bultins more systematically *)
+    | Name ("Format" | "Type" | "U8" as name)
+        when items |> List.assoc_opt name |> Option.is_none
+          && locals |> List.assoc_opt name |> Option.is_none ->
+        failwith "error: expression expected"
     | Name name -> begin
         match List.assoc_opt name locals with
         | Some var -> R.Structural.local var
@@ -97,6 +102,10 @@ end = struct
   let rec elab_format (items : item_context) (t : tm) : Void.t R.is_format =
     match t with
     | Empty -> R.Format.empty
+    (* TODO: Handle bultins more systematically *)
+    | Name ("Format" | "Type" | "U8" as name)
+        when items |> List.assoc_opt name |> Option.is_none ->
+        failwith "error: format expected"
     | Name name -> begin
         match List.assoc_opt name items with
         | Some var -> R.Format.item var
@@ -123,14 +132,37 @@ end = struct
           (name, fun x -> elab_expr items [name, x] e)
           (elab_format items f)
 
+  let rec elab_ann (items : item_context) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
+    match t with
+    (* TODO: Handle bultins more systematically *)
+    | Name "Format" when items |> List.assoc_opt "Format" |> Option.is_none -> `FormatUniv
+    | Name "Type" when items |> List.assoc_opt "Type" |> Option.is_none -> `TypeUniv
+    | Name "U8" when items |> List.assoc_opt "U8" |> Option.is_none -> `Type R.Byte.form
+    | Empty -> `Type R.Unit.form
+    | Seq (t0, t1) -> begin
+        match elab_ann items t0, elab_ann items t1 with
+        | `Type t0, `Type t1 -> `Type (R.Pair.form t0 t1)
+        | _, _ -> failwith "error: type expected"
+    end
+    | _ -> failwith "error: invalid annotation"
+
   let elab_program (items : item_context) (p : program) : Void.t R.is_program =
     let rec go items =
       function
       | [] -> R.Program.empty
-      | (name, format) :: rest ->
+      | (name, None, format) :: rest ->
           R.Program.def_format (name, elab_format items format)
             (fun var -> go ((name, var) :: items) rest)
             (* FIXME:   ^^ tailcall? *)
+      | (name, Some ann, format) :: rest -> begin
+          match elab_ann items ann with
+          | `FormatUniv ->
+              R.Program.def_format (name, elab_format items format)
+                (fun var -> go ((name, var) :: items) rest)
+                (* FIXME:   ^^ tailcall? *)
+          | `TypeUniv -> failwith "error: type definitions are not yet supported"
+          | `Type _ -> failwith "error: term definitions are not yet supported"
+      end
     in
     go items p.items
 

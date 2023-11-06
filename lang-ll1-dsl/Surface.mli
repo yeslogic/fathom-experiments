@@ -24,7 +24,7 @@ val action : tm -> (string * tm) -> tm
 
 type program
 
-val program : (string * tm) list -> program
+val program : (string * tm option * tm) list -> program
 
 
 (** {1 Elaboration} *)
