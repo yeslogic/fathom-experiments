@@ -27,6 +27,8 @@ module FormatInfo = struct
     follow_last = ByteSet.empty;
   }
 
+  let fail = byte ByteSet.empty
+
   (** [separate i1 i2] checks that the follow set of [i1] type does not
       overlap with the first set of [i1]. This is important to ensure that we
       know for certain when to stop parsing a parser with type [i1], and to
@@ -78,6 +80,7 @@ type expr =
 type format_node =
   | Item of string
   | Empty
+  | Fail of ty
   | Byte of ByteSet.t
   | Seq of format * format
   | Union of format * format
@@ -141,12 +144,15 @@ and pp_print_seq_format ppf f =
   match f.node with
   | Seq (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
-        pp_print_range_format f0
+        pp_print_app_format f0
         pp_print_seq_format f1
-  | _ -> Format.fprintf ppf "%a" pp_print_range_format f
+  | _ -> Format.fprintf ppf "%a" pp_print_app_format f
 
-and pp_print_range_format ppf f =
+and pp_print_app_format ppf f =
   match f.node with
+  | Fail t ->
+      Format.fprintf ppf "@[fail@ @@%a@]"
+        pp_print_atomic_ty t
   | Map (t, (n, e), f) ->
       Format.fprintf ppf "@[map@ @@%a@ (%s@ =>@ %a)@ %a@]"
         pp_print_atomic_ty t
@@ -237,6 +243,7 @@ module Semantics = struct
         | None -> invalid_arg "unbound item variable"
     end
     | Empty -> pos, UnitIntro
+    | Fail _ -> raise (DecodeFailure pos)
     | Byte s -> begin
         match get_byte input pos with
         | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
@@ -398,6 +405,14 @@ module Refiner = struct
       match item with
       | Some (repr, info) -> ItemM.pure { node = Item var.name; repr; info }
       | None -> invalid_arg "unbound item variable"
+
+    let fail (t : 'e is_ty) : 'e is_format =
+      let* t = t in
+      ItemM.pure {
+        node = Fail t;
+        repr = t;
+        info = FormatInfo.fail;
+      }
 
     let byte (s : ByteSet.t) : 'e is_format =
       ItemM.pure {

@@ -100,24 +100,24 @@ end = struct
     | Name name -> begin
         match List.assoc_opt name items with
         | Some var -> R.Format.item var
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+        | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
     end
     | Int i -> R.Format.byte (byte_set_of_int i)
     | Range (start, stop) -> R.Format.byte (byte_set_of_range start stop)
     | Not (Int i) -> R.Format.byte (byte_set_of_int i |> ByteSet.neg)
     | Not (Range (start, stop)) -> R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
-    | Not _ -> failwith "error: Can only apply `!_` to bytes and byte ranges" (* TODO: improve diagnostics *)
+    | Not _ -> R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
     | Seq (t0, t1) ->
         R.Format.seq (elab_format items t0) (elab_format items t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
-            | `AmbiguousFormat -> failwith "error: ambiguous concatenation")
+            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
     | Union (t0, t1) ->
         R.Format.union (elab_format items t0) (elab_format items t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
-            | `AmbiguousFormat -> failwith "error: ambiguous alternation"
-            | `ReprMismatch (_, _) -> failwith "error: mismatched represenations")
+            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")
+            | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
     | Action (f, (name, e)) ->
         R.Format.map
           (name, fun x -> elab_expr items [name, x] e)
