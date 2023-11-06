@@ -33,24 +33,81 @@ let program items =
 module Elab : sig
   (** Elaboration of the surface language into the core language. *)
 
-  type item_context
+  module ItemContext : sig
 
-  val empty_item_context : item_context
+    type t
 
-  val elab_program : item_context -> program -> Basis.Void.t Core.Refiner.is_program
+    val empty : t
+
+  end
+
+  val elab_program : ItemContext.t -> program -> Basis.Void.t Core.Refiner.is_program
 
 end = struct
 
   module R = Core.Refiner
   module Void = Basis.Void
 
-  type item_context =
-    (string * R.item_var) list
+  module ItemContext = struct
 
-  let empty_item_context = []
+    type t = {
+      items : (string * R.item_var) list;
+    }
 
-  type local_context =
-    (string * R.local_var) list
+    let empty = {
+      items = [];
+    }
+
+    let def_item (n, var : string * R.item_var) (context : t) : t =
+      { items = (n, var) :: context.items }
+
+    type entry = [
+      | `FormatUniv
+      | `TypeUniv
+      | `Type of Void.t R.is_ty
+      | `Item of R.item_var
+    ]
+
+    let lookup (n : string) (context : t) : [> entry] option =
+      match List.assoc_opt n context.items with
+      | Some var -> Some (`Item var)
+      | None -> begin
+          match n with
+          | "Format" -> Some `FormatUniv
+          | "Type" -> Some `TypeUniv
+          | "U8" -> Some (`Type R.Byte.form)
+          | _ -> None
+      end
+
+  end
+
+  module LocalContext = struct
+
+    type t = {
+      items : (string * R.item_var) list;
+      locals : (string * R.local_var) list;
+    }
+
+    let to_item_context (context : t) : ItemContext.t =
+      { items = context.items }
+
+    let of_item_context (context : ItemContext.t) : t =
+      { items = context.items; locals = [] }
+
+    let bind_local (n, var : string * R.local_var) (context : t) : t =
+      { context with locals = (n, var) :: context.locals }
+
+    type entry = [
+      | ItemContext.entry
+      | `Local of R.local_var
+    ]
+
+    let lookup (n : string) (context : t) : [> entry] option =
+      match List.assoc_opt n context.locals with
+      | Some var -> Some (`Local var)
+      | None -> ItemContext.lookup n (to_item_context context)
+
+  end
 
   let byte_of_int i =
     if 0 <= i && i <= 255 then
@@ -78,37 +135,29 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr (items : item_context) (locals : local_context) (t : tm) : Void.t R.synth_ty =
+  let rec elab_expr (context : LocalContext.t) (t : tm) : Void.t R.synth_ty =
     match t with
     | Empty -> R.Unit.intro
-    (* TODO: Handle bultins more systematically *)
-    | Name ("Format" | "Type" | "U8" as name)
-        when items |> List.assoc_opt name |> Option.is_none
-          && locals |> List.assoc_opt name |> Option.is_none ->
-        failwith "error: expression expected"
     | Name name -> begin
-        match List.assoc_opt name locals with
-        | Some var -> R.Structural.local var
+        match LocalContext.lookup name context with
+        | Some (`Local var) -> R.Structural.local var
+        | Some (`FormatUniv | `TypeUniv | `Type _ | `Item _) -> failwith "error: local variable expected"
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
     | Int i ->
         R.Byte.intro (byte_of_int i)
     | Seq (t0, t1) ->
-        R.Pair.intro
-          (elab_expr items locals t0)
-          (elab_expr items locals t1)
-    | _ -> failwith "TODO"
+        R.Pair.intro (elab_expr context t0) (elab_expr context t1)
+    | _ ->
+        failwith "error: expression expected"
 
-  let rec elab_format (items : item_context) (t : tm) : Void.t R.is_format =
+  let rec elab_format (context : ItemContext.t) (t : tm) : Void.t R.is_format =
     match t with
     | Empty -> R.Format.empty
-    (* TODO: Handle bultins more systematically *)
-    | Name ("Format" | "Type" | "U8" as name)
-        when items |> List.assoc_opt name |> Option.is_none ->
-        failwith "error: format expected"
     | Name name -> begin
-        match List.assoc_opt name items with
-        | Some var -> R.Format.item var
+        match ItemContext.lookup name context with
+        | Some (`Item var) -> R.Format.item var
+        | Some (`FormatUniv | `TypeUniv | `Type _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
         | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
     end
     | Int i -> R.Format.byte (byte_set_of_int i)
@@ -117,58 +166,60 @@ end = struct
     | Not (Range (start, stop)) -> R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
     | Not _ -> R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
     | Seq (t0, t1) ->
-        R.Format.seq (elab_format items t0) (elab_format items t1)
+        R.Format.seq (elab_format context t0) (elab_format context t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
     | Union (t0, t1) ->
-        R.Format.union (elab_format items t0) (elab_format items t1)
+        R.Format.union (elab_format context t0) (elab_format context t1)
         |> R.ItemM.handle (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")
             | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
     | Action (f, (name, e)) ->
         R.Format.map
-          (name, fun x -> elab_expr items [name, x] e)
-          (elab_format items f)
+          (name, fun x -> elab_expr LocalContext.(of_item_context context |> bind_local (name, x)) e)
+          (elab_format context f)
 
-  let rec elab_ann (items : item_context) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
+  let rec elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
     match t with
-    (* TODO: Handle bultins more systematically *)
-    | Name "Format" when items |> List.assoc_opt "Format" |> Option.is_none -> `FormatUniv
-    | Name "Type" when items |> List.assoc_opt "Type" |> Option.is_none -> `TypeUniv
-    | Name "U8" when items |> List.assoc_opt "U8" |> Option.is_none -> `Type R.Byte.form
+    | Name name -> begin
+        match ItemContext.lookup name context with
+        | Some (`Item _) -> failwith "error: invalid annotation"
+        | None -> failwith "error: invalid annotation"
+        | Some (`FormatUniv | `TypeUniv | `Type _ as i) -> i
+    end
     | Empty -> `Type R.Unit.form
     | Seq (t0, t1) -> begin
-        match elab_ann items t0, elab_ann items t1 with
+        match elab_ann context t0, elab_ann context t1 with
         | `Type t0, `Type t1 -> `Type (R.Pair.form t0 t1)
         | _, _ -> failwith "error: type expected"
     end
     | _ -> failwith "error: invalid annotation"
 
-  let elab_program (items : item_context) (p : program) : Void.t R.is_program =
-    let rec go items =
+  let elab_program (context : ItemContext.t) (p : program) : Void.t R.is_program =
+    let rec go context =
       function
       | [] -> R.Program.empty
       | (name, None, format) :: rest ->
-          R.Program.def_format (name, elab_format items format)
-            (fun var -> go ((name, var) :: items) rest)
+          R.Program.def_format (name, elab_format context format)
+            (fun var -> go (ItemContext.def_item (name, var) context) rest)
             (* FIXME:   ^^ tailcall? *)
       | (name, Some ann, format) :: rest -> begin
-          match elab_ann items ann with
+          match elab_ann context ann with
           | `FormatUniv ->
-              R.Program.def_format (name, elab_format items format)
-                (fun var -> go ((name, var) :: items) rest)
+              R.Program.def_format (name, elab_format context format)
+                (fun var -> go (ItemContext.def_item (name, var) context) rest)
                 (* FIXME:   ^^ tailcall? *)
           | `TypeUniv -> failwith "error: type definitions are not yet supported"
           | `Type _ -> failwith "error: term definitions are not yet supported"
       end
     in
-    go items p.items
+    go context p.items
 
 end
 
 let elab_program p =
-  Elab.elab_program Elab.empty_item_context p
+  Elab.elab_program Elab.ItemContext.empty p
   |> Core.Refiner.ItemM.run
   |> Result.fold ~ok:Fun.id ~error:Basis.Void.absurd
