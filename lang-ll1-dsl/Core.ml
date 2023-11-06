@@ -15,15 +15,15 @@ module FormatInfo = struct
         byte of each suffix. *)
   }
 
-  let empty = {
-    nullable = true; (* Never consumes any input *)
-    first = ByteSet.empty;
-    follow_last = ByteSet.empty;
-  }
-
   let byte s = {
     nullable = false; (* Always consumes exactly one byte from the input *)
     first = s;
+    follow_last = ByteSet.empty;
+  }
+
+  let empty = {
+    nullable = true; (* Never consumes any input *)
+    first = ByteSet.empty;
     follow_last = ByteSet.empty;
   }
 
@@ -393,18 +393,18 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
+    let item (var : item_var) : 'e is_format =
+      let* item = ItemM.lookup_item var.name in
+      match item with
+      | Some (repr, info) -> ItemM.pure { node = Item var.name; repr; info }
+      | None -> invalid_arg "unbound item variable"
+
     let empty : 'e is_format =
       ItemM.pure {
         node = Empty;
         repr = UnitTy;
         info = FormatInfo.empty;
       }
-
-    let item (var : item_var) : 'e is_format =
-      let* item = ItemM.lookup_item var.name in
-      match item with
-      | Some (repr, info) -> ItemM.pure { node = Item var.name; repr; info }
-      | None -> invalid_arg "unbound item variable"
 
     let fail (t : 'e is_ty) : 'e is_format =
       let* t = t in
