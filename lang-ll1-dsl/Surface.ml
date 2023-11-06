@@ -23,6 +23,10 @@ and tm_data =
   | Union of tm * tm
   | Action of tm * (string * tm)
   | Proj of tm * string
+  | RecordEmpty
+  | RecordFormat of (string * tm) list
+  | RecordType of (string * tm) list
+  | RecordLit of (string * tm) list
 
 and bound =
   | Open
@@ -38,6 +42,11 @@ let seq t0 t1 = Seq (t0, t1)
 let union t0 t1 = Union (t0, t1)
 let action t0 (n, t1) = Action (t0, (n, t1))
 let proj t l = Proj (t, l)
+
+let record_empty = RecordEmpty
+let record_format fields = RecordFormat fields
+let record_ty fields = RecordType fields
+let record_lit fields = RecordLit fields
 
 type program = {
   items : (string * tm option * tm) list;
@@ -190,6 +199,19 @@ end = struct
         R.Byte.intro (byte_of_int t.loc i)
     | Seq (t0, t1) ->
         R.Pair.intro (elab_synth_ty context t0) (elab_synth_ty context t1)
+    | Proj (t, l) ->
+        R.Record.proj (elab_synth_ty context t) l
+        |> R.handle_local (function
+            | `UnknownFieldLabel _ ->
+                failwith ("error: unknown field label `" ^ l ^ "`"))
+    | RecordEmpty ->
+        R.Record.intro_empty
+    | RecordLit fields ->
+        R.Record.intro (fields |> List.map (fun (l, t) -> l, elab_synth_ty context t))
+        |> R.handle_local (function
+            | `DuplicateFieldLabel l ->
+                error t.loc ("duplicate field `" ^ l ^ "`"))
+                (*    ^^^^^ TODO: Use field location *)
     | _ ->
         error t.loc "expression expected"
 
@@ -233,8 +255,37 @@ end = struct
         R.Format.map
           (name, fun x -> elab_synth_ty (context |> LocalContext.bind_local (name, x)) e)
           (elab_format context f)
-    | Proj (_, _) ->
-        failwith "TODO"
+    | Proj (_, _) -> error t.loc "format expected"
+    | RecordEmpty ->
+        R.Format.pure R.Record.intro_empty
+    | RecordFormat fields ->
+        let rec go context lit_fields =
+          function
+          | [] ->
+              R.Record.intro (List.rev lit_fields)
+              |> R.handle_local (function
+                  | `DuplicateFieldLabel l ->
+                      error t.loc ("duplicate field `" ^ l ^ "`"))
+                      (*    ^^^^^ TODO: Use field location *)
+              |> R.Format.pure
+          | (l, f) :: fields ->
+              R.Format.flat_map
+                (l, fun x ->
+                  let var =
+                    R.Structural.local x
+                    |> R.handle_local (function
+                        | `UnboundVariable -> bug t.loc "unbound local variable")
+                        (*                        ^^^^^ TODO: Use field location *)
+                  in
+                  go (context |> LocalContext.bind_local (l, x)) ((l, var) :: lit_fields) fields)
+                (elab_format context f)
+              |> R.handle_local (function
+                  | `AmbiguousFormat -> error t.loc "ambiguous record")
+                  (*                          ^^^^^ TODO: Use field location *)
+        in
+        go context [] fields
+    | RecordType _ -> error t.loc "format expected"
+    | RecordLit _ -> error t.loc "format expected"
 
   let rec elab_ty (context : ItemContext.t) (t : tm) : R.is_ty =
     match t.data with
@@ -255,6 +306,14 @@ end = struct
         R.Pair.form (elab_ty context t0) (elab_ty context t1)
     | Proj (t, "Repr") ->
         R.Format.repr (elab_format (LocalContext.of_item_context context) t)
+    | RecordEmpty ->
+        R.Record.form_empty
+    | RecordType fields ->
+        R.Record.form (fields |> List.map (fun (l, t) -> l, elab_ty context t))
+        |> R.handle_item (function
+            | `DuplicateFieldLabel l ->
+                error t.loc ("duplicate field `" ^ l ^ "`"))
+                (*    ^^^^^ TODO: Use field location *)
     | _ ->
         error t.loc "type expected"
 
@@ -263,14 +322,14 @@ end = struct
     | Name name -> begin
         match ItemContext.lookup name context with
         | Some (`FormatUniv | `TypeUniv | `Type _ as i) -> i
-        | Some (`Item _) -> error t.loc "invalid annotation"
+        | Some (`Item _) -> error t.loc "invalid annotation" (* FIXME: Type aliases *)
         | None -> error t.loc ("unbound variable `" ^ name ^ "`")
     end
-    | Empty ->
-        `Type R.Unit.form
-    | Seq (t0, t1) -> begin
-        `Type (R.Pair.form (elab_ty context t0) (elab_ty context t1))
-    end
+    | Empty
+    | Seq (_, _)
+    | RecordEmpty
+    | RecordType _ ->
+        `Type (elab_ty context t)
     | _ ->
         error t.loc "invalid annotation"
 

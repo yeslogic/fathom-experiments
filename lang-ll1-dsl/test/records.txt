@@ -1,0 +1,38 @@
+def Pair : Type := {
+    fst : U8;
+    snd : U8;
+};
+
+def zeros : {
+    fst : U8;
+    snd : U8;
+} := {
+    fst := 0;
+    snd := 0;
+};
+
+/- FIXME: Unification
+def zeros : {
+    fst : U8;
+    snd : U8;
+} := {
+    snd := 0;
+    fst := 0;
+};
+-/
+
+/-
+def zeros : Pair := {
+    --      ^^^^ FIXME: item annotations
+    fst := 0;
+    snd := 0;
+};
+-/
+
+def u8 := (..);
+
+def pixels := {
+    x <- u8;
+    y <- u8;
+    -- TODO: data <- repeat-len (x * y) u8;
+};

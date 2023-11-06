@@ -36,6 +36,7 @@ let rec token lexbuf =
   | "," -> COMMA
   | "=>" -> EQUALS_GREATER
   | "." -> FULL_STOP
+  | "<-" -> LESS_HYPHEN
   | "|" -> PIPE
   | ";" -> SEMI
   | ".." -> DOT_DOT

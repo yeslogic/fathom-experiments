@@ -29,6 +29,11 @@ val union : tm -> tm -> tm_data
 val action : tm -> (string * tm) -> tm_data
 val proj : tm -> string -> tm_data
 
+val record_empty : tm_data
+val record_format : (string * tm) list -> tm_data
+val record_ty : (string * tm) list -> tm_data
+val record_lit : (string * tm) list -> tm_data
+
 (** {2 Programs} *)
 
 type program

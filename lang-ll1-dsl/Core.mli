@@ -134,4 +134,14 @@ module Refiner : sig
 
   end
 
+  module Record : sig
+
+    val form_empty : is_ty
+    val form : (string * is_ty) list -> [`DuplicateFieldLabel of string] is_ty_err
+    val intro_empty : synth_ty
+    val intro : (string * synth_ty) list -> [`DuplicateFieldLabel of string] synth_ty_err
+    val proj : synth_ty -> string -> [`UnknownFieldLabel of ty] synth_ty_err
+
+  end
+
 end

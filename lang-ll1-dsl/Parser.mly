@@ -9,6 +9,7 @@
 %token COMMA ","
 %token EQUALS_GREATER "=>"
 %token FULL_STOP "."
+%token LESS_HYPHEN "<-"
 %token PIPE "|"
 %token SEMI ";"
 
@@ -52,7 +53,7 @@ let seq_tm :=
   | range_tm
 
 let range_tm :=
-  | t = located(range_tm); "{"; n = NAME; "=>"; b = located(tm); "}"; { Surface.action t (n, b) }
+  | t = located(proj_tm); "{"; n = NAME; "=>"; b = located(tm); "}"; { Surface.action t (n, b) }
   | start = inclusive; ".."; stop = inclusive; { Surface.range start stop }
   | start = inclusive; "..<"; stop = exclusive; { Surface.range start stop }
   | start = exclusive; ">.."; stop = inclusive; { Surface.range start stop }
@@ -71,6 +72,14 @@ let atomic_tm :=
       { Surface.empty }
   | "("; t = tm; ")";
       { t }
+  | "{"; "}";
+      { Surface.record_empty }
+  | "{"; fs = trailing_nonempty_list(";", field_format); "}";
+      { Surface.record_format fs }
+  | "{"; fs = trailing_nonempty_list(";", field_decl); "}";
+      { Surface.record_ty fs }
+  | "{"; fs = trailing_nonempty_list(";", field_defn); "}";
+      { Surface.record_lit fs }
   | "!"; t = located(atomic_tm);
       { Surface.not t }
   | i = INT;
@@ -86,3 +95,18 @@ let exclusive ==
 let located(X) :=
 | data = X;
     { Surface.located $loc data }
+
+let field_format ==
+  | l = NAME; "<-"; t = located(tm); { l, t }
+
+let field_decl ==
+  | l = NAME; ":"; t = located(tm); { l, t }
+
+let field_defn ==
+  | l = NAME; ":="; t = located(tm); { l, t }
+
+let trailing_nonempty_list(Sep, T) :=
+| t = T; option(Sep);
+    { [ t ] }
+| t = T; Sep; ts = trailing_nonempty_list(Sep, T);
+    { t :: ts }

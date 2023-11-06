@@ -44,6 +44,20 @@ Elaborate ranges
   def exclusive-closed : Format := {129..254};
   
 
+Elaborate records
+  $ cat records.txt | ll1-dsl
+  def Pair : Type := { fst : Byte; snd : Byte };
+  
+  def zeros : { fst : Byte; snd : Byte } := { fst := 0; snd := 0 };
+  
+  def u8 : Format := {0..255};
+  
+  def pixels : Format :=
+    flat-map @{ x : Byte; y : Byte } (x =>
+    flat-map @{ x : Byte; y : Byte } (y =>
+    pure @{ x : Byte; y : Byte } { x := x; y := y }) u8) u8;
+  
+
 Elaborate ASCII
   $ cat ascii.txt | ll1-dsl
   def ascii-null : Format := {0};

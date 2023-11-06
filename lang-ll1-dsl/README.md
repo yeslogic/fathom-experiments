@@ -22,7 +22,7 @@ Formats:
 - [ ] Fixpoint formats
 - [x] Map formats
 - [x] Bind formats
-- [ ] Record formats
+- [x] Record formats
 
 Top-level definitions:
 
