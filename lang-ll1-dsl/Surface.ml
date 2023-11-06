@@ -137,7 +137,8 @@ end = struct
 
   let rec elab_expr (context : LocalContext.t) (t : tm) : Void.t R.synth_ty =
     match t with
-    | Empty -> R.Unit.intro
+    | Empty ->
+        R.Unit.intro
     | Name name -> begin
         match LocalContext.lookup name context with
         | Some (`Local var) -> R.Structural.local var
@@ -153,18 +154,24 @@ end = struct
 
   let rec elab_format (context : ItemContext.t) (t : tm) : Void.t R.is_format =
     match t with
-    | Empty -> R.Format.empty
+    | Empty ->
+        R.Format.empty
     | Name name -> begin
         match ItemContext.lookup name context with
         | Some (`Item var) -> R.Format.item var
         | Some (`FormatUniv | `TypeUniv | `Type _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
         | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
     end
-    | Int i -> R.Format.byte (byte_set_of_int i)
-    | Range (start, stop) -> R.Format.byte (byte_set_of_range start stop)
-    | Not (Int i) -> R.Format.byte (byte_set_of_int i |> ByteSet.neg)
-    | Not (Range (start, stop)) -> R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
-    | Not _ -> R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
+    | Int i ->
+        R.Format.byte (byte_set_of_int i)
+    | Range (start, stop) ->
+        R.Format.byte (byte_set_of_range start stop)
+    | Not (Int i) ->
+        R.Format.byte (byte_set_of_int i |> ByteSet.neg)
+    | Not (Range (start, stop)) ->
+        R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
+    | Not _ ->
+        R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
     | Seq (t0, t1) ->
         R.Format.seq (elab_format context t0) (elab_format context t1)
         |> R.ItemM.handle (function
@@ -189,18 +196,21 @@ end = struct
         | None -> failwith "error: invalid annotation"
         | Some (`FormatUniv | `TypeUniv | `Type _ as i) -> i
     end
-    | Empty -> `Type R.Unit.form
+    | Empty ->
+        `Type R.Unit.form
     | Seq (t0, t1) -> begin
         match elab_ann context t0, elab_ann context t1 with
         | `Type t0, `Type t1 -> `Type (R.Pair.form t0 t1)
         | _, _ -> failwith "error: type expected"
     end
-    | _ -> failwith "error: invalid annotation"
+    | _ ->
+        failwith "error: invalid annotation"
 
   let elab_program (context : ItemContext.t) (p : program) : Void.t R.is_program =
     let rec go context =
       function
-      | [] -> R.Program.empty
+      | [] ->
+          R.Program.empty
       | (name, None, format) :: rest ->
           R.Program.def_format (name, elab_format context format)
             (fun var -> go (ItemContext.def_item (name, var) context) rest)
