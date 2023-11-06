@@ -192,9 +192,9 @@ end = struct
     match t with
     | Name name -> begin
         match ItemContext.lookup name context with
-        | Some (`Item _) -> failwith "error: invalid annotation"
-        | None -> failwith "error: invalid annotation"
         | Some (`FormatUniv | `TypeUniv | `Type _ as i) -> i
+        | Some (`Item _) -> failwith "error: invalid annotation"
+        | None -> failwith ("error: unbound variable `" ^ name ^ "`")
     end
     | Empty ->
         `Type R.Unit.form
