@@ -297,6 +297,10 @@ module Refiner = struct
         Result.bind (m items)
           (fun x -> f x items)
 
+    let scope (f : item_context -> item_context) (m : ('a, 'e) m) : ('a, 'e) m =
+      fun items ->
+        m (f items)
+
     let lookup_item (n : string) : ((ty * FormatInfo.t) option, 'e) m =
       fun items ->
         Ok (List.assoc_opt n items)
@@ -376,16 +380,18 @@ module Refiner = struct
 
   module Program = struct
 
-    let ( let* ) = Result.bind
+    let ( let* ) = ItemM.bind
 
     let empty : 'e is_program =
       ItemM.pure { items = [] }
 
     let def_format (name, f) (body : item_var -> 'e is_program) : 'e is_program =
-      fun items ->
-        let* f = f items in
-        let* program = body { name } ((name, (f.repr, f.info)) :: items) in
-        Ok { items = (name, f) :: program.items }
+      let* f = f in
+      let* program = ItemM.scope
+        (fun items -> (name, (f.repr, f.info)) :: items)
+        (body { name })
+      in
+      ItemM.pure { items = (name, f) :: program.items }
 
   end
 
