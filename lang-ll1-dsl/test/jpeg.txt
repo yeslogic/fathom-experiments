@@ -1,0 +1,61 @@
+-- TODO: Macros
+
+-- def marker (const id : byte) :=
+--     0xFF, id;
+
+-- def marker-segment (const id : byte) (body : Format) :=
+--   sequence {
+--     marker <- marker id;
+--     length <- u16be;
+--     body   <- slice (length - 2) body;
+--   };
+
+def sof0  := 0xFF, 0xC0; -- Start of frame (baseline jpeg)
+def sof1  := 0xFF, 0xC1; -- Start of frame (extended sequential, huffman)
+def sof2  := 0xFF, 0xC2; -- Start of frame (progressive, huffman)
+def sof3  := 0xFF, 0xC3; -- Start of frame (lossless, huffman)
+def dht   := 0xFF, 0xC4; -- Define Huffman Table
+def sof5  := 0xFF, 0xC5; -- Start of frame (differential sequential, huffman)
+def sof6  := 0xFF, 0xC6; -- Start of frame (differential progressive, huffman)
+def sof7  := 0xFF, 0xC7; -- Start of frame (differential lossless, huffman)
+def jpeg  := 0xFF, 0xC8; -- Reserved for JPEG extension
+def sof9  := 0xFF, 0xC9; -- Start of frame (extended sequential, arithmetic)
+def sof10 := 0xFF, 0xCA; -- Start of frame (progressive, arithmetic)
+def sof11 := 0xFF, 0xCB; -- Start of frame (lossless, arithmetic)
+def dac   := 0xFF, 0xCC; -- Define arithmetic coding conditioning
+def sof13 := 0xFF, 0xCD; -- Start of frame (differential sequential, arithmetic)
+def sof14 := 0xFF, 0xCE; -- Start of frame (differential progressive, arithmetic)
+def sof15 := 0xFF, 0xCF; -- Start of frame (differential lossless, arithmetic)
+def rst0  := 0xFF, 0xD0; -- Restart marker 0
+def rst1  := 0xFF, 0xD1; -- Restart marker 1
+def rst2  := 0xFF, 0xD2; -- Restart marker 2
+def rst3  := 0xFF, 0xD3; -- Restart marker 3
+def rst4  := 0xFF, 0xD4; -- Restart marker 4
+def rst5  := 0xFF, 0xD5; -- Restart marker 5
+def rst6  := 0xFF, 0xD6; -- Restart marker 6
+def rst7  := 0xFF, 0xD7; -- Restart marker 7
+def soi   := 0xFF, 0xD8; -- Start of image
+def eoi   := 0xFF, 0xD9; -- End of of image
+def sos   := 0xFF, 0xDA; -- Start of scan
+def dqt   := 0xFF, 0xDB; -- Define quantization table
+def dnl   := 0xFF, 0xDC; -- Define number of lines
+def dri   := 0xFF, 0xDD; -- Define restart interval
+def dhp   := 0xFF, 0xDE; -- Define hierarchical progression
+def exp   := 0xFF, 0xDF; -- Expand reference components
+def app0  := 0xFF, 0xE0; -- Application segment 0 (JFIF/JFXX/AVI1/...)
+def app1  := 0xFF, 0xE1; -- Application segment 1 (EXIF/XMP/XAP/...)
+def app2  := 0xFF, 0xE2; -- Application segment 2 (FlashPix/ICC/...)
+def app3  := 0xFF, 0xE3; -- Application segment 3 (Kodak/...)
+def app4  := 0xFF, 0xE4; -- Application segment 4 (FlashPix/...)
+def app5  := 0xFF, 0xE5; -- Application segment 5 (Ricoh/...)
+def app6  := 0xFF, 0xE6; -- Application segment 6 (GoPro/...)
+def app7  := 0xFF, 0xE7; -- Application segment 7 (Pentax/Qualcomm/...)
+def app8  := 0xFF, 0xE8; -- Application segment 8 (Spiff/...)
+def app9  := 0xFF, 0xE9; -- Application segment 9 (MediaJukebox/...)
+def app10 := 0xFF, 0xEA; -- Application segment 10 (PhotoStudio)
+def app11 := 0xFF, 0xEB; -- Application segment 11 (HDR)
+def app12 := 0xFF, 0xEC; -- Application segment 12 (PictureInfo/Ducky)
+def app13 := 0xFF, 0xED; -- Application segment 13 (PhotoShop/Adobe_CM)
+def app14 := 0xFF, 0xEE; -- Application segment 14 (Adobe)
+def app15 := 0xFF, 0xEF; -- Application segment 15 (GraphicConverter)
+def com   := 0xFF, 0xFE; -- Extension data (comment)
