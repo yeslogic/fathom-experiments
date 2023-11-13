@@ -28,6 +28,7 @@ let mem c s =
 
 let union s1 s2 = make (fun c -> mem c s1 || mem c s2)
 let inter s1 s2 = make (fun c -> mem c s1 && mem c s2)
+let diff s1 s2 = make (fun c -> mem c s1 && not (mem c s2))
 let neg s = make (fun c -> not (mem c s))
 
 let equal = Bytes.equal

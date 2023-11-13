@@ -1,3 +1,93 @@
+(* TODO: Use [PrefixTree.t] in [FormatInfo.t] *)
+
+module PrefixTree : sig
+  (** Lazily constructed prefix trees on byte-strings. *)
+
+  type t
+  (** A prefix tree that is constructed lazily. *)
+
+  val empty : t
+  (** The empty prefix tree, containing no byte strings. *)
+
+  val byte : ByteSet.t -> t
+  (** [byte s] is the prefix tree containing a single byte in the set [s]. *)
+
+  val seq : t -> t -> t
+  (** [seq t1 t2] is the prefix tree containing the byte strings in [t1]
+      followed by the byte strings in [t2]. *)
+
+  val union : t -> t -> t
+  (** [union t1 t2] is the prefix tree containing the byte strings in [t1] and
+      the byte strings in [t2]. *)
+
+  val repeat : t -> t
+  (** [repeat ~len t1 t2] ... *)
+
+  val disjoint : len:int -> t -> t -> bool
+  (** [disjoint ~len t1 t2] tests if [t1] and [t2] have no bytes in common up
+      to a prefix that is [~len] bytes long. *)
+
+end = struct
+
+  type t = {
+    (* NOTE: Not sure if we need an [accept : bool] field in this record. This
+       might be covered by the [nullable] field in the [FormatInfo.t] type *)
+
+    branches : (ByteSet.t * t Lazy.t) list;
+    (** A mapping from bytes to a tree representing the rest of the byte string.
+        Byte sets are used to keep the tree more compact for large byte ranges.
+
+        Invariant: each set of bytes should be disjoint from the other branches.
+    *)
+  }
+
+  let empty = {
+    branches = [];
+  }
+
+  let byte s = {
+    branches = [
+      s, Lazy.from_val empty;
+    ];
+  }
+
+  let rec seq t1 t2 = {
+    branches =
+      match t1.branches with
+      | [] -> t2.branches
+      | branches ->
+          branches
+          |> List.map (fun (s, next) ->
+              s, next |> Lazy.map (fun next -> seq next t2));
+  }
+
+  let union _t1 _t2 = {
+    branches =
+      failwith "TODO";
+    (* branches =
+      t2.branches
+      |> List.concat_map (fun (s2, next2) ->
+        t1.branches
+        |> List.concat_map (fun (s1, next1) ->
+          let common = ByteSet.inter s1 s2 in
+          if ByteSet.is_empty common then [] else
+            let orig = ByteSet.diff s1 s2 in
+            (** TODO: find intersections *)
+            failwith "TODO")) *)
+  }
+
+  let rec repeat t = {
+    branches =
+      t.branches
+      |> List.map (fun (s, next) ->
+          s, next |> Lazy.map (fun next -> seq next (repeat t)));
+  }
+
+  let disjoint ~len:_len _t1 _t2 =
+    failwith "TODO"
+
+end
+
 module FormatInfo : sig
   (** Semantic information about a binary format. *)
 

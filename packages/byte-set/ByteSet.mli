@@ -33,6 +33,10 @@ val inter : t -> t -> t
 (** [inter s0 s1] returns a byte set containing the bytes that are members of
     both [s0] and [s1]. *)
 
+val diff : t -> t -> t
+(** [diff s0 s1] returns a byte set containing the bytes that are members of
+    [s0] and not members of [s1]. *)
+
 val neg : t -> t
 (** [neg s] returns a byte set containing all the bytes that are not in [s] *)
 
