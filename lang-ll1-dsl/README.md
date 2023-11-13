@@ -28,6 +28,10 @@ Top-level definitions:
 
 - [x] Simple format definitions
 - [ ] Parameterised format definitions
+  - [ ] Type parameters
+  - [ ] Format parameters
+  - [ ] Compile-time term parameters
+  - [ ] Run-time term parameters
 - [ ] Mutually recursive format definitions
 
 Static analysis:
