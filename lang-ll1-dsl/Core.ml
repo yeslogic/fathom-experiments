@@ -316,6 +316,9 @@ module Refiner = struct
 
   (* Context monads *)
 
+  (* TODO: Clean up these monads... perhaps moving to the [Basis] module, using
+    effects under the hood, and assembling them out of monad transformers. *)
+
   type ('a, 'e) item_m = item_context -> ('a, 'e) result
   type ('a, 'e) local_m = item_context -> local_context -> ('a, 'e) result
 
