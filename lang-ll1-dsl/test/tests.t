@@ -7,6 +7,12 @@ Elaborate items
   
   def format-ann : Format := ();
   
+  def Byte : Type := Byte;
+  
+  def Pair : Type := Pair Byte Byte;
+  
+  def Unit : Type := Unit;
+  
 
 Elaborate base
   $ cat base.txt | ll1-dsl

@@ -1,0 +1,3 @@
+def Byte : Type := U8;
+def Pair : Type := Byte, Byte;
+def Unit : Type := ();

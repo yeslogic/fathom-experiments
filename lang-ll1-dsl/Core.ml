@@ -126,8 +126,12 @@ and format = {
   info : FormatInfo.t;
 }
 
+type item =
+  | Type of ty
+  | Format of format
+
 type program = {
-  items : (string * format) list;
+  items : (string * item) list;
 }
 
 
@@ -207,10 +211,17 @@ let pp_print_program ppf p =
   let rec go ppf items =
     match items with
     | [] -> Format.fprintf ppf ""
-    | (name, format) :: items ->
+    | (name, Format f) :: items ->
         Format.fprintf ppf "@[<2>@[def@ %s@ :@ Format@ :=@]@ @[%a;@]@]"
           name
-          pp_print_format format;
+          pp_print_format f;
+        Format.pp_force_newline ppf ();
+        Format.pp_force_newline ppf ();
+        (go [@tailcall]) ppf items
+    | (name, Type t) :: items ->
+        Format.fprintf ppf "@[<2>@[def@ %s@ :@ Type@ :=@]@ @[%a;@]@]"
+          name
+          pp_print_ty t;
         Format.pp_force_newline ppf ();
         Format.pp_force_newline ppf ();
         (go [@tailcall]) ppf items
@@ -274,7 +285,8 @@ module Semantics = struct
     match f.node with
     | Item name -> begin
         match List.assoc_opt name p.items with
-        | Some f -> decode p f input pos
+        | Some (Format f) -> decode p f input pos
+        | Some _ -> invalid_arg "not a format item"
         | None -> invalid_arg "unbound item variable"
     end
     | Empty -> pos, UnitIntro
@@ -310,7 +322,11 @@ module Refiner = struct
 
   (* Contexts *)
 
-  type item_context = (string * (ty * FormatInfo.t)) list
+  type item =
+    | Type of ty
+    | Format of { repr : ty; info : FormatInfo.t }
+
+  type item_context = (string * item) list
   type local_context = ty list
 
 
@@ -339,7 +355,7 @@ module Refiner = struct
       fun items ->
         m (f items)
 
-    let lookup_item (n : string) : ((ty * FormatInfo.t) option, 'e) m =
+    let lookup_item (n : string) : (item option, 'e) m =
       fun items ->
         Ok (List.assoc_opt n items)
 
@@ -423,13 +439,21 @@ module Refiner = struct
     let empty : 'e is_program =
       ItemM.pure { items = [] }
 
+    let def_ty (name, t) (body : item_var -> 'e is_program) : 'e is_program =
+      let* t = t in
+      let* program = ItemM.scope
+        (fun items -> (name, Type t) :: items)
+        (body { name })
+      in
+      ItemM.pure { items = (name, Type t) :: program.items }
+
     let def_format (name, f) (body : item_var -> 'e is_program) : 'e is_program =
       let* f = f in
       let* program = ItemM.scope
-        (fun items -> (name, (f.repr, f.info)) :: items)
+        (fun items -> (name, Format { repr = f.repr; info = f.info }) :: items)
         (body { name })
       in
-      ItemM.pure { items = (name, f) :: program.items }
+      ItemM.pure { items = (name, Format f) :: program.items }
 
   end
 
@@ -437,11 +461,12 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let item (var : item_var) : 'e is_format =
+    let item (var : item_var) : [`FormatExpected | `UnboundVariable] is_format =
       let* item = ItemM.lookup_item var.name in
       match item with
-      | Some (repr, info) -> ItemM.pure { node = Item var.name; repr; info }
-      | None -> invalid_arg "unbound item variable"
+      | Some (Format { repr; info }) -> ItemM.pure { node = Item var.name; repr; info }
+      | Some _ -> ItemM.throw `FormatExpected
+      | None -> ItemM.throw `UnboundVariable
 
     let empty : 'e is_format =
       ItemM.pure {
@@ -504,13 +529,22 @@ module Refiner = struct
 
   module Structural = struct
 
+    let ( let* ) = ItemM.bind
+
+    let item_ty (var : item_var) : [`TypeExpected | `UnboundVariable] is_ty =
+      let* item = ItemM.lookup_item var.name in
+      match item with
+      | Some (Type t) -> ItemM.pure t
+      | Some _ -> ItemM.throw `TypeExpected
+      | None -> ItemM.throw `UnboundVariable
+
     let ( let* ) = LocalM.bind
 
-    let local (var : local_var) : 'e synth_ty =
+    let local (var : local_var) : [`UnboundVariable] synth_ty =
       let* binding = LocalM.lookup_local var.level in
       match binding with
       | Some (e, t) -> LocalM.pure (e, t)
-      | None -> invalid_arg "unbound local variable"
+      | None -> LocalM.throw `UnboundVariable
 
     let conv (e : Void.t synth_ty) : [`TypeMismatch of ty * ty] check_ty =
       fun t ->

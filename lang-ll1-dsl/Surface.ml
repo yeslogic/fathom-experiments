@@ -141,7 +141,11 @@ end = struct
         R.Unit.intro
     | Name name -> begin
         match LocalContext.lookup name context with
-        | Some (`Local var) -> R.Structural.local var
+        | Some (`Local var) ->
+            R.Structural.local var
+            |> R.LocalM.handle (function
+                (* TODO: improve diagnostics *)
+                | `UnboundVariable -> failwith "bug: unbound local variable")
         | Some (`FormatUniv | `TypeUniv | `Type _ | `Item _) -> failwith "error: local variable expected"
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
@@ -152,13 +156,39 @@ end = struct
     | _ ->
         failwith "error: expression expected"
 
+  let rec elab_ty (context : ItemContext.t) (t : tm) : Void.t R.is_ty =
+    match t with
+    | Empty ->
+        R.Unit.form
+    | Name name -> begin
+        match ItemContext.lookup name context with
+        | Some (`Item var) ->
+            R.Structural.item_ty var
+            |> R.ItemM.handle (function
+                (* TODO: improve diagnostics *)
+                | `TypeExpected -> failwith "error: type expected"
+                | `UnboundVariable -> failwith "bug: unbound item variable")
+        | Some (`Type t) -> t
+        | Some (`FormatUniv | `TypeUniv) -> failwith "error: type expected" (* TODO: improve diagnostics *)
+        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+    end
+    | Seq (t0, t1) ->
+        R.Pair.form (elab_ty context t0) (elab_ty context t1)
+    | _ ->
+        failwith "error: type expected"
+
   let rec elab_format (context : ItemContext.t) (t : tm) : Void.t R.is_format =
     match t with
     | Empty ->
         R.Format.empty
     | Name name -> begin
         match ItemContext.lookup name context with
-        | Some (`Item var) -> R.Format.item var
+        | Some (`Item var) ->
+            R.Format.item var
+            |> R.ItemM.handle (function
+                (* TODO: improve diagnostics *)
+                | `FormatExpected -> R.Format.fail (failwith "error: format expected")
+                | `UnboundVariable -> R.Format.fail (failwith "bug: unbound item variable"))
         | Some (`FormatUniv | `TypeUniv | `Type _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
         | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
     end
@@ -188,7 +218,7 @@ end = struct
           (name, fun x -> elab_expr LocalContext.(of_item_context context |> bind_local (name, x)) e)
           (elab_format context f)
 
-  let rec elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
+  let elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
     match t with
     | Name name -> begin
         match ItemContext.lookup name context with
@@ -199,9 +229,7 @@ end = struct
     | Empty ->
         `Type R.Unit.form
     | Seq (t0, t1) -> begin
-        match elab_ann context t0, elab_ann context t1 with
-        | `Type t0, `Type t1 -> `Type (R.Pair.form t0 t1)
-        | _, _ -> failwith "error: type expected"
+        `Type (R.Pair.form (elab_ty context t0) (elab_ty context t1))
     end
     | _ ->
         failwith "error: invalid annotation"
@@ -211,17 +239,20 @@ end = struct
       function
       | [] ->
           R.Program.empty
-      | (name, None, format) :: rest ->
-          R.Program.def_format (name, elab_format context format)
+      | (name, None, t) :: rest ->
+          R.Program.def_format (name, elab_format context t)
             (fun var -> go (ItemContext.def_item (name, var) context) rest)
             (* FIXME:   ^^ tailcall? *)
-      | (name, Some ann, format) :: rest -> begin
+      | (name, Some ann, t) :: rest -> begin
           match elab_ann context ann with
           | `FormatUniv ->
-              R.Program.def_format (name, elab_format context format)
+              R.Program.def_format (name, elab_format context t)
                 (fun var -> go (ItemContext.def_item (name, var) context) rest)
                 (* FIXME:   ^^ tailcall? *)
-          | `TypeUniv -> failwith "error: type definitions are not yet supported"
+          | `TypeUniv ->
+              R.Program.def_ty (name, elab_ty context t)
+                (fun var -> go (ItemContext.def_item (name, var) context) rest)
+                (* FIXME:   ^^ tailcall? *)
           | `Type _ -> failwith "error: term definitions are not yet supported"
       end
     in

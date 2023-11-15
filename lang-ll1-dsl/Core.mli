@@ -84,13 +84,14 @@ module Refiner : sig
   module Program : sig
 
     val empty : 'e is_program
+    val def_ty : string * 'e is_ty -> (item_var -> 'e is_program) -> 'e is_program
     val def_format : string * 'e is_format -> (item_var -> 'e is_program) -> 'e is_program
 
   end
 
   module Format : sig
 
-    val item : item_var -> 'e is_format
+    val item : item_var -> [`FormatExpected | `UnboundVariable] is_format
     val empty : 'e is_format
     val fail : 'e is_ty -> 'e is_format
     val byte : ByteSet.t -> 'e is_format
@@ -102,7 +103,8 @@ module Refiner : sig
 
   module Structural : sig
 
-    val local : local_var -> 'e synth_ty
+    val item_ty : item_var -> [`TypeExpected | `UnboundVariable] is_ty
+    val local : local_var -> [`UnboundVariable] synth_ty
     val conv : Void.t synth_ty -> [`TypeMismatch of ty * ty] check_ty
     val ann : 'e check_ty -> 'e is_ty -> 'e synth_ty
 
