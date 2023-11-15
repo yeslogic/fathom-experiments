@@ -1,4 +1,4 @@
-module FormatInfo = struct
+module FormatInfo : sig
   (** Semantic information about a binary format. *)
 
   type t = {
@@ -15,10 +15,46 @@ module FormatInfo = struct
         byte of each suffix. *)
   }
 
-  let byte s = {
-    nullable = false; (* Always consumes exactly one byte from the input *)
-    first = s;
-    follow_last = ByteSet.empty;
+
+  (** {1 Predicates} *)
+
+  val separate : t -> t -> bool
+  (** [separate i1 i2] checks that the follow set of [i1] type does not
+      overlap with the first set of [i1]. This is important to ensure that we
+      know for certain when to stop parsing a parser with type [i1], and to
+      start parsing a parser of type [i2] without needing to backtrack. *)
+
+  val non_overlapping : t -> t -> bool
+  (** [non_overlapping i1 i2] checks if the two types can be uniquely
+      distinguished based on their first sets. This is important to avoid
+      ambiguities in deteministic unions that would require backtracking. *)
+
+
+  (** {1 Combinators} *)
+
+  val empty : t
+  (** [empty] describes a language containing only the empty string. *)
+
+  val byte : ByteSet.t -> t
+  (** [byte c] describes a language containg a single byte in the set [s]. *)
+
+  val fail : t
+  (** [fail] describes a language with no strings. *)
+
+  val seq : t -> t -> t
+  (** [seq i1 i2] describes a language produced by sequencing a language
+      of type [i1] before a language of type [i2]. *)
+
+  val union : t -> t -> t
+  (** [union i1 i2] describes a language produced from the union of a
+      language of type [i1] with a language of type [i2]. *)
+
+end = struct
+
+  type t = {
+    nullable : bool;
+    first : ByteSet.t;
+    follow_last : ByteSet.t;
   }
 
   let empty = {
@@ -27,19 +63,18 @@ module FormatInfo = struct
     follow_last = ByteSet.empty;
   }
 
+  let byte s = {
+    nullable = false; (* Always consumes exactly one byte from the input *)
+    first = s;
+    follow_last = ByteSet.empty;
+  }
+
   let fail = byte ByteSet.empty
 
-  (** [separate i1 i2] checks that the follow set of [i1] type does not
-      overlap with the first set of [i1]. This is important to ensure that we
-      know for certain when to stop parsing a parser with type [i1], and to
-      start parsing a parser of type [i2] without needing to backtrack. *)
   let separate i1 i2 =
     (* TODO: Could it be ok for either [i1] or [i2] to be nullable? *)
     not i1.nullable && ByteSet.disjoint i1.follow_last i2.first
 
-  (** [non_overlapping i1 i2] checks if the two types can be uniquely
-      distinguished based on their first sets. This is important to avoid
-      ambiguities in alternation and hence avoid backtracking. *)
   let non_overlapping i1 i2 =
     not (i1.nullable && i2.nullable) && ByteSet.disjoint i1.first i2.first
 
