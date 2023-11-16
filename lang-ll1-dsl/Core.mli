@@ -99,6 +99,8 @@ module Refiner : sig
     val union : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format
     val map : (string * (local_var -> 'e synth_ty)) -> 'e is_format -> 'e is_format
 
+    val repr : 'e is_format -> 'e is_ty
+
   end
 
   module Structural : sig

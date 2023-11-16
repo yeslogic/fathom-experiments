@@ -35,6 +35,7 @@ let rec token lexbuf =
   | ":=" -> COLON_EQUALS
   | "," -> COMMA
   | "=>" -> EQUALS_GREATER
+  | "." -> FULL_STOP
   | "|" -> PIPE
   | ";" -> SEMI
   | ".." -> DOT_DOT

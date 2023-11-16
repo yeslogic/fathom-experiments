@@ -13,6 +13,8 @@ Elaborate items
   
   def Unit : Type := Unit;
   
+  def test-repr : Type := Unit;
+  
 
 Elaborate base
   $ cat base.txt | ll1-dsl

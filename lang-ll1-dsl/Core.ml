@@ -525,6 +525,10 @@ module Refiner = struct
         info = f.info;
       }
 
+    let repr (f : 'e is_format) : 'e is_ty =
+      let* f = f in
+      ItemM.pure f.repr
+
   end
 
   module Structural = struct

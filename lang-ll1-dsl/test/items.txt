@@ -8,3 +8,6 @@ def format-ann : Format := ();
 def Byte : Type := U8;
 def Pair : Type := Byte, Byte;
 def Unit : Type := ();
+
+def test-repr : Type :=
+  format-ann.Repr;

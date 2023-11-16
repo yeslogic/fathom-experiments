@@ -8,6 +8,7 @@
 %token COLON_EQUALS ":="
 %token COMMA ","
 %token EQUALS_GREATER "=>"
+%token FULL_STOP "."
 %token PIPE "|"
 %token SEMI ";"
 
@@ -56,6 +57,11 @@ let range_tm :=
   | start = inclusive; "..<"; stop = exclusive; { Surface.range start stop }
   | start = exclusive; ">.."; stop = inclusive; { Surface.range start stop }
   | start = exclusive; ">..<"; stop = exclusive; { Surface.range start stop }
+  | proj_tm
+
+let proj_tm :=
+  | t = proj_tm; "."; l = NAME;
+      { Surface.proj t l }
   | atomic_tm
 
 let atomic_tm :=

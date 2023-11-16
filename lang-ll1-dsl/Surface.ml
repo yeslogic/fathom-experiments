@@ -7,6 +7,7 @@ type tm =
   | Seq of tm * tm
   | Union of tm * tm
   | Action of tm * (string * tm)
+  | Proj of tm * string
 
 and bound =
   | Open
@@ -21,6 +22,7 @@ let not t = Not t
 let seq t0 t1 = Seq (t0, t1)
 let union t0 t1 = Union (t0, t1)
 let action t0 (n, t1) = Action (t0, (n, t1))
+let proj t l = Proj (t, l)
 
 type program = {
   items : (string * tm option * tm) list;
@@ -156,27 +158,6 @@ end = struct
     | _ ->
         failwith "error: expression expected"
 
-  let rec elab_ty (context : ItemContext.t) (t : tm) : Void.t R.is_ty =
-    match t with
-    | Empty ->
-        R.Unit.form
-    | Name name -> begin
-        match ItemContext.lookup name context with
-        | Some (`Item var) ->
-            R.Structural.item_ty var
-            |> R.ItemM.handle (function
-                (* TODO: improve diagnostics *)
-                | `TypeExpected -> failwith "error: type expected"
-                | `UnboundVariable -> failwith "bug: unbound item variable")
-        | Some (`Type t) -> t
-        | Some (`FormatUniv | `TypeUniv) -> failwith "error: type expected" (* TODO: improve diagnostics *)
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
-    end
-    | Seq (t0, t1) ->
-        R.Pair.form (elab_ty context t0) (elab_ty context t1)
-    | _ ->
-        failwith "error: type expected"
-
   let rec elab_format (context : ItemContext.t) (t : tm) : Void.t R.is_format =
     match t with
     | Empty ->
@@ -217,6 +198,31 @@ end = struct
         R.Format.map
           (name, fun x -> elab_expr LocalContext.(of_item_context context |> bind_local (name, x)) e)
           (elab_format context f)
+    | Proj (_, _) ->
+        failwith "TODO"
+
+  let rec elab_ty (context : ItemContext.t) (t : tm) : Void.t R.is_ty =
+    match t with
+    | Empty ->
+        R.Unit.form
+    | Name name -> begin
+        match ItemContext.lookup name context with
+        | Some (`Item var) ->
+            R.Structural.item_ty var
+            |> R.ItemM.handle (function
+                (* TODO: improve diagnostics *)
+                | `TypeExpected -> failwith "error: type expected"
+                | `UnboundVariable -> failwith "bug: unbound item variable")
+        | Some (`Type t) -> t
+        | Some (`FormatUniv | `TypeUniv) -> failwith "error: type expected" (* TODO: improve diagnostics *)
+        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+    end
+    | Seq (t0, t1) ->
+        R.Pair.form (elab_ty context t0) (elab_ty context t1)
+    | Proj (t, "Repr") ->
+        R.Format.repr (elab_format context t)
+    | _ ->
+        failwith "error: type expected"
 
   let elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
     match t with
