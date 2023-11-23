@@ -177,7 +177,7 @@ and pp_print_union_format ppf f =
       Format.fprintf ppf "@[%a@]@ |@ %a"
         pp_print_seq_format f0
         pp_print_union_format f1
-  | _ -> Format.fprintf ppf "%a" pp_print_seq_format f
+  | _ -> pp_print_seq_format ppf f
 
 and pp_print_seq_format ppf f =
   match f.node with
@@ -185,7 +185,7 @@ and pp_print_seq_format ppf f =
       Format.fprintf ppf "@[%a,@]@ %a"
         pp_print_app_format f0
         pp_print_seq_format f1
-  | _ -> Format.fprintf ppf "%a" pp_print_app_format f
+  | _ -> pp_print_app_format ppf f
 
 and pp_print_app_format ppf f =
   match f.node with
@@ -198,7 +198,7 @@ and pp_print_app_format ppf f =
         n
         (pp_print_expr [n]) e
         pp_print_atomic_format f
-  | _ -> Format.fprintf ppf "%a" pp_print_atomic_format f
+  | _ -> pp_print_atomic_format ppf f
 
 and pp_print_atomic_format ppf f =
   match f.node with
