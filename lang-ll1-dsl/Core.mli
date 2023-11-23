@@ -5,6 +5,9 @@ type format
 type program
 (** The type of programs. *)
 
+val pp_print_ty : Format.formatter -> ty -> unit
+(** Pretty print a type *)
+
 val pp_print_program : Format.formatter -> program -> unit
 (** Pretty print a program *)
 
