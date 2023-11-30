@@ -75,66 +75,72 @@ module Refiner : sig
   type item_var
   type local_var
 
-  type 'e is_program = (program, 'e) ItemM.m
-  type 'e is_format = (format, 'e) ItemM.m
-  type 'e is_ty = (ty, 'e) ItemM.m
-  type 'e synth_ty = (expr * ty, 'e) LocalM.m
-  type 'e check_ty = ty -> (expr, 'e) LocalM.m
+  type 'e is_program_err = (program, 'e) ItemM.m
+  type 'e is_format_err = (format, 'e) ItemM.m
+  type 'e is_ty_err = (ty, 'e) ItemM.m
+  type 'e synth_ty_err = (expr * ty, 'e) LocalM.m
+  type 'e check_ty_err = ty -> (expr, 'e) LocalM.m
+
+  type is_program = Void.t is_program_err
+  type is_format = Void.t is_format_err
+  type is_ty = Void.t is_ty_err
+  type synth_ty = Void.t synth_ty_err
+  type check_ty = Void.t check_ty_err
 
 
   (** {1 Inference rules} *)
 
   module Program : sig
 
-    val empty : 'e is_program
-    val def_ty : string * 'e is_ty -> (item_var -> 'e is_program) -> 'e is_program
-    val def_format : string * 'e is_format -> (item_var -> 'e is_program) -> 'e is_program
+    val empty : is_program
+    val def_ty : string * is_ty -> (item_var -> is_program) -> is_program
+    val def_format : string * is_format -> (item_var -> is_program) -> is_program
 
   end
 
   module Format : sig
 
-    val item : item_var -> [`FormatExpected | `UnboundVariable] is_format
-    val empty : 'e is_format
-    val fail : 'e is_ty -> 'e is_format
-    val byte : ByteSet.t -> 'e is_format
-    val seq : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat] is_format
-    val union : Void.t is_format -> Void.t is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format
-    val map : (string * (local_var -> 'e synth_ty)) -> 'e is_format -> 'e is_format
+    val item : item_var -> [`FormatExpected | `UnboundVariable] is_format_err
+    val empty : is_format
+    val fail : is_ty -> is_format
+    val byte : ByteSet.t -> is_format
+    val seq : is_format -> is_format -> [`AmbiguousFormat] is_format_err
+    val union : is_format -> is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err
+    val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
 
-    val repr : 'e is_format -> 'e is_ty
+    val repr : is_format -> is_ty
 
   end
 
   module Structural : sig
 
-    val item_ty : item_var -> [`TypeExpected | `UnboundVariable] is_ty
-    val local : local_var -> [`UnboundVariable] synth_ty
-    val conv : Void.t synth_ty -> [`TypeMismatch of ty * ty] check_ty
-    val ann : 'e check_ty -> 'e is_ty -> 'e synth_ty
+    val item_ty : item_var -> [`TypeExpected | `UnboundVariable] is_ty_err
+    val local : local_var -> [`UnboundVariable] synth_ty_err
+    val conv : synth_ty -> [`TypeMismatch of ty * ty] check_ty_err
+    val ann : check_ty -> is_ty -> synth_ty
 
   end
 
   module Unit : sig
 
-    val form : 'e is_ty
-    val intro : 'e synth_ty
+    val form : is_ty
+    val intro : synth_ty
 
   end
 
   module Byte : sig
 
-    val form : 'e is_ty
-    val intro : char -> 'e synth_ty
+    val form : is_ty
+    val intro : char -> synth_ty
 
   end
 
   module Pair : sig
 
-    val form : 'e is_ty -> 'e is_ty -> 'e is_ty
-    val intro : 'e synth_ty -> 'e synth_ty -> 'e synth_ty
-    val fst : Void.t synth_ty -> [`UnexpectedType] synth_ty
-    val snd : Void.t synth_ty -> [`UnexpectedType] synth_ty
+    val form : is_ty -> is_ty -> is_ty
+    val intro : synth_ty -> synth_ty -> synth_ty
+    val fst : synth_ty -> [`UnexpectedType] synth_ty_err
+    val snd : synth_ty -> [`UnexpectedType] synth_ty_err
 
   end
 

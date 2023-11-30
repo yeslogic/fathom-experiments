@@ -43,7 +43,7 @@ module Elab : sig
 
   end
 
-  val elab_program : ItemContext.t -> program -> Basis.Void.t Core.Refiner.is_program
+  val elab_program : ItemContext.t -> program -> Core.Refiner.is_program
 
 end = struct
 
@@ -66,7 +66,7 @@ end = struct
     type entry = [
       | `FormatUniv
       | `TypeUniv
-      | `Type of Void.t R.is_ty
+      | `Type of R.is_ty
       | `Item of R.item_var
     ]
 
@@ -127,8 +127,7 @@ end = struct
       | Inclusive (Int start) -> start (* TODO: Check [start] is in 0..255 *)
       | Exclusive (Int start) -> start + 1 (* TODO: Check [start] is in 0>..255 *)
       | _ -> failwith "error: integer literal expected"
-    in
-    let stop =
+    and stop =
       match stop with
       | Open -> 255
       | Inclusive (Int stop) -> stop (* TODO: Check [stop] is in 0..255 *)
@@ -137,7 +136,7 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr (context : LocalContext.t) (t : tm) : Void.t R.synth_ty =
+  let rec elab_expr (context : LocalContext.t) (t : tm) : R.synth_ty =
     match t with
     | Empty ->
         R.Unit.intro
@@ -158,7 +157,7 @@ end = struct
     | _ ->
         failwith "error: expression expected"
 
-  let rec elab_format (context : ItemContext.t) (t : tm) : Void.t R.is_format =
+  let rec elab_format (context : ItemContext.t) (t : tm) : R.is_format =
     match t with
     | Empty ->
         R.Format.empty
@@ -201,7 +200,7 @@ end = struct
     | Proj (_, _) ->
         failwith "TODO"
 
-  let rec elab_ty (context : ItemContext.t) (t : tm) : Void.t R.is_ty =
+  let rec elab_ty (context : ItemContext.t) (t : tm) : R.is_ty =
     match t with
     | Empty ->
         R.Unit.form
@@ -224,7 +223,7 @@ end = struct
     | _ ->
         failwith "error: type expected"
 
-  let elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of Void.t R.is_ty] =
+  let elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of R.is_ty] =
     match t with
     | Name name -> begin
         match ItemContext.lookup name context with
@@ -240,7 +239,7 @@ end = struct
     | _ ->
         failwith "error: invalid annotation"
 
-  let elab_program (context : ItemContext.t) (p : program) : Void.t R.is_program =
+  let elab_program (context : ItemContext.t) (p : program) : R.is_program =
     let rec go context =
       function
       | [] ->

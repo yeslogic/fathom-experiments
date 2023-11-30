@@ -423,11 +423,17 @@ module Refiner = struct
     name : string;
   }
 
-  type 'e is_format = (format, 'e) ItemM.m
-  type 'e is_program = (program, 'e) ItemM.m
-  type 'e is_ty = (ty, 'e) ItemM.m
-  type 'e synth_ty = (expr * ty, 'e) LocalM.m
-  type 'e check_ty = ty -> (expr, 'e) LocalM.m
+  type 'e is_format_err = (format, 'e) ItemM.m
+  type 'e is_program_err = (program, 'e) ItemM.m
+  type 'e is_ty_err = (ty, 'e) ItemM.m
+  type 'e synth_ty_err = (expr * ty, 'e) LocalM.m
+  type 'e check_ty_err = ty -> (expr, 'e) LocalM.m
+
+  type is_program = Void.t is_program_err
+  type is_format = Void.t is_format_err
+  type is_ty = Void.t is_ty_err
+  type synth_ty = Void.t synth_ty_err
+  type check_ty = Void.t check_ty_err
 
 
   (* Inference rules *)
@@ -436,10 +442,10 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let empty : 'e is_program =
+    let empty : is_program =
       ItemM.pure { items = [] }
 
-    let def_ty (name, t) (body : item_var -> 'e is_program) : 'e is_program =
+    let def_ty (name, t) (body : item_var -> is_program) : is_program =
       let* t = t in
       let* program = ItemM.scope
         (fun items -> (name, Type t) :: items)
@@ -447,7 +453,7 @@ module Refiner = struct
       in
       ItemM.pure { items = (name, Type t) :: program.items }
 
-    let def_format (name, f) (body : item_var -> 'e is_program) : 'e is_program =
+    let def_format (name, f) (body : item_var -> is_program) : is_program =
       let* f = f in
       let* program = ItemM.scope
         (fun items -> (name, Format { repr = f.repr; info = f.info }) :: items)
@@ -461,21 +467,21 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let item (var : item_var) : [`FormatExpected | `UnboundVariable] is_format =
+    let item (var : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
       let* item = ItemM.lookup_item var.name in
       match item with
       | Some (Format { repr; info }) -> ItemM.pure { node = Item var.name; repr; info }
       | Some _ -> ItemM.throw `FormatExpected
       | None -> ItemM.throw `UnboundVariable
 
-    let empty : 'e is_format =
+    let empty : is_format =
       ItemM.pure {
         node = Empty;
         repr = UnitTy;
         info = FormatInfo.empty;
       }
 
-    let fail (t : 'e is_ty) : 'e is_format =
+    let fail (t : is_ty) : is_format =
       let* t = t in
       ItemM.pure {
         node = Fail t;
@@ -483,14 +489,14 @@ module Refiner = struct
         info = FormatInfo.fail;
       }
 
-    let byte (s : ByteSet.t) : 'e is_format =
+    let byte (s : ByteSet.t) : is_format =
       ItemM.pure {
         node = Byte s;
         repr = ByteTy;
         info = FormatInfo.byte s;
       }
 
-    let seq (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat] is_format =
+    let seq (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat] is_format_err =
       let* f0 = f0 |> ItemM.handle Void.absurd in
       let* f1 = f1 |> ItemM.handle Void.absurd in
       if not (FormatInfo.separate f0.info f1.info) then
@@ -502,7 +508,7 @@ module Refiner = struct
           info = FormatInfo.seq f0.info f1.info;
         }
 
-    let union (f0 : Void.t is_format) (f1 : Void.t is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format =
+    let union (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err =
       let* f0 = f0 |> ItemM.handle Void.absurd in
       let* f1 = f1 |> ItemM.handle Void.absurd in
       if not (FormatInfo.non_overlapping f0.info f1.info) then
@@ -516,7 +522,7 @@ module Refiner = struct
           info = FormatInfo.union f0.info f1.info;
         }
 
-    let map (x, e : string * (local_var -> 'e synth_ty)) (f : 'e is_format) : 'e is_format =
+    let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
       let* f = f in
       let* e, t = ItemM.local_m [f.repr] (e { level = 0 }) in
       ItemM.pure {
@@ -525,7 +531,7 @@ module Refiner = struct
         info = f.info;
       }
 
-    let repr (f : 'e is_format) : 'e is_ty =
+    let repr (f : is_format) : is_ty =
       let* f = f in
       ItemM.pure f.repr
 
@@ -535,7 +541,7 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let item_ty (var : item_var) : [`TypeExpected | `UnboundVariable] is_ty =
+    let item_ty (var : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
       let* item = ItemM.lookup_item var.name in
       match item with
       | Some (Type t) -> ItemM.pure t
@@ -544,19 +550,19 @@ module Refiner = struct
 
     let ( let* ) = LocalM.bind
 
-    let local (var : local_var) : [`UnboundVariable] synth_ty =
+    let local (var : local_var) : [`UnboundVariable] synth_ty_err =
       let* binding = LocalM.lookup_local var.level in
       match binding with
       | Some (e, t) -> LocalM.pure (e, t)
       | None -> LocalM.throw `UnboundVariable
 
-    let conv (e : Void.t synth_ty) : [`TypeMismatch of ty * ty] check_ty =
+    let conv (e : synth_ty) : [`TypeMismatch of ty * ty] check_ty_err =
       fun t ->
         let* e, t' = e |> LocalM.handle Void.absurd in
         if t = t' then LocalM.pure e else
           LocalM.throw (`TypeMismatch (t, t'))
 
-    let ann (e : 'e check_ty) (t : 'e is_ty) : 'e synth_ty =
+    let ann (e : check_ty) (t : is_ty) : synth_ty =
       let* t = LocalM.item_m t in
       let* e = e t in
       LocalM.pure (Ann (e, t), t)
@@ -565,20 +571,20 @@ module Refiner = struct
 
   module Unit = struct
 
-    let form : 'e is_ty =
+    let form : is_ty =
       ItemM.pure UnitTy
 
-    let intro : 'e synth_ty =
+    let intro : synth_ty =
       LocalM.pure (UnitIntro, UnitTy)
 
   end
 
   module Byte = struct
 
-    let form : 'e is_ty =
+    let form : is_ty =
       ItemM.pure ByteTy
 
-    let intro c : 'e synth_ty =
+    let intro c : synth_ty =
       LocalM.pure (ByteIntro c, ByteTy)
 
   end
@@ -587,25 +593,25 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let form (t0 : 'e is_ty) (t1 : 'e is_ty) : 'e is_ty =
+    let form (t0 : is_ty) (t1 : is_ty) : is_ty =
       let* t0 = t0 in
       let* t1 = t1 in
       ItemM.pure (PairTy (t0, t1))
 
     let ( let* ) = LocalM.bind
 
-    let intro (e0 : 'e synth_ty) (e1 : 'e synth_ty) : 'e synth_ty =
+    let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
       let* e0, t0 = e0 in
       let* e1, t1 = e1 in
       LocalM.pure (PairIntro (e0, e1), PairTy (t0, t1))
 
-    let fst (e : Void.t synth_ty) : [`UnexpectedType] synth_ty =
+    let fst (e : synth_ty) : [`UnexpectedType] synth_ty_err =
       let* e, t = e |> LocalM.handle Void.absurd in
       match t with
       | PairTy (t0, _) -> LocalM.pure (PairFst e, t0)
       | _ -> LocalM.throw `UnexpectedType
 
-    let snd (e : Void.t synth_ty) : [`UnexpectedType] synth_ty =
+    let snd (e : synth_ty) : [`UnexpectedType] synth_ty_err =
       let* e, t = e |> LocalM.handle Void.absurd in
       match t with
       | PairTy (_, t1) -> LocalM.pure (PairSnd e, t1)
