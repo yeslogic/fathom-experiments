@@ -129,6 +129,7 @@ and format = {
 type item =
   | Type of ty
   | Format of format
+  | Expr of expr * ty
 
 type program = {
   items : (string * item) list;
@@ -222,6 +223,14 @@ let pp_print_program ppf p =
         Format.fprintf ppf "@[<2>@[def@ %s@ :@ Type@ :=@]@ @[%a;@]@]"
           name
           pp_print_ty t;
+        Format.pp_force_newline ppf ();
+        Format.pp_force_newline ppf ();
+        (go [@tailcall]) ppf items
+    | (name, Expr (e, t)) :: items ->
+        Format.fprintf ppf "@[<2>@[def@ %s@ :@ @[%a@]@ :=@]@ @[%a;@]@]"
+          name
+          pp_print_ty t
+          (pp_print_expr []) e;
         Format.pp_force_newline ppf ();
         Format.pp_force_newline ppf ();
         (go [@tailcall]) ppf items
@@ -325,6 +334,7 @@ module Refiner = struct
   type item =
     | Type of ty
     | Format of { repr : ty; info : FormatInfo.t }
+    | Expr of expr * ty
 
   type item_context = (string * item) list
   type local_context = ty list
@@ -456,6 +466,15 @@ module Refiner = struct
       in
       ItemM.pure { items = (name, Format f) :: program.items }
 
+    let def_expr (name, t, e) (body : item_var -> is_program) : is_program =
+      let* t = t in
+      let* e = ItemM.local_m [] (e t) in
+      let* program = ItemM.scope
+        (fun items -> (name, Expr (e, t)) :: items)
+        (body name)
+      in
+      ItemM.pure { items = (name, Expr (e, t)) :: program.items }
+
   end
 
   module Format = struct
@@ -544,6 +563,13 @@ module Refiner = struct
       | None -> ItemM.throw `UnboundVariable
 
     let ( let* ) = LocalM.bind
+
+    let item_expr (name : item_var) : [`ExprExpected | `UnboundVariable] synth_ty_err =
+      let* item = LocalM.item_m (ItemM.lookup_item name) in
+      match item with
+      | Some (Expr (e, t)) -> LocalM.pure (e, t)
+      | Some _ -> LocalM.throw `ExprExpected
+      | None -> LocalM.throw `UnboundVariable
 
     let local (level : local_var) : [`UnboundVariable] synth_ty_err =
       let* binding = LocalM.lookup_local level in

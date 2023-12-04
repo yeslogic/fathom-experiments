@@ -95,6 +95,7 @@ module Refiner : sig
     val empty : is_program
     val def_ty : string * is_ty -> (item_var -> is_program) -> is_program
     val def_format : string * is_format -> (item_var -> is_program) -> is_program
+    val def_expr : string * is_ty * check_ty -> (item_var -> is_program) -> is_program
 
   end
 
@@ -115,6 +116,7 @@ module Refiner : sig
   module Structural : sig
 
     val item_ty : item_var -> [`TypeExpected | `UnboundVariable] is_ty_err
+    val item_expr : item_var -> [`ExprExpected | `UnboundVariable] synth_ty_err
     val local : local_var -> [`UnboundVariable] synth_ty_err
     val conv : synth_ty -> [`TypeMismatch of ty * ty] check_ty_err
     val ann : check_ty -> is_ty -> synth_ty

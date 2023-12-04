@@ -136,7 +136,18 @@ end = struct
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
-  let rec elab_expr (context : LocalContext.t) (t : tm) : R.synth_ty =
+  let rec elab_check_ty (context : LocalContext.t) (t : tm) : R.check_ty =
+    fun ty ->
+      match t with
+      | _ ->
+          R.Structural.conv (elab_synth_ty context t) ty
+          |> R.LocalM.handle (function
+            | `TypeMismatch (found_ty, expected_ty) ->
+                failwith
+                  (Format.asprintf "error: type mismatch, found `%a` expected `%a`"
+                    Core.pp_print_ty found_ty
+                    Core.pp_print_ty expected_ty))
+  and elab_synth_ty (context : LocalContext.t) (t : tm) : R.synth_ty =
     match t with
     | Empty ->
         R.Unit.intro
@@ -147,13 +158,19 @@ end = struct
             |> R.LocalM.handle (function
                 (* TODO: improve diagnostics *)
                 | `UnboundVariable -> failwith "bug: unbound local variable")
-        | Some (`FormatUniv | `TypeUniv | `Type _ | `Item _) -> failwith "error: local variable expected"
+        | Some (`Item var) ->
+            R.Structural.item_expr var
+            |> R.LocalM.handle (function
+                (* TODO: improve diagnostics *)
+                | `ExprExpected -> failwith "error: local variable expected"
+                | `UnboundVariable -> failwith "bug: unbound local variable")
+        | Some (`FormatUniv | `TypeUniv | `Type _) -> failwith "error: local variable expected"
         | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
     end
     | Int i ->
         R.Byte.intro (byte_of_int i)
     | Seq (t0, t1) ->
-        R.Pair.intro (elab_expr context t0) (elab_expr context t1)
+        R.Pair.intro (elab_synth_ty context t0) (elab_synth_ty context t1)
     | _ ->
         failwith "error: expression expected"
 
@@ -195,7 +212,7 @@ end = struct
             | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
     | Action (f, (name, e)) ->
         R.Format.map
-          (name, fun x -> elab_expr LocalContext.(of_item_context context |> bind_local (name, x)) e)
+          (name, fun x -> elab_synth_ty LocalContext.(of_item_context context |> bind_local (name, x)) e)
           (elab_format context f)
     | Proj (_, _) ->
         failwith "TODO"
@@ -258,7 +275,10 @@ end = struct
               R.Program.def_ty (name, elab_ty context t)
                 (fun var -> go (ItemContext.def_item (name, var) context) rest)
                 (* FIXME:   ^^ tailcall? *)
-          | `Type _ -> failwith "error: term definitions are not yet supported"
+          | `Type ann ->
+              R.Program.def_expr (name, ann, elab_check_ty (LocalContext.of_item_context context) t)
+                (fun var -> go (ItemContext.def_item (name, var) context) rest)
+                (* FIXME:   ^^ tailcall? *)
       end
     in
     go context p.items

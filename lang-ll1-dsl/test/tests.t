@@ -15,6 +15,10 @@ Elaborate items
   
   def test-repr : Type := Unit;
   
+  def foo : Byte := 42;
+  
+  def bar : Byte := 42;
+  
 
 Elaborate base
   $ cat base.txt | ll1-dsl

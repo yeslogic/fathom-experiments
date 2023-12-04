@@ -11,3 +11,8 @@ def Unit : Type := ();
 
 def test-repr : Type :=
   format-ann.Repr;
+
+/-  Expressions -/
+
+def foo : U8 := 42;
+def bar : U8 := foo;
