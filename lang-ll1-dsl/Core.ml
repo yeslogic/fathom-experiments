@@ -372,13 +372,13 @@ module Refiner = struct
   type item_var = string
 
   type is_program = program item_m
-  type is_format = format item_m
+  type is_format = format local_m
   type is_ty = ty item_m
   type synth_ty = (expr * ty) local_m
   type check_ty = ty -> expr local_m
 
-  type 'e is_format_err = (format, 'e) item_err_m
   type 'e is_program_err = (program, 'e) item_err_m
+  type 'e is_format_err = (format, 'e) local_err_m
   type 'e is_ty_err = (ty, 'e) item_err_m
   type 'e synth_ty_err = (expr * ty, 'e) local_err_m
   type 'e check_ty_err = ty -> (expr, 'e) local_err_m
@@ -400,7 +400,7 @@ module Refiner = struct
 
     let def_format (name, f) (body : item_var -> is_program) : is_program =
       fun items ->
-        let f = f items in
+        let f = f items [] in
         let program = body name ((name, Format { repr = f.repr; info = f.info }) :: items) in
         { items = (name, Format f) :: program.items }
 
@@ -416,14 +416,14 @@ module Refiner = struct
   module Format = struct
 
     let item (name : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
-      fun items ->
+      fun items _ ->
         match List.assoc_opt name items with
         | Some (Format { repr; info }) -> Ok { node = Item name; repr; info }
         | Some _ -> Error `FormatExpected
         | None -> Error `UnboundVariable
 
     let empty : is_format =
-      fun _ ->
+      fun _ _ ->
         {
           node = Empty;
           repr = UnitTy;
@@ -431,7 +431,7 @@ module Refiner = struct
         }
 
     let fail (t : is_ty) : is_format =
-      fun items ->
+      fun items _ ->
         let t = t items in
         {
           node = Fail t;
@@ -440,7 +440,7 @@ module Refiner = struct
         }
 
     let byte (s : ByteSet.t) : is_format =
-      fun _ ->
+      fun _ _ ->
         {
           node = Byte s;
           repr = ByteTy;
@@ -448,9 +448,9 @@ module Refiner = struct
         }
 
     let seq (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat] is_format_err =
-      fun items ->
-        let f0 = f0 items in
-        let f1 = f1 items in
+      fun items locals ->
+        let f0 = f0 items locals in
+        let f1 = f1 items locals in
         if not (FormatInfo.separate f0.info f1.info) then
           Error `AmbiguousFormat
         else
@@ -461,9 +461,9 @@ module Refiner = struct
           }
 
     let union (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err =
-      fun items ->
-        let f0 = f0 items in
-        let f1 = f1 items in
+      fun items locals ->
+        let f0 = f0 items locals in
+        let f1 = f1 items locals in
         if not (FormatInfo.non_overlapping f0.info f1.info) then
           Error `AmbiguousFormat
         else if f0.repr <> f1.repr then
@@ -476,9 +476,9 @@ module Refiner = struct
           }
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
-      fun items ->
-        let f = f items in
-        let e, t = e 0 items [f.repr] in
+      fun items locals ->
+        let f = f items locals in
+        let e, t = e 0 items (f.repr :: locals) in
         {
           node = Map (t, (x, e), f);
           repr = t;
@@ -487,7 +487,7 @@ module Refiner = struct
 
     let repr (f : is_format) : is_ty =
       fun items ->
-        (f items).repr
+        (f items []).repr
 
   end
 

@@ -63,13 +63,13 @@ module Refiner : sig
   type local_var
 
   type is_program = program item_m
-  type is_format = format item_m
+  type is_format = format local_m
   type is_ty = ty item_m
   type synth_ty = (expr * ty) local_m
   type check_ty = ty -> expr local_m
 
-  type 'e is_format_err = (format, 'e) item_err_m
   type 'e is_program_err = (program, 'e) item_err_m
+  type 'e is_format_err = (format, 'e) local_err_m
   type 'e is_ty_err = (ty, 'e) item_err_m
   type 'e synth_ty_err = (expr * ty, 'e) local_err_m
   type 'e check_ty_err = ty -> (expr, 'e) local_err_m

@@ -173,19 +173,19 @@ end = struct
     | _ ->
         failwith "error: expression expected"
 
-  let rec elab_format (context : ItemContext.t) (t : tm) : R.is_format =
+  let rec elab_format (context : LocalContext.t) (t : tm) : R.is_format =
     match t with
     | Empty ->
         R.Format.empty
     | Name name -> begin
-        match ItemContext.lookup name context with
+        match LocalContext.lookup name context with
         | Some (`Item var) ->
             R.Format.item var
-            |> R.handle_item (function
+            |> R.handle_local (function
                 (* TODO: improve diagnostics *)
                 | `FormatExpected -> R.Format.fail (failwith "error: format expected")
                 | `UnboundVariable -> R.Format.fail (failwith "bug: unbound item variable"))
-        | Some (`FormatUniv | `TypeUniv | `Type _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
+        | Some (`FormatUniv | `TypeUniv | `Type _ | `Local _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
         | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
     end
     | Int i ->
@@ -200,18 +200,18 @@ end = struct
         R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
     | Seq (t0, t1) ->
         R.Format.seq (elab_format context t0) (elab_format context t1)
-        |> R.handle_item (function
+        |> R.handle_local (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
     | Union (t0, t1) ->
         R.Format.union (elab_format context t0) (elab_format context t1)
-        |> R.handle_item (function
+        |> R.handle_local (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")
             | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
     | Action (f, (name, e)) ->
         R.Format.map
-          (name, fun x -> elab_synth_ty LocalContext.(of_item_context context |> bind_local (name, x)) e)
+          (name, fun x -> elab_synth_ty (context |> LocalContext.bind_local (name, x)) e)
           (elab_format context f)
     | Proj (_, _) ->
         failwith "TODO"
@@ -235,7 +235,7 @@ end = struct
     | Seq (t0, t1) ->
         R.Pair.form (elab_ty context t0) (elab_ty context t1)
     | Proj (t, "Repr") ->
-        R.Format.repr (elab_format context t)
+        R.Format.repr (elab_format (LocalContext.of_item_context context) t)
     | _ ->
         failwith "error: type expected"
 
@@ -261,13 +261,13 @@ end = struct
       | [] ->
           R.Program.empty
       | (name, None, t) :: rest ->
-          R.Program.def_format (name, elab_format context t)
+          R.Program.def_format (name, elab_format (LocalContext.of_item_context context) t)
             (fun var -> go (ItemContext.def_item (name, var) context) rest)
             (* FIXME:   ^^ tailcall? *)
       | (name, Some ann, t) :: rest -> begin
           match elab_ann context ann with
           | `FormatUniv ->
-              R.Program.def_format (name, elab_format context t)
+              R.Program.def_format (name, elab_format (LocalContext.of_item_context context) t)
                 (fun var -> go (ItemContext.def_item (name, var) context) rest)
                 (* FIXME:   ^^ tailcall? *)
           | `TypeUniv ->
