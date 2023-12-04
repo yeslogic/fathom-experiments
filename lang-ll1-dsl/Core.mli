@@ -95,6 +95,7 @@ module Refiner : sig
     val seq : is_format -> is_format -> [`AmbiguousFormat] is_format_err
     val union : is_format -> is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err
     val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
+    val flat_map : (string * (local_var -> is_format)) -> is_format -> [`AmbiguousFormat] is_format_err
 
     val repr : is_format -> is_ty
 

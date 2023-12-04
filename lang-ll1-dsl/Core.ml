@@ -122,6 +122,7 @@ type format_node =
   | Seq of format * format
   | Union of format * format
   | Map of ty * (string * expr) * format
+  | FlatMap of ty * (string * format) * format
 and format = {
   node : format_node;
   repr : ty;
@@ -171,26 +172,28 @@ and pp_print_atomic_expr names ppf e =
   | PairSnd e -> Format.fprintf ppf "%a.2" (pp_print_atomic_expr names) e
   | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
-let rec pp_print_format ppf f =
-  pp_print_union_format ppf f
+let rec pp_print_format names ppf f =
+  pp_print_union_format names ppf f
 
-and pp_print_union_format ppf f =
+and pp_print_union_format names ppf f =
   match f.node with
   | Union (f0, f1) ->
       Format.fprintf ppf "@[%a@]@ |@ %a"
-        pp_print_seq_format f0
-        pp_print_union_format f1
-  | _ -> pp_print_seq_format ppf f
+        (pp_print_seq_format names) f0
+        (pp_print_union_format names) f1
+  | _ ->
+      pp_print_seq_format names ppf f
 
-and pp_print_seq_format ppf f =
+and pp_print_seq_format names ppf f =
   match f.node with
   | Seq (f0, f1) ->
       Format.fprintf ppf "@[%a,@]@ %a"
-        pp_print_app_format f0
-        pp_print_seq_format f1
-  | _ -> pp_print_app_format ppf f
+        (pp_print_app_format names) f0
+        (pp_print_seq_format names) f1
+  | _ ->
+      pp_print_app_format names ppf f
 
-and pp_print_app_format ppf f =
+and pp_print_app_format names ppf f =
   match f.node with
   | Fail t ->
       Format.fprintf ppf "@[fail@ @@%a@]"
@@ -199,16 +202,23 @@ and pp_print_app_format ppf f =
       Format.fprintf ppf "@[map@ @@%a@ (%s@ =>@ %a)@ %a@]"
         pp_print_atomic_ty t
         n
-        (pp_print_expr [n]) e
-        pp_print_atomic_format f
-  | _ -> pp_print_atomic_format ppf f
+        (pp_print_expr (n :: names)) e
+        (pp_print_atomic_format names) f
+  | FlatMap (t, (n, f1), f0) ->
+      Format.fprintf ppf "@[flat-map@ @@%a@ (%s@ =>@ %a)@ %a@]"
+        pp_print_atomic_ty t
+        n
+        (pp_print_format (n :: names)) f1
+        (pp_print_atomic_format names) f0
+  | _ ->
+      pp_print_atomic_format names ppf f
 
-and pp_print_atomic_format ppf f =
+and pp_print_atomic_format names ppf f =
   match f.node with
   | Item name -> Format.fprintf ppf "%s" name
   | Empty -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s (* TODO: Custom printing *)
-  | _ -> Format.fprintf ppf "(%a)" pp_print_format f
+  | _ -> Format.fprintf ppf "(%a)" (pp_print_format names) f
 
 let pp_print_program ppf p =
   let rec go ppf items =
@@ -217,7 +227,7 @@ let pp_print_program ppf p =
     | (name, Format f) :: items ->
         Format.fprintf ppf "@[<2>@[def@ %s@ :@ Format@ :=@]@ @[%a;@]@]"
           name
-          pp_print_format f;
+          (pp_print_format []) f;
         Format.pp_force_newline ppf ();
         Format.pp_force_newline ppf ();
         (go [@tailcall]) ppf items
@@ -292,36 +302,42 @@ module Semantics = struct
     else
       None
 
-  let rec decode p f input pos : int * vexpr =
-    match f.node with
-    | Item name -> begin
-        match List.assoc_opt name p.items with
-        | Some (Format f) -> decode p f input pos
-        | Some _ -> invalid_arg "not a format item"
-        | None -> invalid_arg "unbound item variable"
-    end
-    | Empty -> pos, UnitIntro
-    | Fail _ -> raise (DecodeFailure pos)
-    | Byte s -> begin
-        match get_byte input pos with
-        | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
-        | _ -> raise (DecodeFailure pos)
-    end
-    | Seq (f0, f1) ->
-        let pos, e0 = decode p f0 input pos in
-        let pos, e1 = decode p f1 input pos in
-        pos, PairIntro (e0, e1)
-    | Union (f0, f1) -> begin
-        match get_byte input pos with
-        | Some b when ByteSet.mem b f0.info.first -> decode p f0 input pos
-        | Some b when ByteSet.mem b f1.info.first -> decode p f1 input pos
-        | _ when f0.info.nullable -> decode p f0 input pos
-        | _ when f1.info.nullable -> decode p f1 input pos
-        | _ -> raise (DecodeFailure pos)
-    end
-    | Map (_, (_, e), f) ->
-        let pos, ev = decode p f input pos in
-        pos, eval [ev] e
+  let decode (p : program) (f : format) input pos : int * vexpr =
+    let rec go (locals : local_env) (f : format) input pos : int * vexpr =
+      match f.node with
+      | Item name -> begin
+          match List.assoc_opt name p.items with
+          | Some (Format f) -> go locals f input pos
+          | Some _ -> invalid_arg "not a format item"
+          | None -> invalid_arg "unbound item variable"
+      end
+      | Empty -> pos, UnitIntro
+      | Fail _ -> raise (DecodeFailure pos)
+      | Byte s -> begin
+          match get_byte input pos with
+          | Some c when ByteSet.mem c s -> pos + 1, ByteIntro c
+          | _ -> raise (DecodeFailure pos)
+      end
+      | Seq (f0, f1) ->
+          let pos, e0 = go locals f0 input pos in
+          let pos, e1 = go locals f1 input pos in
+          pos, PairIntro (e0, e1)
+      | Union (f0, f1) -> begin
+          match get_byte input pos with
+          | Some b when ByteSet.mem b f0.info.first -> go locals f0 input pos
+          | Some b when ByteSet.mem b f1.info.first -> go locals f1 input pos
+          | _ when f0.info.nullable -> go locals f0 input pos
+          | _ when f1.info.nullable -> go locals f1 input pos
+          | _ -> raise (DecodeFailure pos)
+      end
+      | Map (_, (_, e), f) ->
+          let pos, ev = go locals f input pos in
+          pos, eval (ev :: locals) e
+      | FlatMap (_, (_, f1), f0) ->
+          let pos, ev0 = go locals f0 input pos in
+          go (ev0 :: locals) f1 input pos
+    in
+    go [] f input pos
 
 end
 
@@ -484,6 +500,19 @@ module Refiner = struct
           repr = t;
           info = f.info;
         }
+
+    let flat_map (x, f1 : string * (local_var -> is_format)) (f0 : is_format) : [`AmbiguousFormat] is_format_err =
+      fun items locals ->
+        let f0 = f0 items locals in
+        let f1 = f1 0 items (f0.repr :: locals) in
+        if not (FormatInfo.separate f0.info f1.info) then
+          Error `AmbiguousFormat
+        else
+          Ok {
+            node = FlatMap (f1.repr, (x, f1), f0);
+            repr = f1.repr;
+            info = FormatInfo.seq f0.info f1.info;
+          }
 
     let repr (f : is_format) : is_ty =
       fun items ->

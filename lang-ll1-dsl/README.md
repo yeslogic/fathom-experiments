@@ -21,7 +21,7 @@ Formats:
 - [ ] Repeat formats
 - [ ] Fixpoint formats
 - [x] Map formats
-- [ ] Bind formats
+- [x] Bind formats
 - [ ] Record formats
 
 Top-level definitions:
