@@ -415,13 +415,8 @@ module Refiner = struct
 
   (* Forms of judgement *)
 
-  type local_var = {
-    level : int;
-  }
-
-  type item_var = {
-    name : string;
-  }
+  type local_var = int
+  type item_var = string
 
   type 'e is_format_err = (format, 'e) ItemM.m
   type 'e is_program_err = (program, 'e) ItemM.m
@@ -449,7 +444,7 @@ module Refiner = struct
       let* t = t in
       let* program = ItemM.scope
         (fun items -> (name, Type t) :: items)
-        (body { name })
+        (body name)
       in
       ItemM.pure { items = (name, Type t) :: program.items }
 
@@ -457,7 +452,7 @@ module Refiner = struct
       let* f = f in
       let* program = ItemM.scope
         (fun items -> (name, Format { repr = f.repr; info = f.info }) :: items)
-        (body { name })
+        (body name)
       in
       ItemM.pure { items = (name, Format f) :: program.items }
 
@@ -467,10 +462,10 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let item (var : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
-      let* item = ItemM.lookup_item var.name in
+    let item (name : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
+      let* item = ItemM.lookup_item name in
       match item with
-      | Some (Format { repr; info }) -> ItemM.pure { node = Item var.name; repr; info }
+      | Some (Format { repr; info }) -> ItemM.pure { node = Item name; repr; info }
       | Some _ -> ItemM.throw `FormatExpected
       | None -> ItemM.throw `UnboundVariable
 
@@ -524,7 +519,7 @@ module Refiner = struct
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
       let* f = f in
-      let* e, t = ItemM.local_m [f.repr] (e { level = 0 }) in
+      let* e, t = ItemM.local_m [f.repr] (e 0) in
       ItemM.pure {
         node = Map (t, (x, e), f);
         repr = t;
@@ -541,8 +536,8 @@ module Refiner = struct
 
     let ( let* ) = ItemM.bind
 
-    let item_ty (var : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
-      let* item = ItemM.lookup_item var.name in
+    let item_ty (name : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
+      let* item = ItemM.lookup_item name in
       match item with
       | Some (Type t) -> ItemM.pure t
       | Some _ -> ItemM.throw `TypeExpected
@@ -550,8 +545,8 @@ module Refiner = struct
 
     let ( let* ) = LocalM.bind
 
-    let local (var : local_var) : [`UnboundVariable] synth_ty_err =
-      let* binding = LocalM.lookup_local var.level in
+    let local (level : local_var) : [`UnboundVariable] synth_ty_err =
+      let* binding = LocalM.lookup_local level in
       match binding with
       | Some (e, t) -> LocalM.pure (e, t)
       | None -> LocalM.throw `UnboundVariable
