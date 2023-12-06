@@ -48,7 +48,6 @@ module Elab : sig
 end = struct
 
   module R = Core.Refiner
-  module Void = Basis.Void
 
   module ItemContext = struct
 
@@ -141,7 +140,7 @@ end = struct
       match t with
       | _ ->
           R.Structural.conv (elab_synth_ty context t) ty
-          |> R.LocalM.handle (function
+          |> R.handle_local (function
             | `TypeMismatch (found_ty, expected_ty) ->
                 failwith
                   (Format.asprintf "error: type mismatch, found `%a` expected `%a`"
@@ -155,12 +154,12 @@ end = struct
         match LocalContext.lookup name context with
         | Some (`Local var) ->
             R.Structural.local var
-            |> R.LocalM.handle (function
+            |> R.handle_local (function
                 (* TODO: improve diagnostics *)
                 | `UnboundVariable -> failwith "bug: unbound local variable")
         | Some (`Item var) ->
             R.Structural.item_expr var
-            |> R.LocalM.handle (function
+            |> R.handle_local (function
                 (* TODO: improve diagnostics *)
                 | `ExprExpected -> failwith "error: local variable expected"
                 | `UnboundVariable -> failwith "bug: unbound local variable")
@@ -182,7 +181,7 @@ end = struct
         match ItemContext.lookup name context with
         | Some (`Item var) ->
             R.Format.item var
-            |> R.ItemM.handle (function
+            |> R.handle_item (function
                 (* TODO: improve diagnostics *)
                 | `FormatExpected -> R.Format.fail (failwith "error: format expected")
                 | `UnboundVariable -> R.Format.fail (failwith "bug: unbound item variable"))
@@ -201,12 +200,12 @@ end = struct
         R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
     | Seq (t0, t1) ->
         R.Format.seq (elab_format context t0) (elab_format context t1)
-        |> R.ItemM.handle (function
+        |> R.handle_item (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
     | Union (t0, t1) ->
         R.Format.union (elab_format context t0) (elab_format context t1)
-        |> R.ItemM.handle (function
+        |> R.handle_item (function
             (* TODO: improve diagnostics *)
             | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")
             | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
@@ -225,7 +224,7 @@ end = struct
         match ItemContext.lookup name context with
         | Some (`Item var) ->
             R.Structural.item_ty var
-            |> R.ItemM.handle (function
+            |> R.handle_item (function
                 (* TODO: improve diagnostics *)
                 | `TypeExpected -> failwith "error: type expected"
                 | `UnboundVariable -> failwith "bug: unbound item variable")
@@ -287,5 +286,4 @@ end
 
 let elab_program p =
   Elab.elab_program Elab.ItemContext.empty p
-  |> Core.Refiner.ItemM.run
-  |> Result.fold ~ok:Fun.id ~error:Basis.Void.absurd
+  |> Core.Refiner.run_item

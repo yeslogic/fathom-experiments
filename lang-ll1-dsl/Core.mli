@@ -42,32 +42,19 @@ end
 module Refiner : sig
   (** Trusted interface for constructing programs in the core language. *)
 
-  module Void := Basis.Void
 
+  (** {1 Context effects} *)
 
-  (** {1 Context monads} *)
+  type 'a item_m
+  type 'a local_m
+  type ('a, 'e) item_err_m = ('a, 'e) result item_m
+  type ('a, 'e) local_err_m = ('a, 'e) result local_m
 
-  module ItemM : sig
+  val handle_item : ('e -> 'a item_m) -> ('a, 'e) item_err_m -> 'a item_m
+  val handle_local : ('e -> 'a local_m) -> ('a, 'e) local_err_m -> 'a local_m
 
-    include Basis.IndexedMonad.S
-
-    val handle : ('e_in -> ('a, 'e_out) m) -> ('a, 'e_in) m -> ('a, 'e_out) m
-    val throw : 'e -> ('a, 'e) m
-
-    val run : ('a, 'e) m -> ('a, 'e) result
-
-  end
-
-  module LocalM : sig
-
-    include Basis.IndexedMonad.S
-
-    val handle : ('e_in -> ('a, 'e_out) m) -> ('a, 'e_in) m -> ('a, 'e_out) m
-    val throw : 'e -> ('a, 'e) m
-
-    val item_m : ('a, 'e) ItemM.m -> ('a, 'e) m
-
-  end
+  val run_item : 'a item_m -> 'a
+  val run_local : 'a local_m -> 'a
 
 
   (** {1 Forms of judgement} *)
@@ -75,17 +62,17 @@ module Refiner : sig
   type item_var
   type local_var
 
-  type 'e is_program_err = (program, 'e) ItemM.m
-  type 'e is_format_err = (format, 'e) ItemM.m
-  type 'e is_ty_err = (ty, 'e) ItemM.m
-  type 'e synth_ty_err = (expr * ty, 'e) LocalM.m
-  type 'e check_ty_err = ty -> (expr, 'e) LocalM.m
+  type is_program = program item_m
+  type is_format = format item_m
+  type is_ty = ty item_m
+  type synth_ty = (expr * ty) local_m
+  type check_ty = ty -> expr local_m
 
-  type is_program = Void.t is_program_err
-  type is_format = Void.t is_format_err
-  type is_ty = Void.t is_ty_err
-  type synth_ty = Void.t synth_ty_err
-  type check_ty = Void.t check_ty_err
+  type 'e is_format_err = (format, 'e) item_err_m
+  type 'e is_program_err = (program, 'e) item_err_m
+  type 'e is_ty_err = (ty, 'e) item_err_m
+  type 'e synth_ty_err = (expr * ty, 'e) local_err_m
+  type 'e check_ty_err = ty -> (expr, 'e) local_err_m
 
 
   (** {1 Inference rules} *)

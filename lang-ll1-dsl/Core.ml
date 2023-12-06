@@ -328,9 +328,6 @@ end
 
 module Refiner = struct
 
-  module Void = Basis.Void
-
-
   (* Contexts *)
 
   type item =
@@ -342,70 +339,31 @@ module Refiner = struct
   type local_context = ty list
 
 
-  (* Context monads *)
+  (* Context effects *)
 
-  (* TODO: Clean up these monads... perhaps moving to the [Basis] module, using
-    effects under the hood, and assembling them out of monad transformers. *)
+  type 'a item_m = item_context -> 'a
+  type 'a local_m = item_context -> local_context -> 'a
 
-  type ('a, 'e) item_m = item_context -> ('a, 'e) result
-  type ('a, 'e) local_m = item_context -> local_context -> ('a, 'e) result
+  type ('a, 'e) item_err_m = ('a, 'e) result item_m
+  type ('a, 'e) local_err_m = ('a, 'e) result local_m
 
-  module ItemM = struct
+  let handle_item (handler : 'e -> 'a item_m) (m : ('a, 'e) item_err_m) : 'a item_m =
+    fun items ->
+      match m items with
+      | Ok x -> x
+      | Error e -> (handler e) items
 
-    type ('a, 'e) m = ('a, 'e) item_m
+  let handle_local (handler : 'e -> 'a local_m) (m : ('a, 'e) local_err_m) : 'a local_m =
+    fun items locals ->
+      match m items locals with
+      | Ok x -> x
+      | Error e -> (handler e) items locals
 
-    let pure (x : 'a) : ('a, 'e) m =
-      fun _ ->
-        Ok x
+  let run_item (m : 'a item_m) : 'a =
+    m []
 
-    let bind (m : ('a, 'e) m) (f : 'a -> ('b, 'e) m) : ('b, 'e) m =
-      fun items ->
-        Result.bind (m items)
-          (fun x -> f x items)
-
-    let handle (handler : 'e_in -> ('a, 'e_out) m) (m : ('a, 'e_in) m) : ('a, 'e_out) m =
-      fun items ->
-        match m items with
-        | Ok x -> Ok x
-        | Error e -> (handler e) items
-
-    let throw (e : 'e) : ('a, 'e) m =
-      fun _ ->
-        Error e
-
-    let run (m : ('a, 'e) m) : ('a, 'e) result =
-      m []
-
-  end
-
-  module LocalM = struct
-
-    type ('a, 'e) m = ('a, 'e) local_m
-
-    let pure (x : 'a) : ('a, 'e) m =
-      fun _ _ ->
-        Ok x
-
-    let bind (m : ('a, 'e) m) (f : 'a -> ('b, 'e) m) : ('b, 'e) m =
-      fun items locals ->
-        Result.bind (m items locals)
-          (fun x -> f x items locals)
-
-    let handle (handler : 'e_in -> ('a, 'e_out) m) (m : ('a, 'e_in) m) : ('a, 'e_out) m =
-      fun items locals ->
-        match m items locals with
-        | Ok x -> Ok x
-        | Error e -> (handler e) items locals
-
-    let throw (e : 'e) : ('a, 'e) m =
-      fun _ _ ->
-        Error e
-
-    let item_m (m : ('a, 'e) item_m) : ('a, 'e) m =
-      fun items _ ->
-        m items
-
-  end
+  let run_local (m : 'a local_m) : 'a =
+    m [] []
 
 
   (* Forms of judgement *)
@@ -413,53 +371,49 @@ module Refiner = struct
   type local_var = int
   type item_var = string
 
-  type 'e is_format_err = (format, 'e) item_m
-  type 'e is_program_err = (program, 'e) item_m
-  type 'e is_ty_err = (ty, 'e) item_m
-  type 'e synth_ty_err = (expr * ty, 'e) local_m
-  type 'e check_ty_err = ty -> (expr, 'e) local_m
+  type is_program = program item_m
+  type is_format = format item_m
+  type is_ty = ty item_m
+  type synth_ty = (expr * ty) local_m
+  type check_ty = ty -> expr local_m
 
-  type is_program = Void.t is_program_err
-  type is_format = Void.t is_format_err
-  type is_ty = Void.t is_ty_err
-  type synth_ty = Void.t synth_ty_err
-  type check_ty = Void.t check_ty_err
+  type 'e is_format_err = (format, 'e) item_err_m
+  type 'e is_program_err = (program, 'e) item_err_m
+  type 'e is_ty_err = (ty, 'e) item_err_m
+  type 'e synth_ty_err = (expr * ty, 'e) local_err_m
+  type 'e check_ty_err = ty -> (expr, 'e) local_err_m
 
 
   (* Inference rules *)
 
   module Program = struct
 
-    let ( let* ) = Result.bind
-
     let empty : is_program =
       fun _ ->
-        Ok { items = [] }
+        { items = [] }
 
     let def_ty (name, t) (body : item_var -> is_program) : is_program =
       fun items ->
-        let* t = t items in
-        let* program = body name ((name, Type t) :: items) in
-        Ok { items = (name, Type t) :: program.items }
+        let t = t items in
+        let program = body name ((name, Type t) :: items) in
+        { items = (name, Type t) :: program.items }
 
     let def_format (name, f) (body : item_var -> is_program) : is_program =
       fun items ->
-        let* f = f items in
-        let* program = body name ((name, Format { repr = f.repr; info = f.info }) :: items) in
-        Ok { items = (name, Format f) :: program.items }
+        let f = f items in
+        let program = body name ((name, Format { repr = f.repr; info = f.info }) :: items) in
+        { items = (name, Format f) :: program.items }
 
     let def_expr (name, t, e) (body : item_var -> is_program) : is_program =
       fun items ->
-        let* t = t items in
-        let* e = e t items [] in
-        let* program = body name ((name, Expr (e, t)) :: items) in
-        Ok { items = (name, Expr (e, t)) :: program.items }
+        let t = t items in
+        let e = e t items [] in
+        let program = body name ((name, Expr (e, t)) :: items) in
+        { items = (name, Expr (e, t)) :: program.items }
 
   end
 
   module Format = struct
-
-    let ( let* ) = Result.bind
 
     let item (name : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
       fun items ->
@@ -470,7 +424,7 @@ module Refiner = struct
 
     let empty : is_format =
       fun _ ->
-        Ok {
+        {
           node = Empty;
           repr = UnitTy;
           info = FormatInfo.empty;
@@ -478,8 +432,8 @@ module Refiner = struct
 
     let fail (t : is_ty) : is_format =
       fun items ->
-        let* t = t items in
-        Ok {
+        let t = t items in
+        {
           node = Fail t;
           repr = t;
           info = FormatInfo.fail;
@@ -487,7 +441,7 @@ module Refiner = struct
 
     let byte (s : ByteSet.t) : is_format =
       fun _ ->
-        Ok {
+        {
           node = Byte s;
           repr = ByteTy;
           info = FormatInfo.byte s;
@@ -495,8 +449,8 @@ module Refiner = struct
 
     let seq (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat] is_format_err =
       fun items ->
-        let* f0 = f0 items |> Result.map_error Void.absurd in
-        let* f1 = f1 items |> Result.map_error Void.absurd in
+        let f0 = f0 items in
+        let f1 = f1 items in
         if not (FormatInfo.separate f0.info f1.info) then
           Error `AmbiguousFormat
         else
@@ -508,8 +462,8 @@ module Refiner = struct
 
     let union (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err =
       fun items ->
-        let* f0 = f0 items |> Result.map_error Void.absurd in
-        let* f1 = f1 items |> Result.map_error Void.absurd in
+        let f0 = f0 items in
+        let f1 = f1 items in
         if not (FormatInfo.non_overlapping f0.info f1.info) then
           Error `AmbiguousFormat
         else if f0.repr <> f1.repr then
@@ -523,9 +477,9 @@ module Refiner = struct
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
       fun items ->
-        let* f = f items in
-        let* e, t = e 0 items [f.repr] in
-        Ok {
+        let f = f items in
+        let e, t = e 0 items [f.repr] in
+        {
           node = Map (t, (x, e), f);
           repr = t;
           info = f.info;
@@ -533,14 +487,11 @@ module Refiner = struct
 
     let repr (f : is_format) : is_ty =
       fun items ->
-        let* f = f items in
-        Ok f.repr
+        (f items).repr
 
   end
 
   module Structural = struct
-
-    let ( let* ) = Result.bind
 
     let item_ty (name : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
       fun items ->
@@ -567,15 +518,15 @@ module Refiner = struct
 
     let conv (e : synth_ty) : [`TypeMismatch of ty * ty] check_ty_err =
       fun t items locals ->
-        let* e, t' = e items locals |> Result.map_error Void.absurd in
+        let e, t' = e items locals in
         if t = t' then Ok e else
           Error (`TypeMismatch (t, t'))
 
     let ann (e : check_ty) (t : is_ty) : synth_ty =
       fun items locals ->
-        let* t = t items in
-        let* e = e t items locals in
-        Ok (Ann (e, t), t)
+        let t = t items in
+        let e = e t items locals in
+        Ann (e, t), t
 
   end
 
@@ -583,11 +534,11 @@ module Refiner = struct
 
     let form : is_ty =
       fun _ ->
-        Ok UnitTy
+        UnitTy
 
     let intro : synth_ty =
       fun _ _ ->
-        Ok (UnitIntro, UnitTy)
+        UnitIntro, UnitTy
 
   end
 
@@ -595,40 +546,38 @@ module Refiner = struct
 
     let form : is_ty =
       fun _ ->
-        Ok ByteTy
+        ByteTy
 
     let intro c : synth_ty =
       fun _ _ ->
-        Ok (ByteIntro c, ByteTy)
+        ByteIntro c, ByteTy
 
   end
 
   module Pair = struct
 
-    let ( let* ) = Result.bind
-
     let form (t0 : is_ty) (t1 : is_ty) : is_ty =
       fun items ->
-        let* t0 = t0 items in
-        let* t1 = t1 items in
-        Ok (PairTy (t0, t1))
+        let t0 = t0 items in
+        let t1 = t1 items in
+        PairTy (t0, t1)
 
     let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
       fun items locals ->
-        let* e0, t0 = e0 items locals in
-        let* e1, t1 = e1 items locals in
-        Ok (PairIntro (e0, e1), PairTy (t0, t1))
+        let e0, t0 = e0 items locals in
+        let e1, t1 = e1 items locals in
+        PairIntro (e0, e1), PairTy (t0, t1)
 
     let fst (e : synth_ty) : [`UnexpectedType] synth_ty_err =
       fun items locals ->
-        let* e, t = e items locals |> Result.map_error Void.absurd in
+        let e, t = e items locals in
         match t with
         | PairTy (t0, _) -> Ok (PairFst e, t0)
         | _ -> Error `UnexpectedType
 
     let snd (e : synth_ty) : [`UnexpectedType] synth_ty_err =
       fun items locals ->
-        let* e, t = e items locals |> Result.map_error Void.absurd in
+        let e, t = e items locals in
         match t with
         | PairTy (_, t1) -> Ok (PairSnd e, t1)
         | _ -> Error `UnexpectedType
