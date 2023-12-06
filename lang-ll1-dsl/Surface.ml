@@ -176,7 +176,7 @@ end = struct
   let rec elab_format (context : LocalContext.t) (t : tm) : R.is_format =
     match t with
     | Empty ->
-        R.Format.empty
+        R.Format.pure R.Unit.intro
     | Name name -> begin
         match LocalContext.lookup name context with
         | Some (`Item var) ->

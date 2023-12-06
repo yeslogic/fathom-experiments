@@ -116,11 +116,11 @@ type expr =
 
 type format_node =
   | Item of string
-  | Empty
   | Fail of ty
   | Byte of ByteSet.t
   | Seq of format * format
   | Union of format * format
+  | Pure of ty * expr
   | Map of ty * (string * expr) * format
   | FlatMap of ty * (string * format) * format
 and format = {
@@ -198,6 +198,10 @@ and pp_print_app_format names ppf f =
   | Fail t ->
       Format.fprintf ppf "@[fail@ @@%a@]"
         pp_print_atomic_ty t
+  | Pure (t, e) ->
+      Format.fprintf ppf "@[pure@ @@%a@ %a@]"
+        pp_print_atomic_ty t
+        (pp_print_expr []) e
   | Map (t, (n, e), f) ->
       Format.fprintf ppf "@[map@ @@%a@ (%s@ =>@ %a)@ %a@]"
         pp_print_atomic_ty t
@@ -216,7 +220,6 @@ and pp_print_app_format names ppf f =
 and pp_print_atomic_format names ppf f =
   match f.node with
   | Item name -> Format.fprintf ppf "%s" name
-  | Empty -> Format.fprintf ppf "()"
   | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s (* TODO: Custom printing *)
   | _ -> Format.fprintf ppf "(%a)" (pp_print_format names) f
 
@@ -311,7 +314,6 @@ module Semantics = struct
           | Some _ -> invalid_arg "not a format item"
           | None -> invalid_arg "unbound item variable"
       end
-      | Empty -> pos, UnitIntro
       | Fail _ -> raise (DecodeFailure pos)
       | Byte s -> begin
           match get_byte input pos with
@@ -333,6 +335,7 @@ module Semantics = struct
       | Map (_, (_, e), f) ->
           let pos, ev = go locals f input pos in
           pos, eval (ev :: locals) e
+    | Pure (_, e) -> pos, eval locals e
       | FlatMap (_, (_, f1), f0) ->
           let pos, ev0 = go locals f0 input pos in
           go (ev0 :: locals) f1 input pos
@@ -438,14 +441,6 @@ module Refiner = struct
         | Some _ -> Error `FormatExpected
         | None -> Error `UnboundVariable
 
-    let empty : is_format =
-      fun _ _ ->
-        {
-          node = Empty;
-          repr = UnitTy;
-          info = FormatInfo.empty;
-        }
-
     let fail (t : is_ty) : is_format =
       fun items _ ->
         let t = t items in
@@ -490,6 +485,15 @@ module Refiner = struct
             repr = f0.repr;
             info = FormatInfo.union f0.info f1.info;
           }
+
+    let pure (e : synth_ty) : is_format =
+      fun items locals ->
+        let e, t = e items locals in
+        {
+          node = Pure (t, e);
+          repr = t;
+          info = FormatInfo.empty;
+        }
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
       fun items locals ->

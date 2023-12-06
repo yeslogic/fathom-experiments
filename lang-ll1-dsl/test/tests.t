@@ -3,9 +3,9 @@ Elaborate comments
 
 Elaborate items
   $ cat items.txt | ll1-dsl
-  def no-ann : Format := ();
+  def no-ann : Format := pure @Unit ();
   
-  def format-ann : Format := ();
+  def format-ann : Format := pure @Unit ();
   
   def Byte : Type := Byte;
   
@@ -24,7 +24,7 @@ Elaborate base
   $ cat base.txt | ll1-dsl
   def fail : Format := {};
   
-  def unit : Format := ();
+  def unit : Format := pure @Unit ();
   
   def any-byte : Format := {0..255};
   

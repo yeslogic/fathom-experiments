@@ -89,11 +89,11 @@ module Refiner : sig
   module Format : sig
 
     val item : item_var -> [`FormatExpected | `UnboundVariable] is_format_err
-    val empty : is_format
     val fail : is_ty -> is_format
     val byte : ByteSet.t -> is_format
     val seq : is_format -> is_format -> [`AmbiguousFormat] is_format_err
     val union : is_format -> is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err
+    val pure : synth_ty -> is_format
     val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
     val flat_map : (string * (local_var -> is_format)) -> is_format -> [`AmbiguousFormat] is_format_err
 
