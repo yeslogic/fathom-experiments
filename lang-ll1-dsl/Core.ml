@@ -99,11 +99,13 @@ end
 
 
 type ty =
+  (* | Item of string *)
   | UnitTy
   | ByteTy
   | PairTy of ty * ty
 
 type expr =
+  (* | Item of string *)
   | Local of int
   | Ann of expr * ty
   | UnitIntro
@@ -361,14 +363,6 @@ module Refiner = struct
         Result.bind (m items)
           (fun x -> f x items)
 
-    let scope (f : item_context -> item_context) (m : ('a, 'e) m) : ('a, 'e) m =
-      fun items ->
-        m (f items)
-
-    let lookup_item (n : string) : (item option, 'e) m =
-      fun items ->
-        Ok (List.assoc_opt n items)
-
     let handle (handler : 'e_in -> ('a, 'e_out) m) (m : ('a, 'e_in) m) : ('a, 'e_out) m =
       fun items ->
         match m items with
@@ -378,10 +372,6 @@ module Refiner = struct
     let throw (e : 'e) : ('a, 'e) m =
       fun _ ->
         Error e
-
-    let local_m (locals : local_context) (m : ('a, 'e) local_m) : ('a, 'e) m =
-      fun items ->
-        m items locals
 
     let run (m : ('a, 'e) m) : ('a, 'e) result =
       m []
@@ -400,11 +390,6 @@ module Refiner = struct
       fun items locals ->
         Result.bind (m items locals)
           (fun x -> f x items locals)
-
-    let lookup_local (level : int) : ((expr * ty) option, 'e) m =
-      fun _ locals ->
-        let index = List.length locals - level - 1 in
-        Ok (List.nth_opt locals index |> Option.map (fun t -> Local index, t))
 
     let handle (handler : 'e_in -> ('a, 'e_out) m) (m : ('a, 'e_in) m) : ('a, 'e_out) m =
       fun items locals ->
@@ -428,11 +413,11 @@ module Refiner = struct
   type local_var = int
   type item_var = string
 
-  type 'e is_format_err = (format, 'e) ItemM.m
-  type 'e is_program_err = (program, 'e) ItemM.m
-  type 'e is_ty_err = (ty, 'e) ItemM.m
-  type 'e synth_ty_err = (expr * ty, 'e) LocalM.m
-  type 'e check_ty_err = ty -> (expr, 'e) LocalM.m
+  type 'e is_format_err = (format, 'e) item_m
+  type 'e is_program_err = (program, 'e) item_m
+  type 'e is_ty_err = (ty, 'e) item_m
+  type 'e synth_ty_err = (expr * ty, 'e) local_m
+  type 'e check_ty_err = ty -> (expr, 'e) local_m
 
   type is_program = Void.t is_program_err
   type is_format = Void.t is_format_err
@@ -445,198 +430,208 @@ module Refiner = struct
 
   module Program = struct
 
-    let ( let* ) = ItemM.bind
+    let ( let* ) = Result.bind
 
     let empty : is_program =
-      ItemM.pure { items = [] }
+      fun _ ->
+        Ok { items = [] }
 
     let def_ty (name, t) (body : item_var -> is_program) : is_program =
-      let* t = t in
-      let* program = ItemM.scope
-        (fun items -> (name, Type t) :: items)
-        (body name)
-      in
-      ItemM.pure { items = (name, Type t) :: program.items }
+      fun items ->
+        let* t = t items in
+        let* program = body name ((name, Type t) :: items) in
+        Ok { items = (name, Type t) :: program.items }
 
     let def_format (name, f) (body : item_var -> is_program) : is_program =
-      let* f = f in
-      let* program = ItemM.scope
-        (fun items -> (name, Format { repr = f.repr; info = f.info }) :: items)
-        (body name)
-      in
-      ItemM.pure { items = (name, Format f) :: program.items }
+      fun items ->
+        let* f = f items in
+        let* program = body name ((name, Format { repr = f.repr; info = f.info }) :: items) in
+        Ok { items = (name, Format f) :: program.items }
 
     let def_expr (name, t, e) (body : item_var -> is_program) : is_program =
-      let* t = t in
-      let* e = ItemM.local_m [] (e t) in
-      let* program = ItemM.scope
-        (fun items -> (name, Expr (e, t)) :: items)
-        (body name)
-      in
-      ItemM.pure { items = (name, Expr (e, t)) :: program.items }
+      fun items ->
+        let* t = t items in
+        let* e = e t items [] in
+        let* program = body name ((name, Expr (e, t)) :: items) in
+        Ok { items = (name, Expr (e, t)) :: program.items }
 
   end
 
   module Format = struct
 
-    let ( let* ) = ItemM.bind
+    let ( let* ) = Result.bind
 
     let item (name : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
-      let* item = ItemM.lookup_item name in
-      match item with
-      | Some (Format { repr; info }) -> ItemM.pure { node = Item name; repr; info }
-      | Some _ -> ItemM.throw `FormatExpected
-      | None -> ItemM.throw `UnboundVariable
+      fun items ->
+        match List.assoc_opt name items with
+        | Some (Format { repr; info }) -> Ok { node = Item name; repr; info }
+        | Some _ -> Error `FormatExpected
+        | None -> Error `UnboundVariable
 
     let empty : is_format =
-      ItemM.pure {
-        node = Empty;
-        repr = UnitTy;
-        info = FormatInfo.empty;
-      }
+      fun _ ->
+        Ok {
+          node = Empty;
+          repr = UnitTy;
+          info = FormatInfo.empty;
+        }
 
     let fail (t : is_ty) : is_format =
-      let* t = t in
-      ItemM.pure {
-        node = Fail t;
-        repr = t;
-        info = FormatInfo.fail;
-      }
+      fun items ->
+        let* t = t items in
+        Ok {
+          node = Fail t;
+          repr = t;
+          info = FormatInfo.fail;
+        }
 
     let byte (s : ByteSet.t) : is_format =
-      ItemM.pure {
-        node = Byte s;
-        repr = ByteTy;
-        info = FormatInfo.byte s;
-      }
+      fun _ ->
+        Ok {
+          node = Byte s;
+          repr = ByteTy;
+          info = FormatInfo.byte s;
+        }
 
     let seq (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat] is_format_err =
-      let* f0 = f0 |> ItemM.handle Void.absurd in
-      let* f1 = f1 |> ItemM.handle Void.absurd in
-      if not (FormatInfo.separate f0.info f1.info) then
-        ItemM.throw `AmbiguousFormat
-      else
-        ItemM.pure {
-          node = Seq (f0, f1);
-          repr = PairTy (f0.repr, f1.repr);
-          info = FormatInfo.seq f0.info f1.info;
-        }
+      fun items ->
+        let* f0 = f0 items |> Result.map_error Void.absurd in
+        let* f1 = f1 items |> Result.map_error Void.absurd in
+        if not (FormatInfo.separate f0.info f1.info) then
+          Error `AmbiguousFormat
+        else
+          Ok {
+            node = Seq (f0, f1);
+            repr = PairTy (f0.repr, f1.repr);
+            info = FormatInfo.seq f0.info f1.info;
+          }
 
     let union (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err =
-      let* f0 = f0 |> ItemM.handle Void.absurd in
-      let* f1 = f1 |> ItemM.handle Void.absurd in
-      if not (FormatInfo.non_overlapping f0.info f1.info) then
-        ItemM.throw `AmbiguousFormat
-      else if f0.repr <> f1.repr then
-        ItemM.throw (`ReprMismatch (f0.repr, f1.repr))
-      else
-        ItemM.pure {
-          node = Union (f0, f1);
-          repr = f0.repr;
-          info = FormatInfo.union f0.info f1.info;
-        }
+      fun items ->
+        let* f0 = f0 items |> Result.map_error Void.absurd in
+        let* f1 = f1 items |> Result.map_error Void.absurd in
+        if not (FormatInfo.non_overlapping f0.info f1.info) then
+          Error `AmbiguousFormat
+        else if f0.repr <> f1.repr then
+          Error (`ReprMismatch (f0.repr, f1.repr))
+        else
+          Ok {
+            node = Union (f0, f1);
+            repr = f0.repr;
+            info = FormatInfo.union f0.info f1.info;
+          }
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
-      let* f = f in
-      let* e, t = ItemM.local_m [f.repr] (e 0) in
-      ItemM.pure {
-        node = Map (t, (x, e), f);
-        repr = t;
-        info = f.info;
-      }
+      fun items ->
+        let* f = f items in
+        let* e, t = e 0 items [f.repr] in
+        Ok {
+          node = Map (t, (x, e), f);
+          repr = t;
+          info = f.info;
+        }
 
     let repr (f : is_format) : is_ty =
-      let* f = f in
-      ItemM.pure f.repr
+      fun items ->
+        let* f = f items in
+        Ok f.repr
 
   end
 
   module Structural = struct
 
-    let ( let* ) = ItemM.bind
+    let ( let* ) = Result.bind
 
     let item_ty (name : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
-      let* item = ItemM.lookup_item name in
-      match item with
-      | Some (Type t) -> ItemM.pure t
-      | Some _ -> ItemM.throw `TypeExpected
-      | None -> ItemM.throw `UnboundVariable
-
-    let ( let* ) = LocalM.bind
+      fun items ->
+        match List.assoc_opt name items with
+        (* | Some (Type t) -> Ok (Item name) *)
+        | Some (Type t) -> Ok t
+        | Some _ -> Error `TypeExpected
+        | None -> Error `UnboundVariable
 
     let item_expr (name : item_var) : [`ExprExpected | `UnboundVariable] synth_ty_err =
-      let* item = LocalM.item_m (ItemM.lookup_item name) in
-      match item with
-      | Some (Expr (e, t)) -> LocalM.pure (e, t)
-      | Some _ -> LocalM.throw `ExprExpected
-      | None -> LocalM.throw `UnboundVariable
+      fun items _ ->
+        match List.assoc_opt name items with
+        (* | Some (Expr (e, t)) -> Ok (Item name, t) *)
+        | Some (Expr (e, t)) -> Ok (e, t)
+        | Some _ -> Error `ExprExpected
+        | None -> Error `UnboundVariable
 
     let local (level : local_var) : [`UnboundVariable] synth_ty_err =
-      let* binding = LocalM.lookup_local level in
-      match binding with
-      | Some (e, t) -> LocalM.pure (e, t)
-      | None -> LocalM.throw `UnboundVariable
+      fun _ locals ->
+        let index = List.length locals - level - 1 in
+        match List.nth_opt locals index with
+        | Some t -> Ok (Local index, t)
+        | None -> Error `UnboundVariable
 
     let conv (e : synth_ty) : [`TypeMismatch of ty * ty] check_ty_err =
-      fun t ->
-        let* e, t' = e |> LocalM.handle Void.absurd in
-        if t = t' then LocalM.pure e else
-          LocalM.throw (`TypeMismatch (t, t'))
+      fun t items locals ->
+        let* e, t' = e items locals |> Result.map_error Void.absurd in
+        if t = t' then Ok e else
+          Error (`TypeMismatch (t, t'))
 
     let ann (e : check_ty) (t : is_ty) : synth_ty =
-      let* t = LocalM.item_m t in
-      let* e = e t in
-      LocalM.pure (Ann (e, t), t)
+      fun items locals ->
+        let* t = t items in
+        let* e = e t items locals in
+        Ok (Ann (e, t), t)
 
   end
 
   module Unit = struct
 
     let form : is_ty =
-      ItemM.pure UnitTy
+      fun _ ->
+        Ok UnitTy
 
     let intro : synth_ty =
-      LocalM.pure (UnitIntro, UnitTy)
+      fun _ _ ->
+        Ok (UnitIntro, UnitTy)
 
   end
 
   module Byte = struct
 
     let form : is_ty =
-      ItemM.pure ByteTy
+      fun _ ->
+        Ok ByteTy
 
     let intro c : synth_ty =
-      LocalM.pure (ByteIntro c, ByteTy)
+      fun _ _ ->
+        Ok (ByteIntro c, ByteTy)
 
   end
 
   module Pair = struct
 
-    let ( let* ) = ItemM.bind
+    let ( let* ) = Result.bind
 
     let form (t0 : is_ty) (t1 : is_ty) : is_ty =
-      let* t0 = t0 in
-      let* t1 = t1 in
-      ItemM.pure (PairTy (t0, t1))
-
-    let ( let* ) = LocalM.bind
+      fun items ->
+        let* t0 = t0 items in
+        let* t1 = t1 items in
+        Ok (PairTy (t0, t1))
 
     let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
-      let* e0, t0 = e0 in
-      let* e1, t1 = e1 in
-      LocalM.pure (PairIntro (e0, e1), PairTy (t0, t1))
+      fun items locals ->
+        let* e0, t0 = e0 items locals in
+        let* e1, t1 = e1 items locals in
+        Ok (PairIntro (e0, e1), PairTy (t0, t1))
 
     let fst (e : synth_ty) : [`UnexpectedType] synth_ty_err =
-      let* e, t = e |> LocalM.handle Void.absurd in
-      match t with
-      | PairTy (t0, _) -> LocalM.pure (PairFst e, t0)
-      | _ -> LocalM.throw `UnexpectedType
+      fun items locals ->
+        let* e, t = e items locals |> Result.map_error Void.absurd in
+        match t with
+        | PairTy (t0, _) -> Ok (PairFst e, t0)
+        | _ -> Error `UnexpectedType
 
     let snd (e : synth_ty) : [`UnexpectedType] synth_ty_err =
-      let* e, t = e |> LocalM.handle Void.absurd in
-      match t with
-      | PairTy (_, t1) -> LocalM.pure (PairSnd e, t1)
-      | _ -> LocalM.throw `UnexpectedType
+      fun items locals ->
+        let* e, t = e items locals |> Result.map_error Void.absurd in
+        match t with
+        | PairTy (_, t1) -> Ok (PairSnd e, t1)
+        | _ -> Error `UnexpectedType
 
   end
 
