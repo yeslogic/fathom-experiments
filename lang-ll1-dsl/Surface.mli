@@ -4,22 +4,30 @@
 
 (** {2 Terms} *)
 
-type tm
+(** The start and end position in a source file *)
+type loc = Lexing.position * Lexing.position
+
+type 'a located
+
+val located : loc -> 'a -> 'a located
+
+type tm_data
+type tm = tm_data located
 
 type bound =
   | Open
   | Inclusive of tm
   | Exclusive of tm
 
-val empty : tm
-val name : string -> tm
-val int : int -> tm
-val range : bound -> bound -> tm
-val not : tm -> tm
-val seq : tm -> tm -> tm
-val union : tm -> tm -> tm
-val action : tm -> (string * tm) -> tm
-val proj : tm -> string -> tm
+val empty : tm_data
+val name : string -> tm_data
+val int : int -> tm_data
+val range : bound -> bound -> tm_data
+val not : tm -> tm_data
+val seq : tm -> tm -> tm_data
+val union : tm -> tm -> tm_data
+val action : tm -> (string * tm) -> tm_data
+val proj : tm -> string -> tm_data
 
 (** {2 Programs} *)
 

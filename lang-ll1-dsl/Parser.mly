@@ -33,7 +33,7 @@ let program :=
       { Surface.program is }
 
 let item :=
-  | "def"; n = NAME; t0 = option(":"; t = tm; { t }); ":="; t1 = tm; ";";
+  | "def"; n = NAME; t0 = option(":"; t = located(tm); { t }); ":="; t1 = located(tm); ";";
       { n, t0, t1 }
 
 let tm :=
@@ -42,17 +42,17 @@ let tm :=
   | union_tm
 
 let union_tm :=
-  | t0 = seq_tm; "|"; t1 = union_tm;
+  | t0 = located(seq_tm); "|"; t1 = located(union_tm);
       { Surface.union t0 t1 }
   | seq_tm
 
 let seq_tm :=
-  | t0 = range_tm; ","; t1 = seq_tm;
+  | t0 = located(range_tm); ","; t1 = located(seq_tm);
       { Surface.seq t0 t1 }
   | range_tm
 
 let range_tm :=
-  | t = range_tm; "{"; n = NAME; "=>"; b = tm; "}"; { Surface.action t (n, b) }
+  | t = located(range_tm); "{"; n = NAME; "=>"; b = located(tm); "}"; { Surface.action t (n, b) }
   | start = inclusive; ".."; stop = inclusive; { Surface.range start stop }
   | start = inclusive; "..<"; stop = exclusive; { Surface.range start stop }
   | start = exclusive; ">.."; stop = inclusive; { Surface.range start stop }
@@ -60,7 +60,7 @@ let range_tm :=
   | proj_tm
 
 let proj_tm :=
-  | t = proj_tm; "."; l = NAME;
+  | t = located(proj_tm); "."; l = NAME;
       { Surface.proj t l }
   | atomic_tm
 
@@ -71,14 +71,18 @@ let atomic_tm :=
       { Surface.empty }
   | "("; t = tm; ")";
       { t }
-  | "!"; t = atomic_tm;
+  | "!"; t = located(atomic_tm);
       { Surface.not t }
   | i = INT;
       { Surface.int i }
 
 let inclusive ==
-  | t = atomic_tm; { Surface.Inclusive t }
+  | t = located(atomic_tm); { Surface.Inclusive t }
   | { Surface.Open }
 
 let exclusive ==
-  | t = atomic_tm; { Surface.Exclusive t }
+  | t = located(atomic_tm); { Surface.Exclusive t }
+
+let located(X) :=
+| data = X;
+    { Surface.located $loc data }

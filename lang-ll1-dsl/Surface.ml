@@ -1,4 +1,19 @@
+(** The start and end position in a source file *)
+type loc =
+  Lexing.position * Lexing.position
+
+(** Located nodes *)
+type 'a located = {
+  loc : loc;
+  data : 'a;
+}
+
+let located (loc : loc) (data : 'a) : 'a located =
+  { loc; data }
+
 type tm =
+  tm_data located
+and tm_data =
   | Empty
   | Name of string
   | Int of int
@@ -30,6 +45,13 @@ type program = {
 
 let program items =
   { items }
+
+
+exception Error of loc * string
+exception Bug of loc * string
+
+let error loc msg = raise (Error (loc, msg))
+let bug loc msg = raise (Bug (loc, msg))
 
 
 module Elab : sig
@@ -110,28 +132,28 @@ end = struct
 
   end
 
-  let byte_of_int i =
+  let byte_of_int loc i =
     if 0 <= i && i <= 255 then
       Char.chr i
     else
-      failwith ("error: integer `" ^ string_of_int i ^ "` is outside the range `0..255`")
+      error loc ("integer `" ^ string_of_int i ^ "` is outside the range `0..255`")
 
-  let byte_set_of_int i =
-    ByteSet.singleton (byte_of_int i)
+  let byte_set_of_int loc i =
+    ByteSet.singleton (byte_of_int loc i)
 
   let byte_set_of_range start stop =
     let start =
       match start with
       | Open -> 0
-      | Inclusive (Int start) -> start (* TODO: Check [start] is in 0..255 *)
-      | Exclusive (Int start) -> start + 1 (* TODO: Check [start] is in 0>..255 *)
-      | _ -> failwith "error: integer literal expected"
+      | Inclusive { data = Int start; _ } -> start (* TODO: Check [start] is in 0..255 *)
+      | Exclusive { data = Int start; _ } -> start + 1 (* TODO: Check [start] is in 0>..255 *)
+      | Inclusive { loc; _ } | Exclusive { loc; _ } -> error loc "integer literal expected"
     and stop =
       match stop with
       | Open -> 255
-      | Inclusive (Int stop) -> stop (* TODO: Check [stop] is in 0..255 *)
-      | Exclusive (Int stop) -> stop - 1 (* TODO: Check [stop] is in 0..<255 *)
-      | _ -> failwith "error: integer literal expected"
+      | Inclusive { data = Int stop; _ } -> stop (* TODO: Check [stop] is in 0..255 *)
+      | Exclusive { data = Int stop; _ } -> stop - 1 (* TODO: Check [stop] is in 0..<255 *)
+      | Inclusive { loc; _ } | Exclusive { loc; _ } -> error loc "integer literal expected"
     in
     ByteSet.range (Char.chr start) (Char.chr stop)
 
@@ -142,12 +164,12 @@ end = struct
           R.Structural.conv (elab_synth_ty context t) ty
           |> R.handle_local (function
             | `TypeMismatch (found_ty, expected_ty) ->
-                failwith
-                  (Format.asprintf "error: type mismatch, found `%a` expected `%a`"
+                error t.loc
+                  (Format.asprintf "type mismatch, found `%a` expected `%a`"
                     Core.pp_print_ty found_ty
                     Core.pp_print_ty expected_ty))
   and elab_synth_ty (context : LocalContext.t) (t : tm) : R.synth_ty =
-    match t with
+    match t.data with
     | Empty ->
         R.Unit.intro
     | Name name -> begin
@@ -155,26 +177,24 @@ end = struct
         | Some (`Local var) ->
             R.Structural.local var
             |> R.handle_local (function
-                (* TODO: improve diagnostics *)
-                | `UnboundVariable -> failwith "bug: unbound local variable")
+                | `UnboundVariable -> bug t.loc "unbound local variable")
         | Some (`Item var) ->
             R.Structural.item_expr var
             |> R.handle_local (function
-                (* TODO: improve diagnostics *)
-                | `ExprExpected -> failwith "error: local variable expected"
-                | `UnboundVariable -> failwith "bug: unbound local variable")
-        | Some (`FormatUniv | `TypeUniv | `Type _) -> failwith "error: local variable expected"
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+                | `ExprExpected -> error t.loc "local variable expected"
+                | `UnboundVariable -> bug t.loc "unbound local variable")
+        | Some (`FormatUniv | `TypeUniv | `Type _) -> error t.loc "local variable expected"
+        | None -> error t.loc ("unbound variable `" ^ name ^ "`")
     end
     | Int i ->
-        R.Byte.intro (byte_of_int i)
+        R.Byte.intro (byte_of_int t.loc i)
     | Seq (t0, t1) ->
         R.Pair.intro (elab_synth_ty context t0) (elab_synth_ty context t1)
     | _ ->
-        failwith "error: expression expected"
+        error t.loc "expression expected"
 
   let rec elab_format (context : LocalContext.t) (t : tm) : R.is_format =
-    match t with
+    match t.data with
     | Empty ->
         R.Format.pure R.Unit.intro
     | Name name -> begin
@@ -182,33 +202,33 @@ end = struct
         | Some (`Item var) ->
             R.Format.item var
             |> R.handle_local (function
-                (* TODO: improve diagnostics *)
-                | `FormatExpected -> R.Format.fail (failwith "error: format expected")
-                | `UnboundVariable -> R.Format.fail (failwith "bug: unbound item variable"))
-        | Some (`FormatUniv | `TypeUniv | `Type _ | `Local _) ->  R.Format.fail (failwith "error: format expected") (* TODO: improve diagnostics *)
-        | None -> R.Format.fail (failwith ("error: unbound variable `" ^ name ^ "`")) (* TODO: improve diagnostics *)
+                | `FormatExpected -> error t.loc "format expected"
+                | `UnboundVariable -> bug t.loc "unbound item variable")
+        | Some (`FormatUniv | `TypeUniv | `Type _ | `Local _) ->  error t.loc "format expected"
+        | None -> error t.loc ("unbound variable `" ^ name ^ "`")
     end
     | Int i ->
-        R.Format.byte (byte_set_of_int i)
+        R.Format.byte (byte_set_of_int t.loc i)
     | Range (start, stop) ->
         R.Format.byte (byte_set_of_range start stop)
-    | Not (Int i) ->
-        R.Format.byte (byte_set_of_int i |> ByteSet.neg)
-    | Not (Range (start, stop)) ->
-        R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
-    | Not _ ->
-        R.Format.fail (failwith "error: Can only apply `!_` to bytes and byte ranges") (* TODO: improve diagnostics *)
+    | Not t -> begin
+        match t.data with
+        | Int i ->
+            R.Format.byte (byte_set_of_int t.loc i |> ByteSet.neg)
+        | Range (start, stop) ->
+            R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
+        | _ ->
+            error t.loc "Can only apply `!_` to bytes and byte ranges"
+    end
     | Seq (t0, t1) ->
         R.Format.seq (elab_format context t0) (elab_format context t1)
         |> R.handle_local (function
-            (* TODO: improve diagnostics *)
-            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous concatenation"))
+            | `AmbiguousFormat -> error t.loc "ambiguous concatenation")
     | Union (t0, t1) ->
         R.Format.union (elab_format context t0) (elab_format context t1)
         |> R.handle_local (function
-            (* TODO: improve diagnostics *)
-            | `AmbiguousFormat -> R.Format.fail (failwith "error: ambiguous alternation")
-            | `ReprMismatch (_, _) -> R.Format.fail (failwith "error: mismatched represenations"))
+            | `AmbiguousFormat -> error t.loc "ambiguous alternation"
+            | `ReprMismatch (_, _) -> error t.loc "mismatched represenations")
     | Action (f, (name, e)) ->
         R.Format.map
           (name, fun x -> elab_synth_ty (context |> LocalContext.bind_local (name, x)) e)
@@ -217,7 +237,7 @@ end = struct
         failwith "TODO"
 
   let rec elab_ty (context : ItemContext.t) (t : tm) : R.is_ty =
-    match t with
+    match t.data with
     | Empty ->
         R.Unit.form
     | Name name -> begin
@@ -225,27 +245,26 @@ end = struct
         | Some (`Item var) ->
             R.Structural.item_ty var
             |> R.handle_item (function
-                (* TODO: improve diagnostics *)
-                | `TypeExpected -> failwith "error: type expected"
-                | `UnboundVariable -> failwith "bug: unbound item variable")
+                | `TypeExpected -> error t.loc "type expected"
+                | `UnboundVariable -> bug t.loc "unbound item variable")
         | Some (`Type t) -> t
-        | Some (`FormatUniv | `TypeUniv) -> failwith "error: type expected" (* TODO: improve diagnostics *)
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`") (* TODO: improve diagnostics *)
+        | Some (`FormatUniv | `TypeUniv) -> error t.loc "type expected"
+        | None -> error t.loc ("unbound variable `" ^ name ^ "`")
     end
     | Seq (t0, t1) ->
         R.Pair.form (elab_ty context t0) (elab_ty context t1)
     | Proj (t, "Repr") ->
         R.Format.repr (elab_format (LocalContext.of_item_context context) t)
     | _ ->
-        failwith "error: type expected"
+        error t.loc "type expected"
 
   let elab_ann (context : ItemContext.t) (t : tm) : [`FormatUniv | `TypeUniv | `Type of R.is_ty] =
-    match t with
+    match t.data with
     | Name name -> begin
         match ItemContext.lookup name context with
         | Some (`FormatUniv | `TypeUniv | `Type _ as i) -> i
-        | Some (`Item _) -> failwith "error: invalid annotation"
-        | None -> failwith ("error: unbound variable `" ^ name ^ "`")
+        | Some (`Item _) -> error t.loc "invalid annotation"
+        | None -> error t.loc ("unbound variable `" ^ name ^ "`")
     end
     | Empty ->
         `Type R.Unit.form
@@ -253,7 +272,7 @@ end = struct
         `Type (R.Pair.form (elab_ty context t0) (elab_ty context t1))
     end
     | _ ->
-        failwith "error: invalid annotation"
+        error t.loc "invalid annotation"
 
   let elab_program (context : ItemContext.t) (p : program) : R.is_program =
     let rec go context =
