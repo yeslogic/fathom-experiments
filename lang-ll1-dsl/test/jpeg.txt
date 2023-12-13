@@ -2,6 +2,10 @@
 
 -- def marker (const id : byte) :=
 --     0xFF, id;
+--
+-- (marker _).nullable     := false
+-- (marker _).first        := {0xFF}
+-- (marker _).follow-last  := {}
 
 -- def marker-segment (const id : byte) (body : Format) :=
 --   sequence {
@@ -9,6 +13,10 @@
 --     length <- u16be;
 --     body   <- slice (length - 2) body;
 --   };
+--
+-- (marker-segment _ _).nullable     := false
+-- (marker-segment _ _).first        := {0xFF}
+-- (marker-segment _ _).follow-last  := ??? - would it be u16be.follow-last ... i.e. {}?
 
 def sof0  := 0xFF, 0xC0; -- Start of frame (baseline jpeg)
 def sof1  := 0xFF, 0xC1; -- Start of frame (extended sequential, huffman)
