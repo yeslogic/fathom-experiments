@@ -141,6 +141,21 @@ type program = {
   items : (string * item) list;
 }
 
+(* Unification *)
+
+let rec unify_ty (t1 : ty) (t2 : ty) : bool =
+  match t1, t2 with
+  | UnitTy, UnitTy -> true
+  | ByteTy, ByteTy -> true
+  | PairTy (t1_1, t2_1), PairTy (t1_2, t2_2) ->
+      unify_ty t1_1 t1_2 && unify_ty t2_1 t2_2
+  | RecordTy fields1, RecordTy fields2 ->
+      (* There might be a nicer way to do this... *)
+      let fields1 = List.sort (fun (l1, _) (l2, _) -> String.compare l1 l2) fields1 in
+      let fields2 = List.sort (fun (l1, _) (l2, _) -> String.compare l1 l2) fields2 in
+      List.equal (fun (l1, t1) (l2, t2) -> l1 = l2 && unify_ty t1 t2) fields1 fields2
+  | _, _ -> false
+
 
 (* Pretty printing *)
 
@@ -509,7 +524,7 @@ module Refiner = struct
         let f1 = f1 items locals in
         if not (FormatInfo.non_overlapping f0.info f1.info) then
           Error `AmbiguousFormat
-        else if f0.repr <> f1.repr then
+        else if not (unify_ty f0.repr f1.repr) then
           Error (`ReprMismatch (f0.repr, f1.repr))
         else
           Ok {
@@ -584,7 +599,7 @@ module Refiner = struct
     let conv (e : synth_ty) : [`TypeMismatch of ty * ty] check_ty_err =
       fun t items locals ->
         let e, t' = e items locals in
-        if t = t' then Ok e else
+        if unify_ty t t' then Ok e else
           Error (`TypeMismatch (t, t'))
 
     let ann (e : check_ty) (t : is_ty) : synth_ty =

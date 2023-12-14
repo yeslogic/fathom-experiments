@@ -50,6 +50,8 @@ Elaborate records
   
   def zeros : { fst : Byte; snd : Byte } := { fst := 0; snd := 0 };
   
+  def zeros : { fst : Byte; snd : Byte } := { snd := 0; fst := 0 };
+  
   def u8 : Format := {0..255};
   
   def pixels : Format :=
