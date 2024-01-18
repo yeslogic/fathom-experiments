@@ -15,17 +15,17 @@ let name = [%sedlex.regexp? name_start, Star name_continue]
 
 let rec block_comment lexbuf level =
   match%sedlex lexbuf with
-  | "/-" -> (block_comment [@tailrec]) lexbuf (level + 1)
-  | "-/" -> if level = 0 then () else (block_comment [@tailrec]) lexbuf (level - 1)
-  | any -> (block_comment [@tailrec]) lexbuf level
+  | "/-" -> (block_comment [@tailcall]) lexbuf (level + 1)
+  | "-/" -> if level = 0 then () else (block_comment [@tailcall]) lexbuf (level - 1)
+  | any -> (block_comment [@tailcall]) lexbuf level
   | eof -> raise UnclosedBlockComment
   | _ -> raise UnexpectedChar
 
 let rec token lexbuf =
   match%sedlex lexbuf with
-  | ' ' | '\t' | '\n' -> (token [@tailrec]) lexbuf
-  | "--", Star (Compl '\n'), '\n' -> (token [@tailrec]) lexbuf
-  | "/-" -> block_comment lexbuf 0; (token [@tailrec]) lexbuf
+  | ' ' | '\t' | '\n' -> (token [@tailcall]) lexbuf
+  | "--", Star (Compl '\n'), '\n' -> (token [@tailcall]) lexbuf
+  | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf
   | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | "def" -> KEWORD_DEF
