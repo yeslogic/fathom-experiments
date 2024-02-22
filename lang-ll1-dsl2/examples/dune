@@ -1,0 +1,40 @@
+; actions.txt
+
+(rule
+  (with-stdin-from actions.txt
+    (with-stdout-to actions.stdout.tmp
+      (run %{bin:ll1-dsl2}))))
+
+(rule
+  (alias runtest)
+  (package ll1-dsl2)
+  (action (diff actions.stdout
+                actions.stdout.tmp)))
+
+
+; jpeg.txt
+
+(rule
+  (with-stdin-from jpeg.txt
+    (with-stdout-to jpeg.stdout.tmp
+      (run %{bin:ll1-dsl2}))))
+
+(rule
+  (alias runtest)
+  (package ll1-dsl2)
+  (action (diff jpeg.stdout
+                jpeg.stdout.tmp)))
+
+
+; simple.txt
+
+(rule
+  (with-stdin-from simple.txt
+    (with-stdout-to simple.stdout.tmp
+      (run %{bin:ll1-dsl2}))))
+
+(rule
+  (alias runtest)
+  (package ll1-dsl2)
+  (action (diff simple.stdout
+                simple.stdout.tmp)))

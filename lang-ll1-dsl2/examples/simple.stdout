@@ -1,0 +1,6 @@
+def x : Byte := 1;
+
+def y : Byte := x;
+
+def z : (Byte, Byte) := (y, x);
+

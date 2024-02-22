@@ -1,0 +1,3 @@
+def y := x;
+def z := (y, x);
+def x := 1;

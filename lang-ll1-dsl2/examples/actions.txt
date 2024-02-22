@@ -1,0 +1,8 @@
+format test1 :=
+  | 0 { x => (x, x) }
+  ;
+
+format test2 :=
+  | 0 { x => () }
+  | 1 { y => () }
+  ;

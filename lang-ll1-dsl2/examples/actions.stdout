@@ -1,0 +1,4 @@
+def test2 : Format := #map @() (x => ()) {0} | #map @() (y => ()) {1};
+
+def test1 : Format := #map @(Byte, Byte) (x => (x, x)) {0};
+

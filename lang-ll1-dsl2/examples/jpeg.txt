@@ -1,0 +1,69 @@
+-- TODO: Macros
+
+-- format marker (const id : byte) :=
+--     (0xFF, id);
+--
+-- (marker _).nullable     := false
+-- (marker _).first        := {0xFF}
+-- (marker _).follow-last  := {}
+
+-- format marker-segment (const id : byte) (body : Format) :=
+--   {
+--     marker <- marker id;
+--     length <- u16be;
+--     body   <- slice (length - 2) body;
+--   };
+--
+-- (marker-segment _ _).nullable     := false
+-- (marker-segment _ _).first        := {0xFF}
+-- (marker-segment _ _).follow-last  := ??? - would it be u16be.follow-last ... i.e. {}?
+
+format sof0  := (0xFF, 0xC0); -- Start of frame (baseline jpeg)
+format sof1  := (0xFF, 0xC1); -- Start of frame (extended sequential, huffman)
+format sof2  := (0xFF, 0xC2); -- Start of frame (progressive, huffman)
+format sof3  := (0xFF, 0xC3); -- Start of frame (lossless, huffman)
+format dht   := (0xFF, 0xC4); -- Define Huffman Table
+format sof5  := (0xFF, 0xC5); -- Start of frame (differential sequential, huffman)
+format sof6  := (0xFF, 0xC6); -- Start of frame (differential progressive, huffman)
+format sof7  := (0xFF, 0xC7); -- Start of frame (differential lossless, huffman)
+format jpeg  := (0xFF, 0xC8); -- Reserved for JPEG extension
+format sof9  := (0xFF, 0xC9); -- Start of frame (extended sequential, arithmetic)
+format sof10 := (0xFF, 0xCA); -- Start of frame (progressive, arithmetic)
+format sof11 := (0xFF, 0xCB); -- Start of frame (lossless, arithmetic)
+format dac   := (0xFF, 0xCC); -- Define arithmetic coding conditioning
+format sof13 := (0xFF, 0xCD); -- Start of frame (differential sequential, arithmetic)
+format sof14 := (0xFF, 0xCE); -- Start of frame (differential progressive, arithmetic)
+format sof15 := (0xFF, 0xCF); -- Start of frame (differential lossless, arithmetic)
+format rst0  := (0xFF, 0xD0); -- Restart marker 0
+format rst1  := (0xFF, 0xD1); -- Restart marker 1
+format rst2  := (0xFF, 0xD2); -- Restart marker 2
+format rst3  := (0xFF, 0xD3); -- Restart marker 3
+format rst4  := (0xFF, 0xD4); -- Restart marker 4
+format rst5  := (0xFF, 0xD5); -- Restart marker 5
+format rst6  := (0xFF, 0xD6); -- Restart marker 6
+format rst7  := (0xFF, 0xD7); -- Restart marker 7
+format soi   := (0xFF, 0xD8); -- Start of image
+format eoi   := (0xFF, 0xD9); -- End of of image
+format sos   := (0xFF, 0xDA); -- Start of scan
+format dqt   := (0xFF, 0xDB); -- Define quantization table
+format dnl   := (0xFF, 0xDC); -- Define number of lines
+format dri   := (0xFF, 0xDD); -- Define restart interval
+format dhp   := (0xFF, 0xDE); -- Define hierarchical progression
+format exp   := (0xFF, 0xDF); -- Expand reference components
+format app0  := (0xFF, 0xE0); -- Application segment 0 (JFIF/JFXX/AVI1/...)
+format app1  := (0xFF, 0xE1); -- Application segment 1 (EXIF/XMP/XAP/...)
+format app2  := (0xFF, 0xE2); -- Application segment 2 (FlashPix/ICC/...)
+format app3  := (0xFF, 0xE3); -- Application segment 3 (Kodak/...)
+format app4  := (0xFF, 0xE4); -- Application segment 4 (FlashPix/...)
+format app5  := (0xFF, 0xE5); -- Application segment 5 (Ricoh/...)
+format app6  := (0xFF, 0xE6); -- Application segment 6 (GoPro/...)
+format app7  := (0xFF, 0xE7); -- Application segment 7 (Pentax/Qualcomm/...)
+format app8  := (0xFF, 0xE8); -- Application segment 8 (Spiff/...)
+format app9  := (0xFF, 0xE9); -- Application segment 9 (MediaJukebox/...)
+format app10 := (0xFF, 0xEA); -- Application segment 10 (PhotoStudio)
+format app11 := (0xFF, 0xEB); -- Application segment 11 (HDR)
+format app12 := (0xFF, 0xEC); -- Application segment 12 (PictureInfo/Ducky)
+format app13 := (0xFF, 0xED); -- Application segment 13 (PhotoShop/Adobe_CM)
+format app14 := (0xFF, 0xEE); -- Application segment 14 (Adobe)
+format app15 := (0xFF, 0xEF); -- Application segment 15 (GraphicConverter)
+format com   := (0xFF, 0xFE); -- Extension data (comment)
