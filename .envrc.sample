@@ -9,7 +9,7 @@
 use flake
 
 # Reload the environment when opam files update
-watch_file opam/*.opam
+watch_file "$(find opam -name "*.opam" -printf '"%p" ')"
 
 # Add dune executables to the PATH
 PATH_add _build/install/default/bin/
