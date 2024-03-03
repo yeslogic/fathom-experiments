@@ -70,7 +70,7 @@
         final: prev: { });
 
       buildOpamProject = system: options:
-        (opam-nix.lib.${system}.buildOpamProject' options ./. query).overrideScope'
+        (opam-nix.lib.${system}.buildOpamProject' options ./. query).overrideScope
           overlay.${system};
 
       legacyPackages = eachSystem (system:
