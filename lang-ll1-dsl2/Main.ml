@@ -1,8 +1,3 @@
-module Core = Core
-module Surface = Surface
-module Parser = Parser
-module Lexer = Lexer
-
 let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
       start.pos_fname
