@@ -82,6 +82,8 @@ type program =
 
 module Elab = struct
 
+  module LabelMap = Core.LabelMap
+
   exception Error of loc * string
   exception Bug of loc * string
 
@@ -181,11 +183,11 @@ module Elab = struct
       RecordTy
         (List.fold_left
           (fun fs (l, t) ->
-            if Core.LabelMap.mem l.data fs then
+            if LabelMap.mem l.data fs then
               error l.loc (Stdlib.Format.asprintf "duplicate field labels `%s`" l.data)
             else
-              Core.LabelMap.add l.data (check_ty ctx t) fs)
-          Core.LabelMap.empty
+              LabelMap.add l.data (check_ty ctx t) fs)
+          LabelMap.empty
           fs)
 
     | Tuple ts ->
@@ -212,13 +214,13 @@ module Elab = struct
       let rec go fs_e fs_t fs =
         match fs with
         | [] -> fs_e, fs_t
-        | (l, _) :: _ when Core.LabelMap.mem l.data fs_e ->
+        | (l, _) :: _ when LabelMap.mem l.data fs_e ->
           error l.loc (Stdlib.Format.asprintf "duplicate field labels `%s`" l.data)
         | (l, e) :: fs ->
           let e, t = infer_expr ctx e in
-          go (Core.LabelMap.add l.data e fs_e) (Core.LabelMap.add l.data t fs_t) fs
+          go (LabelMap.add l.data e fs_e) (LabelMap.add l.data t fs_t) fs
       in
-      let fs_e, fs_t = go Core.LabelMap.empty Core.LabelMap.empty fs in
+      let fs_e, fs_t = go LabelMap.empty LabelMap.empty fs in
       RecordLit fs_e, RecordTy fs_t
 
     | TupleLit es ->
@@ -231,7 +233,7 @@ module Elab = struct
     | ProjLabel (e, l) -> begin
       match infer_expr ctx e with
       | e, RecordTy ts -> begin
-        match Core.LabelMap.find_opt l.data ts with
+        match LabelMap.find_opt l.data ts with
         | Some t -> RecordProj (e, l.data), t
         | None -> error l.loc (Stdlib.Format.sprintf "unknown field `%s`" l.data)
       end
@@ -299,7 +301,7 @@ module Elab = struct
         match fs with
         | [] ->
           let is = Seq.ints 0 |> Seq.take (List.length seen) in (* FIXME: reverse *)
-          let t = Core.RecordTy (is |> Seq.map (List.nth ctx.locals) |> Core.LabelMap.of_seq) in
+          let t = Core.RecordTy (is |> Seq.map (List.nth ctx.locals) |> LabelMap.of_seq) in
           let e = Core.TupleLit (is |> Seq.map (fun i -> Core.Local i) |> List.of_seq) in
           Core.{
             node = Pure (t, e);
