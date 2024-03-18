@@ -29,10 +29,6 @@
 
 %start <Surface.program> program
 
-%type <Surface.Format.node> format
-%type <Surface.Expr.node> expr
-%type <Surface.Ty.node> ty
-
 %%
 
 let program :=
@@ -40,85 +36,67 @@ let program :=
       { items }
 
 let item :=
-  | "format"; n = located(NAME); ":="; f = located(format); ";";
+  | "format"; n = located(NAME); ":="; f = located(tm); ";";
       { Surface.FormatDef (n, f) }
-  | "type"; n = located(NAME); ":="; t = located(ty); ";";
+  | "type"; n = located(NAME); ":="; t = located(tm); ";";
       { Surface.TypeDef (n, t) }
-  | "def"; n = located(NAME); t = option(":"; ~ = located(ty); <>); ":="; e = located(expr); ";";
-      { Surface.ExprDef (n, t, e) }
+  | "def"; n = located(NAME); t = option(":"; ~ = located(tm); <>); ":="; e = located(tm); ";";
+      { Surface.Def (n, t, e) }
 
-let ty :=
-  | n = NAME;
-      { Surface.Ty.Name n }
-  | "{"; fs = trailing_list(";", ~ = located(NAME); ":"; ~ = located(ty); <>); "}";
-      { Surface.Ty.Record fs }
-  | "("; ")";
-      { Surface.Ty.Tuple [] }
-  | "("; t = located(ty); ","; ts = trailing_list(",", located(ty)); ")";
-      { Surface.Ty.Tuple (t :: ts) }
+let tm :=
+  | "|"; t = union_tm;
+      { t }
+  | union_tm
 
-let expr :=
-  | e = located(expr); "."; l = located(NAME);
-      { Surface.Expr.ProjLabel (e, l) }
-  | e = located(expr); "."; i = located(INT);
-      { Surface.Expr.ProjIndex (e, i) }
-  | atomic_expr
+let union_tm :=
+  | f1 = located(range_tm); "|"; f2 = located(union_tm);
+      { Surface.Union (f1, f2) }
+  | range_tm
 
-let atomic_expr :=
-  | "("; e = expr; ")";
+let range_tm :=
+  | f = located(proj_tm); "{"; n = located(NAME); "=>"; b = located(tm); "}";
+      { Surface.Action (f, (n, b)) }
+  | start = inclusive; ".."; stop = inclusive; { Surface.Range (start, stop) }
+  | start = inclusive; "..<"; stop = exclusive; { Surface.Range (start, stop) }
+  | start = exclusive; ">.."; stop = inclusive; { Surface.Range (start, stop) }
+  | start = exclusive; ">..<"; stop = exclusive; { Surface.Range (start, stop) }
+  | proj_tm
+
+let proj_tm :=
+  | e = located(proj_tm); "."; l = located(NAME);
+      { Surface.Proj (e, `Label l) }
+  | e = located(proj_tm); "."; i = located(INT);
+      { Surface.Proj (e, `Index i) }
+  | atomic_tm
+
+let atomic_tm :=
+  | "("; e = tm; ")";
       { e }
   | n = NAME;
-      { Surface.Expr.Name n }
+      { Surface.Name n }
   | i = INT;
-      { Surface.Expr.IntLit i }
-  | "{"; fs = trailing_list(";", ~ = located(NAME); ":="; ~ = located(expr); <>); "}";
-      { Surface.Expr.RecordLit fs }
+      { Surface.IntLit i }
+  | "!"; f = located(atomic_tm);
+      { Surface.Not f }
+  | "{"; "}";
+      { Surface.RecordEmpty }
+  | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); ":"; ~ = located(tm); <>); "}";
+      { Surface.RecordTy fs }
+  | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
+      { Surface.RecordLit fs }
+  | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); "<-"; ~ = located(tm); <>); "}";
+      { Surface.RecordFormat fs }
   | "("; ")";
-      { Surface.Expr.TupleLit [] }
-  | "("; e = located(expr); ","; es = trailing_list(",", located(expr)); ")";
-      { Surface.Expr.TupleLit (e :: es) }
-
-let format :=
-  | "|"; t = union_format;
-      { t }
-  | union_format
-
-let union_format :=
-  | f1 = located(range_format); "|"; f2 = located(union_format);
-      { Surface.Format.Union (f1, f2) }
-  | range_format
-
-let range_format :=
-  | f = located(atomic_format); "{"; n = located(NAME); "=>"; b = located(expr); "}";
-      { Surface.Format.Action (f, (n, b)) }
-  | start = inclusive; ".."; stop = inclusive; { Surface.Format.Range (start, stop) }
-  | start = inclusive; "..<"; stop = exclusive; { Surface.Format.Range (start, stop) }
-  | start = exclusive; ">.."; stop = inclusive; { Surface.Format.Range (start, stop) }
-  | start = exclusive; ">..<"; stop = exclusive; { Surface.Format.Range (start, stop) }
-  | atomic_format
-
-let atomic_format :=
-  | "("; f = format; ")";
-      { f }
-  | n = NAME;
-      { Surface.Format.Name n }
-  | i = INT;
-      { Surface.Format.Int i }
-  | "!"; f = located(atomic_format);
-      { Surface.Format.Not f }
-  | "{"; fs = trailing_list(";", ~ = located(NAME); "<-"; ~ = located(format); <>); "}";
-      { Surface.Format.Record fs }
-  | "("; ")";
-      { Surface.Format.Tuple [] }
-  | "("; f = located(format); ","; fs = trailing_list(",", located(format)); ")";
-      { Surface.Format.Tuple (f :: fs) }
+      { Surface.Tuple [] }
+  | "("; t = located(tm); ","; ts = trailing_list(",", located(tm)); ")";
+      { Surface.Tuple (t :: ts) }
 
 let inclusive ==
-  | e = located(INT); { Surface.Format.Inclusive e }
-  | { Surface.Format.Open }
+  | e = located(INT); { Surface.Inclusive e }
+  | { Surface.Open }
 
 let exclusive ==
-  | e = located(INT); { Surface.Format.Exclusive e }
+  | e = located(INT); { Surface.Exclusive e }
 
 // Utilities
 
