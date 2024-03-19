@@ -52,16 +52,16 @@ let tm :=
 
 let union_tm :=
   | f1 = located(range_tm); "|"; f2 = located(union_tm);
-      { Surface.Union (f1, f2) }
+      { Surface.Op2 (`Or, f1, f2) }
   | range_tm
 
 let range_tm :=
   | f = located(proj_tm); "{"; n = located(NAME); "=>"; b = located(tm); "}";
-      { Surface.Action (f, (n, b)) }
-  | start = inclusive; ".."; stop = inclusive; { Surface.Range (start, stop) }
-  | start = inclusive; "..<"; stop = exclusive; { Surface.Range (start, stop) }
-  | start = exclusive; ">.."; stop = inclusive; { Surface.Range (start, stop) }
-  | start = exclusive; ">..<"; stop = exclusive; { Surface.Range (start, stop) }
+      { Surface.ActionFormat (f, (n, b)) }
+  | start = inclusive; ".."; stop = inclusive; { Surface.RangeFormat (start, stop) }
+  | start = inclusive; "..<"; stop = exclusive; { Surface.RangeFormat (start, stop) }
+  | start = exclusive; ">.."; stop = inclusive; { Surface.RangeFormat (start, stop) }
+  | start = exclusive; ">..<"; stop = exclusive; { Surface.RangeFormat (start, stop) }
   | proj_tm
 
 let proj_tm :=
@@ -77,9 +77,9 @@ let atomic_tm :=
   | n = NAME;
       { Surface.Name n }
   | i = INT;
-      { Surface.IntLit i }
+      { Surface.Int i }
   | "!"; f = located(atomic_tm);
-      { Surface.Not f }
+      { Surface.Op1(`Not, f) }
   | "{"; "}";
       { Surface.RecordEmpty }
   | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); ":"; ~ = located(tm); <>); "}";
