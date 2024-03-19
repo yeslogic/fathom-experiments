@@ -63,52 +63,33 @@ module Elab = struct
   let error loc msg = raise (Error (loc, msg))
   let bug loc msg = raise (Bug (loc, msg))
 
-  (* An elaborated type *)
-  type _ elab_ty =
-    | Kind : [`Kind] elab_ty
-    | TypeKind : [`TypeKind] elab_ty
-    | FormatKind : [`FormatKind] elab_ty
-    | Type : Core.ty -> Core.ty elab_ty
-
-  (* An elaborated term *)
-  type _ elab_tm =
-    | TypeKind : [`Kind] elab_tm
-    | FormatKind : [`Kind] elab_tm
-    | Type : Core.ty -> [`TypeKind] elab_tm
-    | Format : Core.format -> [`FormatKind] elab_tm
-    | Expr : Core.expr -> Core.ty elab_tm
-
-  type ann_tm =
-    | AnnTm : 'ann elab_tm * 'ann elab_ty -> ann_tm
-
-  let expect_kind loc tm =
-    match tm with
-    | AnnTm (TypeKind, _) -> TypeKind
-    | AnnTm (FormatKind, _) -> FormatKind
-    | AnnTm (Type _, _) -> error loc "expected kind, found type"
-    | AnnTm (Expr _, _) -> error loc "expected kind, found expression"
-    | AnnTm (Format _, _) -> error loc "expected kind, found format"
+  (** An inferred term *)
+  type infer_tm =
+    | InferKind of [`Type | `Format]
+    | InferType of Core.ty
+    | InferExpr of Core.expr * Core.ty
+    | InferFormat of Core.format
 
   let expect_type loc tm =
     match tm with
-    | AnnTm ((TypeKind | FormatKind), _) -> error loc "expected type, found kind"
-    | AnnTm (Type t, _) -> Type t
-    | AnnTm (Expr _, _) -> error loc "expected type, found expression"
-    | AnnTm (Format _, _) -> error loc "expected type, found format"
+    | InferKind _ -> error loc "expected type, found kind"
+    | InferType t -> t
+    | InferExpr (_, _) -> error loc "expected type, found expression"
+    | InferFormat _ -> error loc "expected type, found format"
 
   let expect_expr loc tm =
     match tm with
-    | AnnTm ((TypeKind | FormatKind), Kind) -> error loc "expected expression, found kind"
-    | AnnTm (Expr e, Type t) -> e, t
-    | AnnTm (Type _, TypeKind) -> error loc "expected expression, found type"
-    | AnnTm (Format _, FormatKind) -> error loc "expected expression, found format"
+    | InferKind _ -> error loc "expected expression, found kind"
+    | InferExpr (e, t) -> e, t
+    | InferType _ -> error loc "expected expression, found type"
+    | InferFormat _ -> error loc "expected expression, found format"
 
   let expect_format loc tm =
     match tm with
-    | AnnTm ((TypeKind | FormatKind), _) -> error loc "expected format, found kind"
-    | AnnTm (Type _, _) -> error loc "expected format, found type"
-    | AnnTm (Expr _, _) -> error loc "expected format, found expression"
-    | AnnTm (Format f, _) -> Format f
+    | InferKind _ -> error loc "expected format, found kind"
+    | InferType _ -> error loc "expected format, found type"
+    | InferExpr (_, _) -> error loc "expected format, found expression"
+    | InferFormat f -> f
 
 
   type context = {
@@ -162,91 +143,104 @@ module Elab = struct
           Core.pp_print_ty ty1
           Core.pp_print_ty ty2)
 
+  (** Elaborate a surface term into a core type. *)
+  let rec check_type (ctx : context) (tm : tm) : Core.ty =
+    match tm.data with
+    (* Empty records *)
+    | RecordEmpty ->
+      RecordTy LabelMap.empty
 
-  (** Elaborate a surface term into a core term, given an expected type. *)
-  let rec check : type ann. context -> tm -> ann elab_ty -> ann elab_tm =
-    fun ctx tm ty ->
-      match tm.data with
-      (* Empty records *)
-      | RecordEmpty -> begin
-        match ty with
-        | Kind -> error tm.loc "expected kind, found empty record"
-        | TypeKind -> Type (RecordTy LabelMap.empty)
-        | FormatKind ->
-          Format Core.{
-            node = Pure (RecordTy LabelMap.empty, RecordLit LabelMap.empty);
-            repr = RecordTy LabelMap.empty;
-            info = FormatInfo.empty;
-          }
-        | Type t ->
-          equate_ty tm.loc t (RecordTy LabelMap.empty);
-          Expr (RecordLit LabelMap.empty)
-      end
+    (* Tuples *)
+    | Tuple tms ->
+      TupleTy (List.map (check_type ctx) tms)
 
-      (* Tuples *)
-      | Tuple tms -> begin
-        match ty with
-        | Kind -> error tm.loc "expected kind, found tuple"
-        | TypeKind -> Type (TupleTy (List.map (check_type ctx) tms))
-        | FormatKind ->
-          let fs = List.map (check_format ctx) tms in
-          Format Core.{
-            node = Seq fs;
-            repr = TupleTy (List.map (fun f -> f.repr) fs);
-            info = List.fold_right (fun f acc -> FormatInfo.seq f.info acc) fs FormatInfo.empty;
-          }
-        | Type t -> begin
-          match t with
-          | TupleTy ts ->
-            let rec go tms ts =
-              match tms, ts with
-              | [], [] -> []
-              | tm :: tms, t :: ts -> check_expr ctx tm t :: go tms ts
-              | _, _ -> error tm.loc "unexpected number of elements in tuple"
-            in
-            Expr (TupleLit (go tms ts))
-          | t ->
-            error tm.loc
-              (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: tuple@]@]"
-                Core.pp_print_ty t)
-        end
+    (* Integer literals *)
+    | IntLit _ ->
+      error tm.loc "unexpected integer literal"
 
-      end
+    (* Conversion *)
+    | _ ->
+      infer ctx tm |> expect_type tm.loc
 
-      (* Integer literals *)
-      | IntLit i -> begin
-        match ty with
-        | FormatKind -> Format (format_of_byte_set (byte_set_of_int tm.loc i))
-        | Type ByteTy -> Expr (ByteLit (byte_of_int tm.loc i))
-        | _ -> error tm.loc "unexpected integer literal"
-      end
+  (** Elaborate a surface term into a core expression, given an expected type. *)
+  and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
+    match tm.data, t with
+    (* Empty records *)
 
-      (* Conversion *)
-      | _ -> begin
-        match ty with
-        | Kind -> infer ctx tm |> expect_kind tm.loc
-        | TypeKind -> infer ctx tm |> expect_type tm.loc
-        | FormatKind -> infer ctx tm |> expect_format tm.loc
-        | Type t ->
-          let e', t' = infer_expr ctx tm in
-          equate_ty tm.loc t t';
-          Expr e'
-      end
+    | RecordEmpty, t ->
+      equate_ty tm.loc t (RecordTy LabelMap.empty);
+      RecordLit LabelMap.empty
+
+    (* Tuples *)
+
+    | Tuple tms, TupleTy ts ->
+      let rec go tms ts =
+        match tms, ts with
+        | [], [] -> []
+        | tm :: tms, t :: ts -> check_expr ctx tm t :: go tms ts
+        | _, _ -> error tm.loc "unexpected number of elements in tuple"
+      in
+      TupleLit (go tms ts)
+
+    | Tuple _, t ->
+      error tm.loc
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: tuple@]@]"
+          Core.pp_print_ty t)
+
+    (* Integer literals *)
+
+    | IntLit i, ByteTy -> ByteLit (byte_of_int tm.loc i)
+    | IntLit _, _ -> error tm.loc "unexpected integer literal"
+
+    (* Conversion *)
+
+    | _, t ->
+      let e', t' = infer_expr ctx tm in
+      equate_ty tm.loc t t';
+      e'
+
+  (** Elaborate a surface term into a core format. *)
+  and check_format (ctx : context) (tm : tm) : Core.format =
+    match tm.data with
+    (* Empty records *)
+    | RecordEmpty ->
+      Core.{
+        node = Pure (RecordTy LabelMap.empty, RecordLit LabelMap.empty);
+        repr = RecordTy LabelMap.empty;
+        info = FormatInfo.empty;
+      }
+
+    (* Tuples *)
+    | Tuple tms ->
+      let fs = List.map (check_format ctx) tms in
+      Core.{
+        node = Seq fs;
+        repr = TupleTy (List.map (fun f -> f.repr) fs);
+        info = List.fold_right (fun f acc -> FormatInfo.seq f.info acc) fs FormatInfo.empty;
+      }
+
+    (* Integer literals *)
+    | IntLit i ->
+      format_of_byte_set (byte_set_of_int tm.loc i)
+
+    (* Conversion *)
+    | _ ->
+      infer ctx tm |> expect_format tm.loc
 
   (** Elaborate a surface term into a core term, inferring its type. *)
-  and infer (ctx : context) (tm : tm) : ann_tm =
+  and infer (ctx : context) (tm : tm) : infer_tm =
     match tm.data with
     | Name n -> begin
       match lookup_local ctx n with
-      | Some (e, t) -> AnnTm (Expr e, Type t)
+      | Some (e, t) -> InferExpr (e, t)
       | None -> begin
         match List.assoc_opt n ctx.items with
-        | Some (Type _) -> AnnTm (Type (Item n), TypeKind)
-        | Some (Format f) -> AnnTm (Format ({ f with node = Item n }), FormatKind)
-        | Some (Expr (_, ty)) -> AnnTm (Expr (Item n), Type ty)
-        | None when n = "Type" -> AnnTm (TypeKind, Kind)
-        | None when n = "Format" -> AnnTm (FormatKind, Kind)
-        | None when n = "Byte" -> AnnTm (Type ByteTy, TypeKind)
+        | Some (Type _) -> InferType (Item n)
+        | Some (Format f) -> InferFormat { f with node = Item n }
+        | Some (Expr (_, ty)) -> InferExpr (Item n, ty)
+        | None when n = "Type" -> InferKind `Type
+        | None when n = "Format" -> InferKind `Format
+        | None when n = "Byte" -> InferType ByteTy
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" n)
       end
     end
@@ -257,7 +251,7 @@ module Elab = struct
     | RecordTy fs ->
       let rec go fs acc_fs =
         match fs with
-        | [] -> AnnTm (Type (RecordTy acc_fs), TypeKind)
+        | [] -> InferType (RecordTy acc_fs)
         | (l, tm) :: fs  ->
           if LabelMap.mem l.data acc_fs then
             error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
@@ -269,7 +263,7 @@ module Elab = struct
     | RecordLit fs ->
       let rec go fs fs_e fs_t =
         match fs with
-        | [] -> AnnTm (Expr (RecordLit fs_e), Type (RecordTy fs_t))
+        | [] -> InferExpr (RecordLit fs_e, RecordTy fs_t)
         | (l, e) :: fs ->
           if LabelMap.mem l.data fs_e then
             error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
@@ -287,7 +281,7 @@ module Elab = struct
         repr = t;
         info = f.info;
       } in
-      AnnTm (Format f, FormatKind)
+      InferFormat f
 
     | Union (f1, f2) ->
       let f1 = check_format ctx f1 in
@@ -298,10 +292,10 @@ module Elab = struct
         repr = f1.repr;
         info = Core.FormatInfo.union f1.info f2.info;
       } in
-      AnnTm (Format f, FormatKind)
+      InferFormat f
 
     | Range (start, stop) ->
-      AnnTm (Format (format_of_byte_set (byte_set_of_range start stop)), FormatKind)
+      InferFormat (format_of_byte_set (byte_set_of_range start stop))
 
     | RecordFormat fs ->
       let rec go ctx seen fs : Core.format =
@@ -327,7 +321,7 @@ module Elab = struct
               info = Core.FormatInfo.seq f1.info f2.info;
             }
       in
-      AnnTm (Format (go ctx [] fs), FormatKind)
+      InferFormat (go ctx [] fs)
 
     | Not tm ->
         let s =
@@ -336,50 +330,39 @@ module Elab = struct
           | Range (start, stop) -> byte_set_of_range start stop
           | _ -> error tm.loc "negation is only supported for integer and range formats"
         in
-        AnnTm (Format (format_of_byte_set (ByteSet.neg s)), FormatKind)
+        InferFormat (format_of_byte_set (ByteSet.neg s))
 
     | IntLit i ->
       (* TODO: postpone elaboration *)
-      AnnTm (Expr (ByteLit (byte_of_int tm.loc i)), Type ByteTy)
+      InferExpr (ByteLit (byte_of_int tm.loc i), ByteTy)
 
     | Tuple tms ->
       (* TODO: postpone elaboration *)
       let es_ts = List.map (infer_expr ctx) tms in
-      AnnTm (Expr (TupleLit (List.map fst es_ts)), Type (TupleTy (List.map snd es_ts)))
+      InferExpr (TupleLit (List.map fst es_ts), TupleTy (List.map snd es_ts))
 
     | Proj (e, `Label l) -> begin
       match infer ctx e with
-      | AnnTm (Expr e, Type (RecordTy ts)) -> begin
+      | InferExpr (e, RecordTy ts) -> begin
         match LabelMap.find_opt l.data ts with
-        | Some t -> AnnTm (Expr (RecordProj (e, l.data)), Type t)
+        | Some t -> InferExpr (RecordProj (e, l.data), t)
         | None -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
       end
-
-      | AnnTm (Format f, FormatKind) when l.data = "Repr" ->
-        AnnTm (Type f.repr, TypeKind)
+      | InferFormat f when l.data = "Repr" ->
+        InferType f.repr
         (*          ^^^^^^ TODO: preserve `Repr` in core language *)
-
       | _ -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
     end
 
     | Proj (e, `Index i) -> begin
       match infer ctx e with
-      | AnnTm (Expr e, Type (TupleTy ts)) when i.data < List.length ts ->
-        AnnTm (Expr (TupleProj (e, i.data)), Type (List.nth ts i.data))
-
+      | InferExpr (e, TupleTy ts) when i.data < List.length ts ->
+        InferExpr (TupleProj (e, i.data), List.nth ts i.data)
       | _ -> error i.loc (Format.sprintf "unknown field `%i`" i.data)
     end
 
+
   (* Specialised elaboration functions *)
-
-  and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
-    let Expr e = check ctx tm (Type t) in e
-
-  and check_type (ctx : context) (tm : tm) : Core.ty =
-    let Type t = check ctx tm TypeKind in t
-
-  and check_format (ctx : context) (tm : tm) : Core.format =
-    let Format f = check ctx tm FormatKind in f
 
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     infer ctx tm |> expect_expr tm.loc
@@ -447,19 +430,19 @@ module Elab = struct
       | TypeDef (n, t) -> n.data, Type (check_type ctx t)
       | Def (n, None, body) -> begin
         match infer ctx body with
-        | AnnTm ((TypeKind | FormatKind), _) -> error n.loc "kind definitions are not supported"
-        | AnnTm (Type t, TypeKind) -> n.data, Type t
-        | AnnTm (Expr e, Type t) -> n.data, Expr (e, t)
-        | AnnTm (Format f, FormatKind) ->  n.data, Format f
+        | InferKind _ -> error n.loc "kind definitions are not supported"
+        | InferType t -> n.data, Type t
+        | InferExpr (e, t) -> n.data, Expr (e, t)
+        | InferFormat f ->  n.data, Format f
       end
       | Def (n, Some ann, body) -> begin
         match infer ctx ann with
-        | AnnTm (TypeKind, _) -> n.data, Type (check_type ctx body)
-        | AnnTm (FormatKind, _) -> n.data, Format (check_format ctx body)
-        | AnnTm (Type t, _) -> n.data, Expr (check_expr ctx body t, t)
-        | AnnTm (Expr _, _) -> error body.loc "expected annotation, found expression"
-        | AnnTm (Format f, _) ->  n.data, Expr (check_expr ctx body f.repr, f.repr)
-        (*                                                          ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
+        | InferKind `Type -> n.data, Type (check_type ctx body)
+        | InferKind `Format -> n.data, Format (check_format ctx body)
+        | InferType t -> n.data, Expr (check_expr ctx body t, t)
+        | InferExpr _ -> error body.loc "expected annotation, found expression"
+        | InferFormat f ->  n.data, Expr (check_expr ctx body f.repr, f.repr)
+        (*                                                    ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
       end
     in
 
