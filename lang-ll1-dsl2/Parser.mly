@@ -46,6 +46,8 @@ let item :=
 let tm :=
   | "|"; t = union_tm;
       { t }
+  | tm1 = located(union_tm); ":"; tm2 = located(tm);
+      { Surface.Ann (tm1, tm2) }
   | union_tm
 
 let union_tm :=

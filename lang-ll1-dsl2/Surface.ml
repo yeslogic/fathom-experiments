@@ -25,6 +25,7 @@ type tm =
 
 and tm_node =
   | Name of string
+  | Ann of tm * tm
   | RecordEmpty
   | RecordTy of (string located * tm) list
   | RecordLit of (string located * tm) list
@@ -224,6 +225,16 @@ module Elab = struct
       end
     end
 
+    | Ann (tm, ann) -> begin
+      match infer ctx ann with
+      | InferKind `Type -> InferType (check_type ctx tm)
+      | InferKind `Format -> InferFormat (check_format ctx tm)
+      | InferType t -> InferExpr (check_expr ctx tm t, t)
+      | InferExpr _ -> error tm.loc "expected annotation, found expression"
+      | InferFormat f ->  InferExpr (check_expr ctx tm f.repr, f.repr)
+      (*                                               ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
+    end
+
     | RecordEmpty ->
       error tm.loc "ambiguous empty record"
 
@@ -393,6 +404,7 @@ module Elab = struct
       match t.data with
       | Name n when StringSet.mem n locals -> []
       | Name n -> StringMap.find_opt n name_map |> Option.to_list
+      | Ann (tm, ann) -> tm_deps locals tm @ tm_deps locals ann
       | RecordEmpty -> []
       | RecordTy fs -> List.concat_map (fun (_, t) -> tm_deps locals t) fs
       | RecordLit fs -> List.concat_map (fun (_, e) -> tm_deps locals e) fs
