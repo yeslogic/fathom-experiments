@@ -140,7 +140,12 @@ module Elab = struct
 
     (* Conversion *)
     | _ ->
-      infer_type ctx tm
+      match infer ctx tm with
+      | InferKind _ -> error tm.loc "expected type, found kind"
+      | InferType t -> t
+      | InferExpr (_, _) -> error tm.loc "expected type, found expression"
+      | InferFormat f -> f.repr
+      (*                 ^^^^^^ TODO: preserve `repr` in core language *)
 
   (** Elaborate a surface term into a core expression, given an expected type. *)
   and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
@@ -340,7 +345,7 @@ module Elab = struct
       end
       | InferFormat f when l.data = "Repr" ->
         InferType f.repr
-        (*          ^^^^^^ TODO: preserve `Repr` in core language *)
+        (*        ^^^^^^ TODO: preserve `Repr` in core language *)
       | _ -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
     end
 
@@ -353,13 +358,6 @@ module Elab = struct
 
 
   (* Specialised elaboration functions *)
-
-  and infer_type (ctx : context) (tm : tm) : Core.ty =
-    match infer ctx tm with
-    | InferKind _ -> error tm.loc "expected type, found kind"
-    | InferType t -> t
-    | InferExpr (_, _) -> error tm.loc "expected type, found expression"
-    | InferFormat _ -> error tm.loc "expected type, found format"
 
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     match infer ctx tm with
