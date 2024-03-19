@@ -54,7 +54,14 @@ type program =
 
 (** {1 Elaboration} *)
 
-module Elab = struct
+module Elab : sig
+
+  exception Error of loc * string
+  exception Bug of loc * string
+
+  val check_program : item list -> Core.program
+
+end = struct
 
   module LabelMap = Core.LabelMap
 
@@ -65,7 +72,7 @@ module Elab = struct
   exception Bug of loc * string
 
   let error loc msg = raise (Error (loc, msg))
-  let bug loc msg = raise (Bug (loc, msg))
+  let[@warning "-unused-value-declaration"] bug loc msg = raise (Bug (loc, msg))
 
 
   (** {2 Byte conversions} *)
