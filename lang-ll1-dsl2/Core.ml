@@ -309,20 +309,25 @@ module Semantics = struct
 
   (* Evalution *)
 
-  let rec eval (locals : local_env) (e : expr) : vexpr =
+  let rec eval (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
-    | Item _n -> failwith "todo"
-    | Local x -> begin
-        match List.nth_opt locals x with
-        | Some v -> v
-        | None -> invalid_arg "unbound local variable"
+    | Item n -> begin
+      match List.assoc_opt n items with
+      | Some (Expr (e, _)) -> eval items [] e
+      | Some _ -> invalid_arg "expected expression"
+      | None -> invalid_arg "unbound item variable"
     end
-    | Ann (e, _) -> eval locals e
+    | Local x -> begin
+      match List.nth_opt locals x with
+      | Some v -> v
+      | None -> invalid_arg "unbound local variable"
+    end
+    | Ann (e, _) -> eval items locals e
     | ByteLit c -> ByteLit c
-    | RecordLit fs -> RecordLit (LabelMap.map (eval locals) fs)
-    | RecordProj (e, l) -> record_proj (eval locals e) l
-    | TupleLit es -> TupleLit (List.map (eval locals) es)
-    | TupleProj (e, i) -> tuple_proj (eval locals e) i
+    | RecordLit fs -> RecordLit (LabelMap.map (eval items locals) fs)
+    | RecordProj (e, l) -> record_proj (eval items locals e) l
+    | TupleLit es -> TupleLit (List.map (eval items locals) es)
+    | TupleProj (e, i) -> tuple_proj (eval items locals e) i
 
   let rec quote (ve : vexpr) : expr =
     match ve with
@@ -330,8 +335,8 @@ module Semantics = struct
     | RecordLit fs -> RecordLit (LabelMap.map quote fs)
     | TupleLit ves -> TupleLit (List.map quote ves)
 
-  let normalise (locals : local_env) (e : expr) : expr =
-    quote (eval locals e)
+  let normalise (items : (string * item) list) (locals : local_env) (e : expr) : expr =
+    quote (eval items locals e)
 
 
   (* Decode semantics *)
@@ -372,8 +377,8 @@ module Semantics = struct
       end
       | Map (_, (_, e), f) ->
           let pos, ev = go locals input pos f in
-          pos, eval (ev :: locals) e
-    | Pure (_, e) -> pos, eval locals e
+          pos, eval p.items (ev :: locals) e
+    | Pure (_, e) -> pos, eval p.items locals e
       | FlatMap (_, (_, f1), f0) ->
           let pos, ev0 = go locals input pos f0 in
           go (ev0 :: locals) input pos f1
