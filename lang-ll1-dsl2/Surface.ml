@@ -255,30 +255,29 @@ module Elab = struct
       error tm.loc "ambiguous empty record"
 
     | RecordTy fs ->
-      let fs =
-        List.fold_left
-          (fun fs (l, t) ->
-            if LabelMap.mem l.data fs then
-              error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
-            else
-              LabelMap.add l.data (check_type ctx t) fs)
-          LabelMap.empty
-          fs
+      let rec go fs acc_fs =
+        match fs with
+        | [] -> AnnTm (Type (RecordTy acc_fs), TypeKind)
+        | (l, tm) :: fs  ->
+          if LabelMap.mem l.data acc_fs then
+            error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
+          else
+            (go [@tailcall]) fs (LabelMap.add l.data (check_type ctx tm) acc_fs)
       in
-      AnnTm (Type (RecordTy fs), TypeKind)
+      go fs LabelMap.empty
 
     | RecordLit fs ->
-      let rec go fs_e fs_t fs =
+      let rec go fs fs_e fs_t =
         match fs with
-        | [] -> fs_e, fs_t
-        | (l, _) :: _ when LabelMap.mem l.data fs_e ->
-          error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
+        | [] -> AnnTm (Expr (RecordLit fs_e), Type (RecordTy fs_t))
         | (l, e) :: fs ->
-          let e, t = infer_expr ctx e in
-          go (LabelMap.add l.data e fs_e) (LabelMap.add l.data t fs_t) fs
+          if LabelMap.mem l.data fs_e then
+            error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
+          else
+            let e, t = infer_expr ctx e in
+            (go [@tailcall]) fs (LabelMap.add l.data e fs_e) (LabelMap.add l.data t fs_t)
       in
-      let fs_e, fs_t = go LabelMap.empty LabelMap.empty fs in
-      AnnTm (Expr (RecordLit fs_e), Type (RecordTy fs_t))
+      go fs LabelMap.empty LabelMap.empty
 
     | Action (f, (n, e)) ->
       let f = check_format ctx f in
@@ -311,21 +310,22 @@ module Elab = struct
           let is = List.init (List.length seen) Fun.id in
           let t = Core.RecordTy (is |> List.rev_map (List.nth ctx.locals) |> LabelMap.of_list) in
           let e = Core.RecordLit (is |> List.rev_map (fun i -> (List.nth seen i).data, Core.Local i) |> LabelMap.of_list) in
-          Core.{
+          {
             node = Pure (t, e);
             repr = t;
-            info = FormatInfo.empty;
+            info = Core.FormatInfo.empty;
           }
-        | (l, _) :: _ when List.mem l seen ->
-          error l.loc (Format.sprintf "duplicate label in record format `%s`" l.data)
         | (l, f) :: fs ->
-          let f1 = check_format ctx f in
-          let f2 = go { ctx with locals = (l.data, f1.repr) :: ctx.locals } (l :: seen) fs in
-          Core.{
-            node = FlatMap (f1.repr, (l.data, f2), f1);
-            repr = f2.repr;
-            info = FormatInfo.seq f1.info f2.info;
-          }
+          if List.mem l seen then
+            error l.loc (Format.sprintf "duplicate label in record format `%s`" l.data)
+          else
+            let f1 = check_format ctx f in
+            let f2 = go { ctx with locals = (l.data, f1.repr) :: ctx.locals } (l :: seen) fs in
+            {
+              node = FlatMap (f1.repr, (l.data, f2), f1);
+              repr = f2.repr;
+              info = Core.FormatInfo.seq f1.info f2.info;
+            }
       in
       AnnTm (Format (go ctx [] fs), FormatKind)
 
@@ -456,15 +456,16 @@ module Elab = struct
         (*                                                          ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
       end
     in
+
     let[@tail_mod_cons] rec go ctx order =
       match order with
       | i :: order ->
         let n, i = check_item ctx (List.nth is i) in
         go { ctx with items = (n, i) :: ctx.items } order
-
       | [] ->
         Core.{ items = List.rev ctx.items }
     in
+
     (* TODO: Sort with strongly connected components, elaborating to fixedpoints *)
     match Tsort.sort (collect_deps is) with
     | Tsort.Sorted order -> go { items = []; locals = [] } order
