@@ -201,12 +201,11 @@ end = struct
   and check_format (ctx : context) (tm : tm) : Core.format =
     match tm.data with
     (* Empty records *)
-    | RecordEmpty ->
-      Core.{
-        node = Pure (RecordTy LabelMap.empty, RecordLit LabelMap.empty);
-        repr = RecordTy LabelMap.empty;
-        info = FormatInfo.empty;
-      }
+    | RecordEmpty -> {
+      node = Pure (RecordTy LabelMap.empty, RecordLit LabelMap.empty);
+      repr = RecordTy LabelMap.empty;
+      info = Core.FormatInfo.empty;
+    }
 
     (* Tuples *)
     | Tuple tms ->
@@ -284,23 +283,21 @@ end = struct
     | Action (f, (n, e)) ->
       let f = check_format ctx f in
       let e, t = infer_expr { ctx with locals = (n.data, f.repr) :: ctx.locals } e in
-      let f = Core.{
+      InferFormat {
         node = Map (t, (n.data, e), f);
         repr = t;
         info = f.info;
-      } in
-      InferFormat f
+      }
 
     | Union (f1, f2) ->
       let f1 = check_format ctx f1 in
       let f2 = check_format ctx f2 in
       equate_ty tm.loc f1.repr f1.repr;
-      let f = Core.{
+      InferFormat {
         node = Union (f1, f2);
         repr = f1.repr;
         info = Core.FormatInfo.union f1.info f2.info;
-      } in
-      InferFormat f
+      }
 
     | Range (start, stop) ->
       InferFormat (format_of_byte_set (byte_set_of_range start stop))
