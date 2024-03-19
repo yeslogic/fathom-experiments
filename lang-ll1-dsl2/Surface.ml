@@ -70,27 +70,6 @@ module Elab = struct
     | InferExpr of Core.expr * Core.ty
     | InferFormat of Core.format
 
-  let expect_type loc tm =
-    match tm with
-    | InferKind _ -> error loc "expected type, found kind"
-    | InferType t -> t
-    | InferExpr (_, _) -> error loc "expected type, found expression"
-    | InferFormat _ -> error loc "expected type, found format"
-
-  let expect_expr loc tm =
-    match tm with
-    | InferKind _ -> error loc "expected expression, found kind"
-    | InferExpr (e, t) -> e, t
-    | InferType _ -> error loc "expected expression, found type"
-    | InferFormat _ -> error loc "expected expression, found format"
-
-  let expect_format loc tm =
-    match tm with
-    | InferKind _ -> error loc "expected format, found kind"
-    | InferType _ -> error loc "expected format, found type"
-    | InferExpr (_, _) -> error loc "expected format, found expression"
-    | InferFormat f -> f
-
 
   type context = {
     items : (string * Core.item) list;
@@ -160,7 +139,7 @@ module Elab = struct
 
     (* Conversion *)
     | _ ->
-      infer ctx tm |> expect_type tm.loc
+      infer_type ctx tm
 
   (** Elaborate a surface term into a core expression, given an expected type. *)
   and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
@@ -225,7 +204,7 @@ module Elab = struct
 
     (* Conversion *)
     | _ ->
-      infer ctx tm |> expect_format tm.loc
+      infer_format ctx tm
 
   (** Elaborate a surface term into a core term, inferring its type. *)
   and infer (ctx : context) (tm : tm) : infer_tm =
@@ -364,8 +343,26 @@ module Elab = struct
 
   (* Specialised elaboration functions *)
 
+  and infer_type (ctx : context) (tm : tm) : Core.ty =
+    match infer ctx tm with
+    | InferKind _ -> error tm.loc "expected type, found kind"
+    | InferType t -> t
+    | InferExpr (_, _) -> error tm.loc "expected type, found expression"
+    | InferFormat _ -> error tm.loc "expected type, found format"
+
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
-    infer ctx tm |> expect_expr tm.loc
+    match infer ctx tm with
+    | InferKind _ -> error tm.loc "expected expression, found kind"
+    | InferExpr (e, t) -> e, t
+    | InferType _ -> error tm.loc "expected expression, found type"
+    | InferFormat _ -> error tm.loc "expected expression, found format"
+
+  and infer_format (ctx : context) (tm : tm) : Core.format =
+    match infer ctx tm with
+    | InferKind _ -> error tm.loc "expected format, found kind"
+    | InferType _ -> error tm.loc "expected format, found type"
+    | InferExpr (_, _) -> error tm.loc "expected format, found expression"
+    | InferFormat f -> f
 
 
   (** {2 Item traversal} *)
