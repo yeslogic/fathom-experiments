@@ -222,7 +222,11 @@ end = struct
 
     (* Conversion *)
     | _ ->
-      infer_format ctx tm
+      match infer ctx tm with
+      | InferKind _ -> error tm.loc "expected format, found kind"
+      | InferType _ -> error tm.loc "expected format, found type"
+      | InferExpr (_, _) -> error tm.loc "expected format, found expression"
+      | InferFormat f -> f
 
   (** Elaborate a surface term into a core term, inferring its type. *)
   and infer (ctx : context) (tm : tm) : infer_tm =
@@ -353,9 +357,8 @@ end = struct
         | Some t -> InferExpr (RecordProj (e, l.data), t)
         | None -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
       end
-      | InferFormat f when l.data = "Repr" ->
-        InferType f.repr
-        (*        ^^^^^^ TODO: preserve `Repr` in core language *)
+      | InferFormat f when l.data = "Repr" -> InferType f.repr
+        (*                                              ^^^^^^ TODO: preserve `Repr` in core language *)
       | _ -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
     end
 
@@ -375,13 +378,6 @@ end = struct
     | InferExpr (e, t) -> e, t
     | InferType _ -> error tm.loc "expected expression, found type"
     | InferFormat _ -> error tm.loc "expected expression, found format"
-
-  and infer_format (ctx : context) (tm : tm) : Core.format =
-    match infer ctx tm with
-    | InferKind _ -> error tm.loc "expected format, found kind"
-    | InferType _ -> error tm.loc "expected format, found type"
-    | InferExpr (_, _) -> error tm.loc "expected format, found expression"
-    | InferFormat f -> f
 
 
   (** {2 Item traversal} *)
