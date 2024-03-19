@@ -1,0 +1,6 @@
+format u8 := (..);
+
+format point := {
+  x <- u8;
+  y <- u8;
+};

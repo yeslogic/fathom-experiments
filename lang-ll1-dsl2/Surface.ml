@@ -308,9 +308,9 @@ module Elab = struct
       let rec go ctx seen fs : Core.format =
         match fs with
         | [] ->
-          let is = Seq.ints 0 |> Seq.take (List.length seen) in (* FIXME: reverse *)
-          let t = Core.RecordTy (is |> Seq.map (List.nth ctx.locals) |> LabelMap.of_seq) in
-          let e = Core.TupleLit (is |> Seq.map (fun i -> Core.Local i) |> List.of_seq) in
+          let is = List.init (List.length seen) Fun.id in
+          let t = Core.RecordTy (is |> List.rev_map (List.nth ctx.locals) |> LabelMap.of_list) in
+          let e = Core.RecordLit (is |> List.rev_map (fun i -> (List.nth seen i).data, Core.Local i) |> LabelMap.of_list) in
           Core.{
             node = Pure (t, e);
             repr = t;

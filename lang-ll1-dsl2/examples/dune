@@ -26,6 +26,20 @@
                 jpeg.stdout.tmp)))
 
 
+; point.txt
+
+(rule
+  (with-stdin-from point.txt
+    (with-stdout-to point.stdout.tmp
+      (run %{bin:ll1-dsl2}))))
+
+(rule
+  (alias runtest)
+  (package ll1-dsl2)
+  (action (diff point.stdout
+                point.stdout.tmp)))
+
+
 ; simple.txt
 
 (rule
