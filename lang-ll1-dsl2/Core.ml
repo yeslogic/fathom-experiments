@@ -309,11 +309,11 @@ module Semantics = struct
 
   (* Evalution *)
 
-  let rec eval (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
+  let rec eval_expr (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
     | Item n -> begin
       match List.assoc_opt n items with
-      | Some (Expr (e, _)) -> eval items [] e
+      | Some (Expr (e, _)) -> eval_expr items [] e
       | Some _ -> invalid_arg "expected expression"
       | None -> invalid_arg "unbound item variable"
     end
@@ -322,21 +322,21 @@ module Semantics = struct
       | Some v -> v
       | None -> invalid_arg "unbound local variable"
     end
-    | Ann (e, _) -> eval items locals e
+    | Ann (e, _) -> eval_expr items locals e
     | ByteLit c -> ByteLit c
-    | RecordLit fs -> RecordLit (LabelMap.map (eval items locals) fs)
-    | RecordProj (e, l) -> record_proj (eval items locals e) l
-    | TupleLit es -> TupleLit (List.map (eval items locals) es)
-    | TupleProj (e, i) -> tuple_proj (eval items locals e) i
+    | RecordLit fs -> RecordLit (LabelMap.map (eval_expr items locals) fs)
+    | RecordProj (e, l) -> record_proj (eval_expr items locals e) l
+    | TupleLit es -> TupleLit (List.map (eval_expr items locals) es)
+    | TupleProj (e, i) -> tuple_proj (eval_expr items locals e) i
 
-  let rec quote (ve : vexpr) : expr =
+  let rec quote_expr (ve : vexpr) : expr =
     match ve with
     | ByteLit c -> ByteLit c
-    | RecordLit fs -> RecordLit (LabelMap.map quote fs)
-    | TupleLit ves -> TupleLit (List.map quote ves)
+    | RecordLit fs -> RecordLit (LabelMap.map quote_expr fs)
+    | TupleLit ves -> TupleLit (List.map quote_expr ves)
 
-  let normalise (items : (string * item) list) (locals : local_env) (e : expr) : expr =
-    quote (eval items locals e)
+  let normalise_expr (items : (string * item) list) (locals : local_env) (e : expr) : expr =
+    quote_expr (eval_expr items locals e)
 
 
   (* Decode semantics *)
@@ -349,7 +349,7 @@ module Semantics = struct
     else
       None
 
-  let decode (p : program) (input : bytes) (pos : int) (f : format) : int * vexpr =
+  let decode_format (p : program) (input : bytes) (pos : int) (f : format) : int * vexpr =
     let rec go (locals : local_env) input pos (f : format) : int * vexpr =
       match f.node with
       | Item name -> begin
@@ -377,8 +377,8 @@ module Semantics = struct
       end
       | Map (_, (_, e), f) ->
           let pos, ev = go locals input pos f in
-          pos, eval p.items (ev :: locals) e
-    | Pure (_, e) -> pos, eval p.items locals e
+          pos, eval_expr p.items (ev :: locals) e
+    | Pure (_, e) -> pos, eval_expr p.items locals e
       | FlatMap (_, (_, f1), f0) ->
           let pos, ev0 = go locals input pos f0 in
           go (ev0 :: locals) input pos f1
