@@ -58,31 +58,17 @@ module Elab = struct
 
   module LabelMap = Core.LabelMap
 
+
+  (** {2 Error handling} *)
+
   exception Error of loc * string
   exception Bug of loc * string
 
   let error loc msg = raise (Error (loc, msg))
   let bug loc msg = raise (Bug (loc, msg))
 
-  (** An inferred term *)
-  type infer_tm =
-    | InferKind of [`Type | `Format]
-    | InferType of Core.ty
-    | InferExpr of Core.expr * Core.ty
-    | InferFormat of Core.format
 
-
-  type context = {
-    items : (string * Core.item) list;
-    locals : (string * Core.ty) list;
-  }
-
-  let lookup_local (ctx : context) (n : string) : (Core.expr * Core.ty) option =
-    ctx.locals |> List.find_mapi @@ fun i (n', t) ->
-      if n = n' then Some (Core.Local i, t) else None
-
-
-  (** Byte conversions *)
+  (** {2 Byte conversions} *)
 
   let byte_of_int loc i =
     if 0 <= i && i <= 255 then
@@ -114,8 +100,28 @@ module Elab = struct
   }
 
 
+  (** {2 Elaboration contexts} *)
+
+  type context = {
+    items : (string * Core.item) list;
+    locals : (string * Core.ty) list;
+  }
+
+  let lookup_local (ctx : context) (n : string) : (Core.expr * Core.ty) option =
+    ctx.locals |> List.find_mapi @@ fun i (n', t) ->
+      if n = n' then Some (Core.Local i, t) else None
+
+
   (** {2 Bidirectional type checking} *)
 
+  (** An inferred term *)
+  type infer_tm =
+    | InferKind of [`Type | `Format]
+    | InferType of Core.ty
+    | InferExpr of Core.expr * Core.ty
+    | InferFormat of Core.format
+
+  (* Compare two types for equality. *)
   let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     if ty1 = ty2 then () else
       error loc
