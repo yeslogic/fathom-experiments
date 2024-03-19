@@ -141,17 +141,6 @@ type program = {
   items : (string * item) list;
 }
 
-(* Unification *)
-
-let rec unify_ty (t1 : ty) (t2 : ty) : bool =
-  match t1, t2 with
-  | ByteTy, ByteTy -> true
-  | RecordTy fields1, RecordTy fields2 ->
-    LabelMap.equal unify_ty fields1 fields2
-  | TupleTy ts1, TupleTy ts2 ->
-    List.equal unify_ty ts1 ts2
-  | _, _ -> false
-
 
 (* Pretty printing *)
 
@@ -286,6 +275,11 @@ let pp_print_program ppf p =
 
 module Semantics = struct
 
+  type vty =
+    | ByteTy
+    | RecordTy of vty LabelMap.t
+    | TupleTy of vty list
+
   type vexpr =
     | ByteLit of char
     | RecordLit of vexpr LabelMap.t
@@ -309,6 +303,18 @@ module Semantics = struct
 
   (* Evalution *)
 
+  let rec eval_ty (items : (string * item) list) (t : ty) : vty =
+    match t with
+    | Item n -> begin
+      match List.assoc_opt n items with
+      | Some (Type t) -> eval_ty items t
+      | Some _ -> invalid_arg "expected type"
+      | None -> invalid_arg "unbound item variable"
+    end
+    | ByteTy -> ByteTy
+    | RecordTy fs -> RecordTy (LabelMap.map (eval_ty items) fs)
+    | TupleTy ts -> TupleTy (List.map (eval_ty items) ts)
+
   let rec eval_expr (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
     | Item n -> begin
@@ -329,6 +335,12 @@ module Semantics = struct
     | TupleLit es -> TupleLit (List.map (eval_expr items locals) es)
     | TupleProj (e, i) -> tuple_proj (eval_expr items locals e) i
 
+  let rec quote_ty (vt : vty) : ty =
+    match vt with
+    | ByteTy -> ByteTy
+    | RecordTy fs -> RecordTy (LabelMap.map quote_ty fs)
+    | TupleTy ts -> TupleTy (List.map quote_ty ts)
+
   let rec quote_expr (ve : vexpr) : expr =
     match ve with
     | ByteLit c -> ByteLit c
@@ -338,6 +350,17 @@ module Semantics = struct
   let normalise_expr (items : (string * item) list) (locals : local_env) (e : expr) : expr =
     quote_expr (eval_expr items locals e)
 
+
+  (* Unification *)
+
+  let rec unify_tys (vt1 : vty) (vt2 : vty) : bool =
+    match vt1, vt2 with
+    | ByteTy, ByteTy -> true
+    | RecordTy fields1, RecordTy fields2 ->
+      LabelMap.equal unify_tys fields1 fields2
+    | TupleTy vts1, TupleTy vts2 ->
+      List.equal unify_tys vts1 vts2
+    | _, _ -> false
 
   (* Decode semantics *)
 

@@ -118,6 +118,9 @@ end = struct
     ctx.locals |> List.find_mapi @@ fun i (n', t) ->
       if n = n' then Some (Core.Local i, t) else None
 
+  let eval_ty (ctx : context) : Core.ty -> Core.Semantics.vty =
+    Core.Semantics.eval_ty ctx.items
+
 
   (** {2 Bidirectional type checking} *)
 
@@ -129,8 +132,9 @@ end = struct
     | FormatTm of Core.format
 
   (* Compare two types for equality. *)
-  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
-    if ty1 = ty2 then () else
+  let unify_tys (ctx : context) (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+    (* TODO: evaluate types prior to unification *)
+    if Core.Semantics.unify_tys (eval_ty ctx ty1) (eval_ty ctx ty2) then () else
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_print_ty ty1
@@ -166,7 +170,7 @@ end = struct
     (* Empty records *)
 
     | RecordEmpty, t ->
-      equate_ty tm.loc t (RecordTy LabelMap.empty);
+      unify_tys ctx tm.loc t (RecordTy LabelMap.empty);
       RecordLit LabelMap.empty
 
     (* Tuples *)
@@ -194,7 +198,7 @@ end = struct
 
     | _, t ->
       let e', t' = infer_expr ctx tm in
-      equate_ty tm.loc t t';
+      unify_tys ctx tm.loc t t';
       e'
 
   (** Elaborate a surface term into a core format. *)
@@ -362,7 +366,7 @@ end = struct
     | Op2 (`Or, f1, f2) ->
       let f1 = check_format ctx f1 in
       let f2 = check_format ctx f2 in
-      equate_ty tm.loc f1.repr f1.repr;
+      unify_tys ctx tm.loc f1.repr f1.repr;
       FormatTm {
         node = Union (f1, f2);
         repr = f1.repr;
