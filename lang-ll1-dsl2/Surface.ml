@@ -445,7 +445,13 @@ module Elab = struct
       match i with
       | FormatDef (n, f) -> n.data, Format (check_format ctx f)
       | TypeDef (n, t) -> n.data, Type (check_type ctx t)
-      | Def (n, None, body) -> let e, t = infer_expr ctx body in n.data, Expr (e, t)
+      | Def (n, None, body) -> begin
+        match infer ctx body with
+        | AnnTm ((TypeKind | FormatKind), _) -> error n.loc "kind definitions are not supported"
+        | AnnTm (Type t, TypeKind) -> n.data, Type t
+        | AnnTm (Expr e, Type t) -> n.data, Expr (e, t)
+        | AnnTm (Format f, FormatKind) ->  n.data, Format f
+      end
       | Def (n, Some ann, body) -> begin
         match infer ctx ann with
         | AnnTm (TypeKind, _) -> n.data, Type (check_type ctx body)
