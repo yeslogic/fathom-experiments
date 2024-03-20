@@ -121,6 +121,9 @@ end = struct
   let eval_ty (ctx : context) : Core.ty -> Core.Semantics.vty =
     Core.Semantics.eval_ty ctx.items
 
+  let quote_ty : Core.Semantics.vty -> Core.ty =
+    Core.Semantics.quote_ty
+
 
   (** {2 Bidirectional type checking} *)
 
@@ -132,13 +135,12 @@ end = struct
     | FormatTm of Core.format
 
   (* Compare two types for equality. *)
-  let unify_tys (ctx : context) (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
-    (* TODO: evaluate types prior to unification *)
-    if Core.Semantics.unify_tys (eval_ty ctx ty1) (eval_ty ctx ty2) then () else
+  let unify_tys (loc : loc) (vt1 : Core.Semantics.vty) (vt2 : Core.Semantics.vty) =
+    if Core.Semantics.unify_tys vt1 vt2 then () else
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_print_ty ty1
-          Core.pp_print_ty ty2)
+          Core.pp_print_ty (quote_ty vt1)
+          Core.pp_print_ty (quote_ty vt2))
 
   (** Elaborate a surface term into a core type. *)
   let rec check_type (ctx : context) (tm : tm) : Core.ty =
@@ -169,7 +171,7 @@ end = struct
     (* Empty records *)
 
     | RecordEmpty, t ->
-      unify_tys ctx tm.loc t (RecordTy LabelMap.empty);
+      unify_tys tm.loc (eval_ty ctx t) (RecordTy LabelMap.empty);
       RecordLit LabelMap.empty
 
     (* Tuples *)
@@ -197,7 +199,7 @@ end = struct
 
     | _, t ->
       let e', t' = infer_expr ctx tm in
-      unify_tys ctx tm.loc t t';
+      unify_tys tm.loc (eval_ty ctx t) (eval_ty ctx t');
       e'
 
   (** Elaborate a surface term into a core format. *)
@@ -363,7 +365,7 @@ end = struct
     | Op2 (`Or, f1, f2) ->
       let f1 = check_format ctx f1 in
       let f2 = check_format ctx f2 in
-      unify_tys ctx tm.loc f1.repr f1.repr;
+      unify_tys tm.loc (eval_ty ctx f1.repr) (eval_ty ctx f1.repr);
       FormatTm {
         node = Union (f1, f2);
         repr = f1.repr;
