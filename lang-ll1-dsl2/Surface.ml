@@ -161,8 +161,7 @@ end = struct
       | KindTm _ -> error tm.loc "expected type, found kind"
       | TypeTm t -> t
       | ExprTm (_, _) -> error tm.loc "expected type, found expression"
-      | FormatTm f -> f.repr
-      (*              ^^^^^^ TODO: preserve `repr` in core language *)
+      | FormatTm f -> FormatRepr f
 
   (** Elaborate a surface term into a core expression, given an expected type. *)
   and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
@@ -257,7 +256,6 @@ end = struct
       | TypeTm t -> ExprTm (check_expr ctx tm t, t)
       | ExprTm _ -> error tm.loc "expected annotation, found expression"
       | FormatTm f ->  ExprTm (check_expr ctx tm f.repr, f.repr)
-      (*                                         ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
     end
 
     | RecordEmpty ->
@@ -342,8 +340,7 @@ end = struct
         | Some t -> ExprTm (RecordProj (e, l.data), t)
         | None -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
       end
-      | FormatTm f when l.data = "Repr" -> TypeTm f.repr
-        (*                                        ^^^^^^ TODO: preserve `Repr` in core language *)
+      | FormatTm f when l.data = "Repr" -> TypeTm (FormatRepr f)
       | _ -> error l.loc (Format.sprintf "unknown field `%s`" l.data)
     end
 
@@ -458,8 +455,7 @@ end = struct
         | KindTm `Format -> n.data, Format (check_format ctx body)
         | TypeTm t -> n.data, Expr (check_expr ctx body t, t)
         | ExprTm _ -> error body.loc "expected annotation, found expression"
-        | FormatTm f ->  n.data, Expr (check_expr ctx body f.repr, f.repr)
-        (*                                                 ^^^^^^  ^^^^^^ TODO: preserve `repr` in core language *)
+        | FormatTm f ->  n.data, Expr (check_expr ctx body f.repr, FormatRepr f)
       end
     in
 

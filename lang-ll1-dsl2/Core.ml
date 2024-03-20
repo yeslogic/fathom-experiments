@@ -100,13 +100,16 @@ end
 (** An unordered row of elements distinguished by label. *)
 module LabelMap = Map.Make (String)
 
+[@@@warning "-duplicate-definitions"]
+
 type ty =
   | Item of string
   | ByteTy
   | RecordTy of ty LabelMap.t
   | TupleTy of ty list
+  | FormatRepr of format
 
-type expr =
+and expr =
   | Item of string
   | Local of int
   | Ann of expr * ty
@@ -116,7 +119,7 @@ type expr =
   | TupleLit of expr list
   | TupleProj of expr * int
 
-type format_node =
+and format_node =
   | Item of string
   | Fail of ty
   | Byte of ByteSet.t
@@ -164,9 +167,12 @@ and pp_print_atomic_ty ppf t =
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
           pp_print_ty)
         ts
+  | FormatRepr f ->
+      Format.fprintf ppf "%a.Repr"
+        (pp_print_atomic_format []) f
   (* | t -> Format.fprintf ppf "(%a)" pp_print_ty t *)
 
-let rec pp_print_expr names ppf (e : expr) =
+and pp_print_expr names ppf (e : expr) =
   match e with
   | e -> pp_proj_expr names ppf e
 
@@ -195,7 +201,7 @@ and pp_print_atomic_expr names ppf e =
         es
   | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
-let rec pp_print_format names ppf (f : format) =
+and pp_print_format names ppf (f : format) =
   pp_print_union_format names ppf f
 
 and pp_print_union_format names ppf f =
@@ -314,6 +320,7 @@ module Semantics = struct
     | ByteTy -> ByteTy
     | RecordTy fs -> RecordTy (LabelMap.map (eval_ty items) fs)
     | TupleTy ts -> TupleTy (List.map (eval_ty items) ts)
+    | FormatRepr f -> eval_ty items f.repr
 
   let rec eval_expr (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
