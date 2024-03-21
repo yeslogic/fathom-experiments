@@ -127,8 +127,8 @@ end = struct
 
   (** {2 Bidirectional type checking} *)
 
-  (** An inferred term *)
-  type infer_tm =
+  (** An elaborated term *)
+  type elab_tm =
     | KindTm of [`Type | `Format]
     | TypeTm of Core.ty
     | ExprTm of Core.expr * Core.ty
@@ -232,7 +232,7 @@ end = struct
       | FormatTm f -> f
 
   (** Elaborate a surface term into a core term, inferring its type. *)
-  and infer (ctx : context) (tm : tm) : infer_tm =
+  and infer (ctx : context) (tm : tm) : elab_tm =
     match tm.data with
     | Name n -> begin
       match lookup_local ctx n with
