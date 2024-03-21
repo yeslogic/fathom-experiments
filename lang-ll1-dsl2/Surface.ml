@@ -166,29 +166,29 @@ end = struct
       | FormatTm f -> FormatRepr f
 
   (** Elaborate a surface term into a core expression, given an expected type. *)
-  and check_expr (ctx : context) (tm : tm) (t : Core.ty) : Core.expr =
-    match tm.data, t with
+  and check_expr (ctx : context) (tm : tm) (vt : Core.Semantics.vty) : Core.expr =
+    match tm.data, vt with
     (* Empty records *)
 
-    | RecordEmpty, t ->
-      unify_tys tm.loc (eval_ty ctx t) (RecordTy LabelMap.empty);
+    | RecordEmpty, vt ->
+      unify_tys tm.loc vt (RecordTy LabelMap.empty);
       RecordLit LabelMap.empty
 
     (* Tuples *)
 
-    | Tuple tms, TupleTy ts ->
-      let rec go tms ts =
-        match tms, ts with
+    | Tuple tms, TupleTy vts ->
+      let rec go tms vts =
+        match tms, vts with
         | [], [] -> []
-        | tm :: tms, t :: ts -> check_expr ctx tm t :: go tms ts
+        | tm :: tms, vt :: vts -> check_expr ctx tm vt :: go tms vts
         | _, _ -> error tm.loc "unexpected number of elements in tuple"
       in
-      TupleLit (go tms ts)
+      TupleLit (go tms vts)
 
-    | Tuple _, t ->
+    | Tuple _, vt ->
       error tm.loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: tuple@]@]"
-          Core.pp_print_ty t)
+          Core.pp_print_ty (quote_ty vt))
 
     (* Integer literals *)
 
@@ -199,7 +199,7 @@ end = struct
 
     | _, t ->
       let e', t' = infer_expr ctx tm in
-      unify_tys tm.loc (eval_ty ctx t) (eval_ty ctx t');
+      unify_tys tm.loc t (eval_ty ctx t');
       e'
 
   (** Elaborate a surface term into a core format. *)
@@ -221,11 +221,9 @@ end = struct
         info = List.fold_right (fun f acc -> FormatInfo.seq f.info acc) fs FormatInfo.empty;
       }
 
-    (* Integer literals *)
     | Int i ->
       format_of_byte_set (byte_set_of_int tm.loc i)
 
-    (* Conversion *)
     | _ ->
       match infer ctx tm with
       | KindTm _ -> error tm.loc "expected format, found kind"
@@ -246,7 +244,7 @@ end = struct
         | Some (Expr (_, ty)) -> ExprTm (Item n, ty)
         | None when n = "Type" -> KindTm `Type
         | None when n = "Format" -> KindTm `Format
-        | None when n = "Byte" -> TypeTm ByteTy
+        | None when n = "U8" -> TypeTm ByteTy
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" n)
       end
     end
@@ -255,9 +253,9 @@ end = struct
       match infer ctx ann with
       | KindTm `Type -> TypeTm (check_type ctx tm)
       | KindTm `Format -> FormatTm (check_format ctx tm)
-      | TypeTm t -> ExprTm (check_expr ctx tm t, t)
+      | TypeTm t -> ExprTm (check_expr ctx tm (eval_ty ctx t), t)
       | ExprTm _ -> error tm.loc "expected annotation, found expression"
-      | FormatTm f ->  ExprTm (check_expr ctx tm f.repr, f.repr)
+      | FormatTm f ->  ExprTm (check_expr ctx tm (eval_ty ctx f.repr), f.repr)
     end
 
     | RecordEmpty ->
@@ -372,9 +370,6 @@ end = struct
         info = Core.FormatInfo.union f1.info f2.info;
       }
 
-
-  (* Specialised elaboration functions *)
-
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     match infer ctx tm with
     | KindTm _ -> error tm.loc "expected expression, found kind"
@@ -455,9 +450,9 @@ end = struct
         match infer ctx ann with
         | KindTm `Type -> n.data, Type (check_type ctx body)
         | KindTm `Format -> n.data, Format (check_format ctx body)
-        | TypeTm t -> n.data, Expr (check_expr ctx body t, t)
+        | TypeTm t -> n.data, Expr (check_expr ctx body (eval_ty ctx t), t)
         | ExprTm _ -> error body.loc "expected annotation, found expression"
-        | FormatTm f ->  n.data, Expr (check_expr ctx body f.repr, FormatRepr f)
+        | FormatTm f ->  n.data, Expr (check_expr ctx body (eval_ty ctx f.repr), FormatRepr f)
       end
     in
 

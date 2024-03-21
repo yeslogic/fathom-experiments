@@ -1,0 +1,20 @@
+/- Formats -/
+
+def no-ann := ();
+def format-ann : Format := ();
+
+/- Types -/
+
+def Byte : Type := U8;
+def Pair : Type := (Byte, Byte);
+def Unit : Type := ();
+
+def test-repr : Type :=
+  format-ann.Repr;
+
+/-  Expressions -/
+
+def foo : U8 := 42;
+def bar : U8 := foo;
+
+def unit : test-repr := ();
