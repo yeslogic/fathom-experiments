@@ -111,10 +111,10 @@ end = struct
 
   type context = {
     items : (string * Core.item) list;
-    locals : (string * Core.ty) list;
+    locals : (string * Core.Semantics.vty) list;
   }
 
-  let lookup_local (ctx : context) (n : string) : (Core.expr * Core.ty) option =
+  let lookup_local (ctx : context) (n : string) : (Core.expr * Core.Semantics.vty) option =
     ctx.locals |> List.find_mapi @@ fun i (n', t) ->
       if n = n' then Some (Core.Local i, t) else None
 
@@ -131,7 +131,7 @@ end = struct
   type elab_tm =
     | KindTm of [`Type | `Format]
     | TypeTm of Core.ty
-    | ExprTm of Core.expr * Core.ty
+    | ExprTm of Core.expr * Core.Semantics.vty
     | FormatTm of Core.format
 
   (* Compare two types for equality. *)
@@ -197,9 +197,9 @@ end = struct
 
     (* Conversion *)
 
-    | _, t ->
-      let e', t' = infer_expr ctx tm in
-      unify_tys tm.loc t (eval_ty ctx t');
+    | _, vt ->
+      let e', vt' = infer_expr ctx tm in
+      unify_tys tm.loc vt vt';
       e'
 
   (** Elaborate a surface term into a core format. *)
@@ -236,12 +236,12 @@ end = struct
     match tm.data with
     | Name n -> begin
       match lookup_local ctx n with
-      | Some (e, t) -> ExprTm (e, t)
+      | Some (e, vt) -> ExprTm (e, vt)
       | None -> begin
         match List.assoc_opt n ctx.items with
         | Some (Type _) -> TypeTm (Item n)
         | Some (Format f) -> FormatTm { f with node = Item n }
-        | Some (Expr (_, ty)) -> ExprTm (Item n, ty)
+        | Some (Expr (_, t)) -> ExprTm (Item n, eval_ty ctx t)
         | None when n = "Type" -> KindTm `Type
         | None when n = "Format" -> KindTm `Format
         | None when n = "U8" -> TypeTm ByteTy
@@ -253,68 +253,69 @@ end = struct
       match infer ctx ann with
       | KindTm `Type -> TypeTm (check_type ctx tm)
       | KindTm `Format -> FormatTm (check_format ctx tm)
-      | TypeTm t -> ExprTm (check_expr ctx tm (eval_ty ctx t), t)
+      | TypeTm t -> ExprTm (check_expr ctx tm (eval_ty ctx t), eval_ty ctx t)
       | ExprTm _ -> error tm.loc "expected annotation, found expression"
-      | FormatTm f ->  ExprTm (check_expr ctx tm (eval_ty ctx f.repr), f.repr)
+      | FormatTm f ->  ExprTm (check_expr ctx tm (eval_ty ctx f.repr), eval_ty ctx f.repr)
     end
 
     | RecordEmpty ->
       error tm.loc "ambiguous empty record"
 
     | RecordTy fs ->
-      let rec go fs acc_fs =
+      let rec go fs fs' =
         match fs with
-        | [] -> TypeTm (RecordTy acc_fs)
+        | [] -> TypeTm (RecordTy fs')
         | (l, tm) :: fs  ->
-          if LabelMap.mem l.data acc_fs then
+          if LabelMap.mem l.data fs' then
             error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
           else
-            (go [@tailcall]) fs (LabelMap.add l.data (check_type ctx tm) acc_fs)
+            (go [@tailcall]) fs (LabelMap.add l.data (check_type ctx tm) fs')
       in
       go fs LabelMap.empty
 
     | RecordLit fs ->
-      let rec go fs fs_e fs_t =
+      let rec go fs fs_e fs_vt =
         match fs with
-        | [] -> ExprTm (RecordLit fs_e, RecordTy fs_t)
+        | [] -> ExprTm (RecordLit fs_e, RecordTy fs_vt)
         | (l, e) :: fs ->
           if LabelMap.mem l.data fs_e then
             error l.loc (Format.asprintf "duplicate field labels `%s`" l.data)
           else
             let e, t = infer_expr ctx e in
-            (go [@tailcall]) fs (LabelMap.add l.data e fs_e) (LabelMap.add l.data t fs_t)
+            (go [@tailcall]) fs (LabelMap.add l.data e fs_e) (LabelMap.add l.data t fs_vt)
       in
       go fs LabelMap.empty LabelMap.empty
 
     | RecordFormat fs ->
-      let rec go ctx seen fs : Core.format =
+      let rec go ctx fs_t fs : Core.format =
         match fs with
         | [] ->
-          let is = List.init (List.length seen) Fun.id in
-          let t = Core.RecordTy (is |> List.rev_map (List.nth ctx.locals) |> LabelMap.of_list) in
-          let e = Core.RecordLit (is |> List.rev_map (fun i -> (List.nth seen i).data, Core.Local i) |> LabelMap.of_list) in
+          let t = Core.RecordTy fs_t in
+          let fs_e = Seq.init (LabelMap.cardinal fs_t) (fun i -> fst (List.nth ctx.locals i), Core.Local i) in
           {
-            node = Pure (t, e);
+            node = Pure (t, Core.RecordLit (LabelMap.of_seq fs_e));
             repr = t;
             info = Core.FormatInfo.empty;
           }
         | (l, f) :: fs ->
-          if List.mem l seen then
+          if LabelMap.mem l.data fs_t then
             error l.loc (Format.sprintf "duplicate label in record format `%s`" l.data)
           else
             let f1 = check_format ctx f in
-            let f2 = go { ctx with locals = (l.data, f1.repr) :: ctx.locals } (l :: seen) fs in
+            let fs_t = LabelMap.add l.data f1.repr fs_t in
+            let f2 = go { ctx with locals = (l.data, eval_ty ctx f1.repr) :: ctx.locals } fs_t fs in
             {
               node = FlatMap (f1.repr, (l.data, f2), f1);
               repr = f2.repr;
               info = Core.FormatInfo.seq f1.info f2.info;
             }
       in
-      FormatTm (go ctx [] fs)
+      FormatTm (go ctx LabelMap.empty fs)
 
     | ActionFormat (f, (n, e)) ->
       let f = check_format ctx f in
-      let e, t = infer_expr { ctx with locals = (n.data, f.repr) :: ctx.locals } e in
+      let e, vt = infer_expr { ctx with locals = (n.data, eval_ty ctx f.repr) :: ctx.locals } e in
+      let t = quote_ty vt in
       FormatTm {
         node = Map (t, (n.data, e), f);
         repr = t;
@@ -370,10 +371,10 @@ end = struct
         info = Core.FormatInfo.union f1.info f2.info;
       }
 
-  and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
+  and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.Semantics.vty =
     match infer ctx tm with
     | KindTm _ -> error tm.loc "expected expression, found kind"
-    | ExprTm (e, t) -> e, t
+    | ExprTm (e, vt) -> e, vt
     | TypeTm _ -> error tm.loc "expected expression, found type"
     | FormatTm _ -> error tm.loc "expected expression, found format"
 
@@ -443,7 +444,7 @@ end = struct
         match infer ctx body with
         | KindTm _ -> error n.loc "kind definitions are not supported"
         | TypeTm t -> n.data, Type t
-        | ExprTm (e, t) -> n.data, Expr (e, t)
+        | ExprTm (e, vt) -> n.data, Expr (e, quote_ty vt)
         | FormatTm f ->  n.data, Format f
       end
       | Def (n, Some ann, body) -> begin
