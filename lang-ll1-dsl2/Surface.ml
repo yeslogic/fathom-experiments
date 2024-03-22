@@ -290,7 +290,8 @@ end = struct
         match fs with
         | [] ->
           let t = Core.RecordTy fs_t in
-          let fs_e = Seq.init (LabelMap.cardinal fs_t) (fun i -> fst (List.nth ctx.locals i), Core.Local i) in
+          let init_field i = fst (List.nth ctx.locals i), Core.Local i in
+          let fs_e = Seq.init (LabelMap.cardinal fs_t) init_field in
           {
             node = Pure (t, Core.RecordLit (LabelMap.of_seq fs_e));
             info = Core.FormatInfo.empty;
