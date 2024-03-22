@@ -102,7 +102,6 @@ end = struct
 
   let format_of_byte_set s : Core.format = {
     node = Byte s;
-    repr = ByteTy;
     info = Core.FormatInfo.byte s;
   }
 
@@ -208,7 +207,6 @@ end = struct
     (* Empty records *)
     | RecordEmpty -> {
       node = Pure (RecordTy LabelMap.empty, RecordLit LabelMap.empty);
-      repr = RecordTy LabelMap.empty;
       info = Core.FormatInfo.empty;
     }
 
@@ -217,7 +215,6 @@ end = struct
       let fs = List.map (check_format ctx) tms in
       Core.{
         node = Seq fs;
-        repr = TupleTy (List.map (fun f -> f.repr) fs);
         info = List.fold_right (fun f acc -> FormatInfo.seq f.info acc) fs FormatInfo.empty;
       }
 
@@ -255,7 +252,9 @@ end = struct
       | KindTm `Format -> FormatTm (check_format ctx tm)
       | TypeTm t -> ExprTm (check_expr ctx tm (eval_ty ctx t), eval_ty ctx t)
       | ExprTm _ -> error tm.loc "expected annotation, found expression"
-      | FormatTm f ->  ExprTm (check_expr ctx tm (eval_ty ctx f.repr), eval_ty ctx f.repr)
+      | FormatTm f ->
+        let repr = eval_ty ctx (FormatRepr f) in
+        ExprTm (check_expr ctx tm repr, repr)
     end
 
     | RecordEmpty ->
@@ -294,7 +293,6 @@ end = struct
           let fs_e = Seq.init (LabelMap.cardinal fs_t) (fun i -> fst (List.nth ctx.locals i), Core.Local i) in
           {
             node = Pure (t, Core.RecordLit (LabelMap.of_seq fs_e));
-            repr = t;
             info = Core.FormatInfo.empty;
           }
         | (l, f) :: fs ->
@@ -302,11 +300,10 @@ end = struct
             error l.loc (Format.sprintf "duplicate label in record format `%s`" l.data)
           else
             let f1 = check_format ctx f in
-            let fs_t = LabelMap.add l.data f1.repr fs_t in
-            let f2 = go { ctx with locals = (l.data, eval_ty ctx f1.repr) :: ctx.locals } fs_t fs in
+            let fs_t = LabelMap.add l.data (Core.FormatRepr f1) fs_t in
+            let f2 = go { ctx with locals = (l.data, eval_ty ctx (FormatRepr f1)) :: ctx.locals } fs_t fs in
             {
-              node = FlatMap (f1.repr, (l.data, f2), f1);
-              repr = f2.repr;
+              node = FlatMap (FormatRepr f1, (l.data, f2), f1);
               info = Core.FormatInfo.seq f1.info f2.info;
             }
       in
@@ -314,11 +311,9 @@ end = struct
 
     | ActionFormat (f, (n, e)) ->
       let f = check_format ctx f in
-      let e, vt = infer_expr { ctx with locals = (n.data, eval_ty ctx f.repr) :: ctx.locals } e in
-      let t = quote_ty vt in
+      let e, vt = infer_expr { ctx with locals = (n.data, eval_ty ctx (FormatRepr f)) :: ctx.locals } e in
       FormatTm {
-        node = Map (t, (n.data, e), f);
-        repr = t;
+        node = Map (quote_ty vt, (n.data, e), f);
         info = f.info;
       }
 
@@ -364,10 +359,9 @@ end = struct
     | Op2 (`Or, f1, f2) ->
       let f1 = check_format ctx f1 in
       let f2 = check_format ctx f2 in
-      unify_tys tm.loc (eval_ty ctx f1.repr) (eval_ty ctx f1.repr);
+      unify_tys tm.loc (eval_ty ctx (FormatRepr f1)) (eval_ty ctx (FormatRepr f1));
       FormatTm {
         node = Union (f1, f2);
-        repr = f1.repr;
         info = Core.FormatInfo.union f1.info f2.info;
       }
 
@@ -453,7 +447,7 @@ end = struct
         | KindTm `Format -> n.data, Format (check_format ctx body)
         | TypeTm t -> n.data, Expr (check_expr ctx body (eval_ty ctx t), t)
         | ExprTm _ -> error body.loc "expected annotation, found expression"
-        | FormatTm f ->  n.data, Expr (check_expr ctx body (eval_ty ctx f.repr), FormatRepr f)
+        | FormatTm f -> n.data, Expr (check_expr ctx body (eval_ty ctx (FormatRepr f)), FormatRepr f)
       end
     in
 

@@ -131,7 +131,6 @@ and format_node =
 
 and format = {
   node : format_node;
-  repr : ty;
   info : FormatInfo.t;
 }
 
@@ -320,7 +319,23 @@ module Semantics = struct
     | ByteTy -> ByteTy
     | RecordTy fs -> RecordTy (LabelMap.map (eval_ty items) fs)
     | TupleTy ts -> TupleTy (List.map (eval_ty items) ts)
-    | FormatRepr f -> eval_ty items f.repr
+    | FormatRepr f -> eval_format_repr items f
+
+  and eval_format_repr (items : (string * item) list) (f : format) : vty =
+    match f.node with
+    | Item n -> begin
+      match List.assoc_opt n items with
+      | Some (Format f) -> eval_format_repr items f
+      | Some _ -> invalid_arg "expected format"
+      | None -> invalid_arg "unbound item variable"
+    end
+    | Fail t -> eval_ty items t
+    | Byte _ -> ByteTy
+    | Seq fs -> TupleTy (List.map (eval_format_repr items) fs)
+    | Union (f1, _) -> eval_format_repr items f1
+    | Map (t, (_, _), _) -> eval_ty items t
+    | Pure (t, _) -> eval_ty items t
+    | FlatMap (t, (_, _), _) -> eval_ty items t
 
   let rec eval_expr (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
@@ -408,7 +423,7 @@ module Semantics = struct
       | Map (_, (_, e), f) ->
           let pos, ev = go locals input pos f in
           pos, eval_expr p.items (ev :: locals) e
-    | Pure (_, e) -> pos, eval_expr p.items locals e
+      | Pure (_, e) -> pos, eval_expr p.items locals e
       | FlatMap (_, (_, f1), f0) ->
           let pos, ev0 = go locals input pos f0 in
           go (ev0 :: locals) input pos f1

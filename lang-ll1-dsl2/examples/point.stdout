@@ -1,7 +1,7 @@
 def u8 : Format := {0..255};
 
 def point : Format :=
-  #flat-map @Byte (x =>
-  #flat-map @Byte (y => #pure @{ x : Byte; y : Byte } { x := x; y := y }) u8)
-  u8;
+  #flat-map @u8.Repr (x =>
+  #flat-map @u8.Repr (y =>
+  #pure @{ x : u8.Repr; y : u8.Repr } { x := x; y := y }) u8) u8;
 
