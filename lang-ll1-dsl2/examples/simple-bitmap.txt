@@ -1,11 +1,11 @@
+format main := {
+  width <- u32be;
+  height <- u64be;
+  data <- repeat-count (width * height) color;
+};
+
 format color := {
   r <- u8;
   g <- u8;
   b <- u8;
-};
-
-format image := {
-  width <- u32be;
-  height <- u64be;
-  data <- repeat-count (width * height) color;
 };

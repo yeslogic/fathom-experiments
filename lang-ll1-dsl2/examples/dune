@@ -12,6 +12,20 @@
                 actions.stdout.tmp)))
 
 
+; binary-stl.txt
+
+; (rule
+;   (with-stdin-from binary-stl.txt
+;     (with-stdout-to binary-stl.stdout.tmp
+;       (run %{bin:ll1-dsl2}))))
+
+; (rule
+;   (alias runtest)
+;   (package ll1-dsl2)
+;   (action (diff binary-stl.stdout
+;                 binary-stl.stdout.tmp)))
+
+
 ; items.txt
 
 (rule
@@ -52,6 +66,20 @@
   (package ll1-dsl2)
   (action (diff point.stdout
                 point.stdout.tmp)))
+
+
+; simple-bitmap.txt
+
+; (rule
+;   (with-stdin-from simple-bitmap.txt
+;     (with-stdout-to simple-bitmap.stdout.tmp
+;       (run %{bin:ll1-dsl2}))))
+
+; (rule
+;   (alias runtest)
+;   (package ll1-dsl2)
+;   (action (diff simple-bitmap.stdout
+;                 simple-bitmap.stdout.tmp)))
 
 
 ; simple.txt

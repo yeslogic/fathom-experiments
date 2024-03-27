@@ -1,0 +1,27 @@
+--| Binary STL File
+--|
+--| - [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL)
+
+-- TODO: STL variants:
+--
+-- * VisCAM
+-- * SolidView
+-- * Materialise Magics
+
+def main := {
+  header <- repeat-count 80 u8;
+  triangle-count <- u32le;
+  triangles <- repeat-count triangle-count triangle;
+};
+
+def triangle := {
+  normal <- vec3d;
+  vertices <- repeat-count 3 vec3d;
+  attribute-byte-count <- u16len = 0;
+};
+
+def vec3d := {
+  x <- f32le;
+  y <- f32le;
+  z <- f32le;
+};
