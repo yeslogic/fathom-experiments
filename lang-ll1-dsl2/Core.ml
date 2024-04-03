@@ -112,7 +112,6 @@ type ty =
 and expr =
   | Item of string
   | Local of int
-  | Ann of expr * ty
   | ByteLit of char
   | RecordLit of expr LabelMap.t
   | RecordProj of expr * string
@@ -350,7 +349,6 @@ module Semantics = struct
       | Some v -> v
       | None -> invalid_arg "unbound local variable"
     end
-    | Ann (e, _) -> eval_expr items locals e
     | ByteLit c -> ByteLit c
     | RecordLit fs -> RecordLit (LabelMap.map (eval_expr items locals) fs)
     | RecordProj (e, l) -> record_proj (eval_expr items locals e) l
