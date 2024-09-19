@@ -1,0 +1,432 @@
+(** Surface language
+
+    This language closely mirrors what the programmer originaly wrote,
+    including syntactic sugar and higher level language features that make
+    programming more convenient (in comparison to the {!Core}).
+*)
+
+(** {1 Syntax} *)
+
+(** The start and end position in a source file *)
+type loc =
+  Lexing.position * Lexing.position
+
+(** Located nodes *)
+type 'a located = {
+  loc : loc;
+  data : 'a;
+}
+
+(** Names that bind definitions or parameters *)
+type binder =
+  string located
+
+(** Unary operators *)
+type op1 = [
+  | `Neg
+  | `LogicalNot
+]
+
+(** Binary operators *)
+type op2 = [
+  | `Eq
+  | `Add
+  | `Sub
+  | `Mul
+  | `Div
+  | `LogicalAnd
+  | `LogicalOr
+  | `LogicalXor
+  | `LogicalShl
+  | `ArithShr
+  | `LogicalShr
+]
+
+type tm =
+  tm_node located
+
+and tm_node =
+  | Name of string
+  | Ann of tm * tm
+  | Let of binder * tm option * tm * tm
+  | Bind of binder * tm * tm
+  | RecordLit of (string located * tm) list
+  | IntLit of int
+  | Proj of tm * string located
+  | Op1 of op1 * tm
+  | Op2 of op2 * tm * tm
+
+type format_field =
+  | Let of binder * tm option * tm          (* let x : tm := tm *)
+  | Bind of binder * tm                     (* let x <- tm *)
+  | LetField of binder * tm option * tm     (* x : tm := tm *)
+  | BindField of binder * tm                (* x <- tm *)
+
+type item =
+  | RecordType of binder * (string located * tm) list
+  | RecordFormat of binder * format_field list
+  | FormatDef of binder * tm
+  | TypeDef of binder * tm
+  | TermDef of binder * tm option * tm
+
+type program =
+  item list
+
+
+(** Elaboration from the surface language to the core language. *)
+module Elab : sig
+
+  exception Error of loc * string
+
+  val check_program : item list -> Core.program
+
+end = struct
+
+  (** {1 Error handling} *)
+
+  exception Error of loc * string
+
+  let error (type a) (loc : loc) (msg : string) : a =
+    raise (Error (loc, msg))
+
+  (** {1 Elaboration context} *)
+
+  type context = {
+    items : (string * Core.item) list;
+    locals : (string * Core.Semantics.vty) list;
+  }
+
+  let lookup_local (ctx : context) (name : string) : (Core.expr * Core.Semantics.vty) option =
+    ctx.locals |> List.find_mapi @@ fun index (name', vt) ->
+      if name = name' then Some (Core.LocalVar index, vt) else None
+
+  let eval_ty (ctx : context) : Core.ty -> Core.Semantics.vty =
+    Core.Semantics.eval_ty ctx.items
+
+  let quote_vty : ?unfold_items:bool -> Core.Semantics.vty -> Core.ty =
+    Core.Semantics.quote_vty
+
+  let format_ty (ctx : context) (fmt : Core.format) : Core.ty =
+    Core.Semantics.format_ty ctx.items fmt
+
+  (* Compare two types for equality. *)
+  let unify_tys (ctx : context) (loc : loc) (vt1 : Core.Semantics.vty) (vt2 : Core.Semantics.vty) =
+    try Core.Semantics.unify_vtys ctx.items vt1 vt2 with
+    | Core.Semantics.FailedToUnify ->
+      error loc
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+          Core.pp_print_ty (quote_vty vt1)
+          Core.pp_print_ty (quote_vty vt2))
+
+
+  (** {1 Bidirectional elaboration} *)
+
+  (** An elaborated term *)
+  type elab_tm =
+    | KindTm of [`Type | `Format]
+    | TypeTm of Core.ty
+    | ExprTm of Core.expr * Core.Semantics.vty
+    | FormatTm of Core.format
+
+  (** Elaborate a surface term into a core type. *)
+  let rec check_type (ctx : context) (tm : tm) : Core.ty =
+    match tm.data with
+    (* Conversion *)
+    | _ ->
+      match infer ctx tm with
+      | TypeTm ty -> ty
+      | FormatTm fmt -> Core.Semantics.format_ty ctx.items fmt
+      (* | FormatTm fmt -> FormatRepr fmt *)
+      | KindTm _ -> error tm.loc "expected type, found kind"
+      | ExprTm (_, _) -> error tm.loc "expected type, found expression"
+
+  (** Elaborate a surface term into a core expression, given an expected type. *)
+  and check_expr (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.expr =
+    match tm.data with
+    | RecordLit field_tms ->
+        begin match Core.Semantics.force_vty vty with
+        | RecordType (name, field_tys) ->
+            let rec go field_tms field_exprs =
+              match field_tms with
+              | [] -> field_exprs
+              | (label, _) :: _ when Core.LabelMap.mem label.data field_exprs ->
+                  error label.loc (Format.asprintf "duplicate field `%s`" label.data)
+              | (label, tm) :: field_tms ->
+                  begin match Core.LabelMap.find_opt label.data field_tys with
+                  | None -> error label.loc (Format.asprintf "unexpected field `%s`" label.data)
+                  | Some vty ->
+                      let def = check_expr ctx tm vty in
+                      (go [@tailcall]) field_tms (Core.LabelMap.add label.data def field_exprs)
+                  end
+            in
+            RecordLit (name, go field_tms Core.LabelMap.empty)
+        | _ ->
+          error tm.loc
+            (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %s@]@ @[found: %a@]@]"
+              "record type"
+              Core.pp_print_ty (quote_vty vty))
+        end
+
+    (* Conversion *)
+    | _ ->
+        let expr', vty' = infer_expr ctx tm in
+        unify_tys ctx tm.loc vty vty';
+        expr'
+
+  (** Elaborate a surface term into a core format. *)
+  and check_format (ctx : context) (tm : tm) : Core.format =
+    match tm.data with
+    (* Conversion *)
+    |_ ->
+      match infer ctx tm with
+      | FormatTm fmt -> fmt
+      | KindTm _ -> error tm.loc "expected format, found kind"
+      | TypeTm _ -> error tm.loc "expected format, found type"
+      | ExprTm (expr, vty) -> Pure (quote_vty vty, expr)
+
+  (** Elaborate a surface term into a core term, inferring its type. *)
+  and infer (ctx : context) (tm : tm) : elab_tm =
+    match tm.data with
+    | Name name ->
+        begin match lookup_local ctx name with
+        | Some (e, vt) -> ExprTm (e, vt)
+        | None ->
+            begin match List.assoc_opt name ctx.items with
+            | Some (RecordType _) -> TypeTm (ItemVar name)
+            | Some (TypeDef _) -> TypeTm (ItemVar name)
+            | Some (FormatDef fmt) -> FormatTm fmt
+            | Some (ExprDef (ty, _)) -> ExprTm (ItemVar name, eval_ty ctx ty)
+            | None when name = "Type" -> KindTm `Type
+            | None when name = "Format" -> KindTm `Format
+            | None when name = "Int" -> TypeTm IntType
+            | None when name = "repeat-len" -> failwith "TODO"
+            | None when name = "pure" -> failwith "TODO"
+            | None when name = "byte" -> FormatTm Byte
+            | None when name = "fail" -> failwith "TODO"
+            | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+            end
+        end
+
+    | Ann (tm, ann) ->
+        infer_ann ctx tm (Some ann)
+
+    | Let (name, def_ty, def, body) ->
+        let def, def_vty =
+          match def_ty with
+          | Some def_ty ->
+              let ty = check_type ctx def_ty in
+              let vty = eval_ty ctx ty in
+              check_expr ctx def vty, vty
+          | None -> infer_expr ctx def
+        in
+        begin match infer { ctx with locals = (name.data, def_vty) :: ctx.locals } body with
+        | ExprTm (body, vty) -> ExprTm (Let (name.data, quote_vty def_vty, def, body), vty)
+        | FormatTm body_fmt -> FormatTm (Bind (name.data, Pure (quote_vty def_vty, def), body_fmt))
+        | KindTm _ -> error tm.loc "expected expression or format, found kind"
+        | TypeTm _ -> error tm.loc "expected expression or format, found type"
+        end
+
+    | Bind (name, def_fmt, body_fmt) ->
+        let def_fmt = check_format ctx def_fmt in
+        let def_vty = eval_ty ctx (format_ty ctx def_fmt) in
+        let body_fmt = check_format { ctx with locals = (name.data, def_vty) :: ctx.locals } body_fmt in
+        FormatTm (Bind (name.data, def_fmt, body_fmt))
+
+    | RecordLit _ ->
+        (* TODO: postpone elaboration *)
+        error tm.loc "ambiguous record literal"
+
+    | IntLit i ->
+        (* TODO: postpone elaboration *)
+        ExprTm (IntLit i, IntType)
+
+    | Proj (head, label) ->
+        begin match infer ctx head with
+        | ExprTm (head, head_vty) ->
+            begin match Core.Semantics.force_vty head_vty with
+            | RecordType (_, field_vtys) ->
+                begin match Core.LabelMap.find_opt label.data field_vtys with
+                | Some vty -> ExprTm (RecordProj (head, label.data), vty)
+                | None -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
+                end
+            | _ -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
+            end
+        | FormatTm fmt when label.data = "Repr" -> TypeTm (format_ty ctx fmt)
+        (* | FormatTm fmt when label.data = "Repr" -> TypeTm (FormatRepr fmt) *)
+        | _ -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
+        end
+
+    | Op1 (op, tm) ->
+        let op : Core.prim =
+          match op with
+          | `Neg -> IntNeg
+          | `LogicalNot -> IntLogicalNot
+        in
+        let expr = check_expr ctx tm IntType in
+        ExprTm (PrimApp (op, [expr]), IntType)
+
+    | Op2 (op, tm1, tm2) ->
+        let (op : Core.prim), (ty : Core.Semantics.vty) =
+          match op with
+          | `Eq -> IntEq, BoolType
+          | `Add -> IntAdd, IntType
+          | `Sub -> IntSub, IntType
+          | `Mul -> IntMul, IntType
+          | `Div -> IntDiv, IntType
+          | `LogicalAnd -> IntLogicalAnd, IntType
+          | `LogicalOr -> IntLogicalOr, IntType
+          | `LogicalXor -> IntLogicalXor, IntType
+          | `LogicalShl -> IntLogicalShl, IntType
+          | `ArithShr -> IntArithShr, IntType
+          | `LogicalShr -> IntLogicalShr, IntType
+        in
+        let expr1 = check_expr ctx tm1 IntType in
+        let expr2 = check_expr ctx tm2 IntType in
+        ExprTm (PrimApp (op, [expr1; expr2]), ty)
+
+  and infer_ann (ctx : context) (tm : tm) (ann : tm option) : elab_tm =
+    match ann with
+    | None -> infer ctx tm
+    | Some ann ->
+        begin match infer ctx ann with
+        | KindTm `Type -> TypeTm (check_type ctx tm)
+        | KindTm `Format -> FormatTm (check_format ctx tm)
+        | TypeTm ty ->
+            let vty = eval_ty ctx ty in
+            ExprTm (check_expr ctx tm vty, vty)
+        | ExprTm _ ->
+            error ann.loc "expected annotation, found expression"
+        | FormatTm fmt ->
+            let repr = eval_ty ctx (format_ty ctx fmt) in
+            (* let repr = eval_ty ctx (FormatRepr fmt) in *)
+            ExprTm (check_expr ctx tm repr, repr)
+        end
+
+  (** Elaborate a surface term into a core expression, inferring its type. *)
+  and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.Semantics.vty =
+    match infer ctx tm with
+    | ExprTm (expr, vty) -> expr, vty
+    | KindTm _ -> error tm.loc "expected expression, found kind"
+    | TypeTm _ -> error tm.loc "expected expression, found type"
+    | FormatTm _ -> error tm.loc "expected expression, found format"
+
+  (** {1 Top-level elaboration} *)
+
+  let check_item (ctx : context) (item : item) : string * Core.item =
+    match item with
+    | RecordType (name, field_tms) ->
+        let rec go field_tms field_tys =
+          match field_tms with
+          | [] -> field_tys
+          | (label, tm) :: field_tms  ->
+            if Core.LabelMap.mem label.data field_tys then
+              error label.loc (Format.asprintf "duplicate field labels `%s`" label.data)
+            else
+              (go [@tailcall]) field_tms (Core.LabelMap.add label.data (check_type ctx tm) field_tys)
+        in
+        name.data, RecordType (go field_tms Core.LabelMap.empty)
+    | RecordFormat (name, field_tms) ->
+        name.data, FormatDef (failwith "TODO")
+    | FormatDef (name, tm) -> name.data, FormatDef (check_format ctx tm)
+    | TypeDef (name, tm) -> name.data, TypeDef (check_type ctx tm)
+    | TermDef (name, ann, tm) ->
+        begin match infer_ann ctx tm ann with
+        | KindTm _ -> error name.loc "kind definitions are not supported"
+        | TypeTm ty -> name.data, TypeDef ty
+        | ExprTm (expr, ty) -> name.data, ExprDef (quote_vty ty, expr)
+        | FormatTm fmt -> name.data, FormatDef fmt
+        end
+
+  let check_program (items : item list) : Core.program =
+    let module StringMap = Map.Make (String) in
+    let module StringSet = Set.Make (String) in
+
+    let item_name (item : item) : string located =
+      match item with
+      | RecordType (name, _) -> name
+      | RecordFormat (name, _) -> name
+      | FormatDef (name, _) -> name
+      | TypeDef (name, _) -> name
+      | TermDef (name, _, _) -> name
+    in
+
+    let item_name_ids =
+      Seq.fold_lefti
+        (fun map i item ->
+          let name = item_name item in
+          if StringMap.mem name.data map then
+            error name.loc (Format.sprintf "the item name `%s` is defined multiple times" name.data)
+          else
+            StringMap.add name.data i map)
+        StringMap.empty
+        (List.to_seq items)
+    in
+
+    let rec tm_deps (locals : StringSet.t)  (tm : tm) : int list =
+      match tm.data with
+      | Name name when StringSet.mem name locals -> []
+      | Name name -> StringMap.find_opt name item_name_ids |> Option.to_list
+      | Ann (tm, ann) ->
+          tm_deps locals tm
+            @ tm_deps locals ann
+      | Let (name, None, def_tm, body_tm) ->
+          tm_deps locals def_tm
+            @ tm_deps (StringSet.add name.data locals) body_tm
+      | Let (name, Some def_ty, def_tm, body_tm) ->
+          tm_deps locals def_ty
+            @ tm_deps locals def_tm
+            @ tm_deps (StringSet.add name.data locals) body_tm
+      | Bind (name, def_fmt, body_fmt) ->
+          tm_deps locals def_fmt
+            @ tm_deps (StringSet.add name.data locals) body_fmt
+      | RecordLit field_tms ->
+          List.concat_map (fun (_, tm) -> tm_deps locals tm) field_tms
+      | IntLit _ -> []
+      | Proj (tm, _) -> tm_deps locals tm
+      | Op1 (_, tm) -> tm_deps locals tm
+      | Op2 (_, tm1, tm2) -> tm_deps locals tm1 @ tm_deps locals tm2
+    in
+
+    (* Collect a dependency list for use when topologically sorting *)
+    let collect_deps (items : item list) : (int * int list) list =
+      items |> List.mapi @@ fun id item ->
+        match item with
+        | RecordType (_, field_tms) ->
+            id, List.concat_map (fun (_, tm) -> tm_deps StringSet.empty tm) field_tms
+        | RecordFormat (_, field_tms) ->
+            let rec go locals (field_tms : format_field list) =
+              match field_tms with
+              | [] -> []
+              | Let (label, None, tm) :: field_tms
+              | Bind (label, tm) :: field_tms
+              | LetField (label, None, tm) :: field_tms
+              | BindField (label, tm) :: field_tms ->
+                  tm_deps locals tm
+                    @ go (StringSet.add label.data locals) field_tms
+              | Let (label,Some ann, tm) :: field_tms
+              | LetField (label,Some ann, tm) :: field_tms ->
+                  tm_deps locals ann
+                    @ tm_deps locals tm
+                    @ go (StringSet.add label.data locals) field_tms
+            in
+            id, go StringSet.empty field_tms
+        | FormatDef (_, tm) -> id, tm_deps StringSet.empty tm
+        | TypeDef (_, tm) -> id, tm_deps StringSet.empty tm
+        | TermDef (_, None, tm) -> id, tm_deps StringSet.empty tm
+        | TermDef (_, Some ann, tm) -> id, tm_deps StringSet.empty ann @ tm_deps StringSet.empty tm
+    in
+
+    let[@tail_mod_cons] rec go (ctx : context) (order : int list) =
+      match order with
+      | [] -> List.rev ctx.items
+      | id :: order ->
+          let name, item = check_item ctx (List.nth items id) in
+          go { ctx with items = (name, item) :: ctx.items } order
+    in
+
+    (* TODO: Sort with strongly connected components, elaborating to fixed-points *)
+    match Tsort.sort (collect_deps items) with
+    | Tsort.Sorted order -> go { items = []; locals = [] } order
+    | Tsort.ErrorCycle _ -> failwith "TODO: cyclic items" (* TODO: raise a better error *)
+
+end
