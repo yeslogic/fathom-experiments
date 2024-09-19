@@ -1,0 +1,33 @@
+-- Base formats
+
+format u8 :=
+  byte;
+
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  pure Int (b0 | (b1 << 8));
+
+format u16be :=
+  let b0 <- byte;
+  let b1 <- byte;
+  pure Int ((b0 << 8) | b1);
+
+-- Image format
+
+format info {
+  width <- u16be;
+  height <- u16be;
+}
+
+format pixel {
+  red <- u8;
+  green <- u8;
+  blue <- u8;
+}
+
+format image {
+  info <- info;
+  let num-pixels := info.width * info.height;
+  data <- repeat-len num-pixels pixel;
+}

@@ -1,0 +1,12 @@
+type Point {
+  x : Int;
+  y : Int;
+}
+
+def test-point-1 : Point := {
+  x := 1;
+  y := 2;
+};
+
+def test-point-2 :=
+  { x := 1; y := 2 } : Point;

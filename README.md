@@ -13,6 +13,8 @@ A repository of Fathom-related binary parsing experiments.
   traditional elaborator.
 - [**llk-simple**](./lang-llk-simple):
   LL(k) parser DSL.
+- [**simple-ddl**](./lang-simple-ddl): A simply typed binary format DSL that
+  compiles to a recursive descent parser.
 
 ## Development setup
 

@@ -1,0 +1,3 @@
+(library
+  (name CaseConv)
+  (public_name case-conv))
