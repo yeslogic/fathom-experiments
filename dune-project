@@ -14,3 +14,4 @@
 (package (name ll1-dsl))
 (package (name ll1-dsl2))
 (package (name llk-simple))
+(package (name simple-ddl))
