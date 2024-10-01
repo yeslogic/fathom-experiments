@@ -32,12 +32,12 @@ discuss how we have used the calculus to improve PADS.
 
 [@brendanzab](https://github.com/brendanzab):
 
-This was the paper that inspired the work on Fathom.
+This was inspired the work on Fathom.
 The language (PADS), is intended for use on text-based formats like log files,
 but we were hoping to apply it to binary formats like OpenType.
 
 I think their use of the term “type” for _data descriptions_ in the IPADS syntax and DDC syntax is rather misleading, so beware!
-It led me astray for quite while when trying to implement dependently typed data description language.
+It led me astray for quite while when trying to implement a dependently typed data description language.
 I think a better approach is to treat these as an inductive-recursive _universe_ of data descriptions,
 which you can see in [The Power of Pi](./the-power-of-pi.md).
 This is the approach I used in later versions of Fathom.
