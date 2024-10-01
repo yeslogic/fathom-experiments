@@ -23,7 +23,7 @@ in domain-specific embedded type systems.
 [@brendanzab](https://github.com/brendanzab):
 
 This paper demonstrates a series of practical use cases for dependently typed programming,
-including an example of an embedded data description language in section 3.
+including an example of an embedded data description language in Section 3.
 The relevant code is listed below:
 
 ```agda
@@ -64,13 +64,26 @@ data Either (A : Set) (B : Set) : Set where
 ```
 
 The DSL uses and inductive-recursive universe of file formats called `Format`,
-which is analogous to `τ` in DDC[^1].
+which is analogous to `τ` in DDC[^ddc].
 The `⟦_⟧ : Format → Set` function on the other hand is analogous to the `⟦τ⟧rep = σ` relation in DDC.
 Unlike DDC dependent types are used to track dynamic information in the types, like the lengths of arrays.
 
-Interestingly the “universe pattern” described in section 3 has links to Tarski universes[^2].
+The “universe pattern” described in Section 3 seems pretty close to how you’d embed Tarski universes[^tarski-nlab] in a type theory.
+
+Note that the `Read` formats require that the parsed values are present in the resulting decoded data,
+as part of a sigma type.
+This could be a performance issue if that information is only in the type,
+but this could be alleviated with quantitative type theory[^nuttin][^qtt] like in Idris[^idris-qtt],
+or an run-time irrelevance like in recent versions of Agda[^agda-irrel].
 
 I attempted to use a similar approach to this in later implementations of Fathom.
+One issue I ran into was interleaving computed data inside formats,
+when you might not want those to appear in the resulting data structure.
+I now feel like this might be a similar issue to the the `Read` formats above.
 
-[^1]: [The Next 700 Data Description Languages](./the-next-700-data-languages.md)
-[^2]: [Tarski universe](https://ncatlab.org/nlab/show/Tarski+universe) on the nLab
+[^ddc]: [The Next 700 Data Description Languages](./the-next-700-data-languages.md)
+[^nuttin]: [I Got Plenty o’ Nuttin’](https://personal.cis.strath.ac.uk/conor.mcbride/PlentyO-CR.pdf)
+[^qtt]: [Syntax and Semantics of Quantitative Type Theory](https://bentnib.org/quantitative-type-theory.pdf)
+[^idris-qtt]: [A Crash Course in Idris 2: Multiplicities](https://idris2.readthedocs.io/en/latest/tutorial/multiplicities.html)
+[^tarski-nlab]: [Tarski universe](https://ncatlab.org/nlab/show/Tarski+universe) on the nLab
+[^agda-irrel]: [Agda Language Reference: Run-time Irrelevance](https://agda.readthedocs.io/en/v2.6.1.1/language/runtime-irrelevance.html)
