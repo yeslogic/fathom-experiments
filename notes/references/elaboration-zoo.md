@@ -1,13 +1,9 @@
 # elaboration-zoo
 
-| Field       | Value |
-| ----------- | ----- |
-| Author      | András Kovacs |
-| Repository  | [github:AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/) |
-
-## Abstract
-
-Minimal implementations for dependent type checking and elaboration
+- **Author**: András Kovacs
+- **Source**: [github:AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/)
+- **Abstract**:
+  > Minimal implementations for dependent type checking and elaboration
 
 ## Notes
 

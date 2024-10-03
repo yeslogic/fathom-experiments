@@ -1,13 +1,9 @@
 # Language garden
 
-| Field       | Value |
-| ----------- | ----- |
-| Author      | Brendan Zabarauskas |
-| Repository  | [github:brendanzab/language-garden](https://github.com/brendanzab/language-garden/) |
-
-## Abstract
-
-A garden of small programming language implementations
+- **Author**: Brendan Zabarauskas
+- **Source**: [github:brendanzab/language-garden](https://github.com/brendanzab/language-garden/)
+- **Abstract**:
+  > A garden of small programming language implementations
 
 ## Notes
 
