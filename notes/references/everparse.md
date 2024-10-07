@@ -37,17 +37,17 @@
 
 ```bibtex
 @inproceedings {236232,
-author = {Tahina Ramananandro and Antoine Delignat-Lavaud and Cedric Fournet and
-Nikhil Swamy and Tej Chajed and Nadim Kobeissi and Jonathan Protzenko},
-title = {{EverParse}: Verified Secure {Zero-Copy} Parsers for Authenticated Message Formats},
-booktitle = {28th USENIX Security Symposium (USENIX Security 19)},
-year = {2019},
-isbn = {978-1-939133-06-9},
-address = {Santa Clara, CA},
-pages = {1465--1482},
-url = {https://www.usenix.org/conference/usenixsecurity19/presentation/delignat-lavaud},
-publisher = {USENIX Association},
-month = aug
+  author = {Tahina Ramananandro and Antoine Delignat-Lavaud and Cedric Fournet and
+  Nikhil Swamy and Tej Chajed and Nadim Kobeissi and Jonathan Protzenko},
+  title = {{EverParse}: Verified Secure {Zero-Copy} Parsers for Authenticated Message Formats},
+  booktitle = {28th USENIX Security Symposium (USENIX Security 19)},
+  year = {2019},
+  isbn = {978-1-939133-06-9},
+  address = {Santa Clara, CA},
+  pages = {1465--1482},
+  url = {https://www.usenix.org/conference/usenixsecurity19/presentation/delignat-lavaud},
+  publisher = {USENIX Association},
+  month = aug
 }
 ```
 

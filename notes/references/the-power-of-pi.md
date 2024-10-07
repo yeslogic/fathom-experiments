@@ -19,51 +19,51 @@
 
 ```bibtex
 @inproceedings{10.1145/1411204.1411213,
-author = {Oury, Nicolas and Swierstra, Wouter},
-title = {The power of Pi},
-year = {2008},
-isbn = {9781595939197},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1411204.1411213},
-doi = {10.1145/1411204.1411213},
-abstract = {This paper exhibits the power of programming with dependent types by
-dint of embedding three domain-specific languages: Cryptol, a language for
-cryptographic protocols; a small data description language; and relational
-algebra. Each example demonstrates particular design patterns inherent to
-dependently-typed programming. Documenting these techniques paves the way for
-further research in domain-specific embedded type systems.},
-booktitle = {Proceedings of the 13th ACM SIGPLAN International Conference on Functional Programming},
-pages = {39–50},
-numpages = {12},
-keywords = {domain-specific embedded languages, dependent types},
-location = {Victoria, BC, Canada},
-series = {ICFP '08}
+  author = {Oury, Nicolas and Swierstra, Wouter},
+  title = {The power of Pi},
+  year = {2008},
+  isbn = {9781595939197},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/1411204.1411213},
+  doi = {10.1145/1411204.1411213},
+  abstract = {This paper exhibits the power of programming with dependent types by
+    dint of embedding three domain-specific languages: Cryptol, a language for
+    cryptographic protocols; a small data description language; and relational
+    algebra. Each example demonstrates particular design patterns inherent to
+    dependently-typed programming. Documenting these techniques paves the way for
+    further research in domain-specific embedded type systems.},
+  booktitle = {Proceedings of the 13th ACM SIGPLAN International Conference on Functional Programming},
+  pages = {39–50},
+  numpages = {12},
+  keywords = {domain-specific embedded languages, dependent types},
+  location = {Victoria, BC, Canada},
+  series = {ICFP '08}
 }
 
 @article{10.1145/1411203.1411213,
-author = {Oury, Nicolas and Swierstra, Wouter},
-title = {The power of Pi},
-year = {2008},
-issue_date = {September 2008},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {43},
-number = {9},
-issn = {0362-1340},
-url = {https://doi.org/10.1145/1411203.1411213},
-doi = {10.1145/1411203.1411213},
-abstract = {This paper exhibits the power of programming with dependent types by
-dint of embedding three domain-specific languages: Cryptol, a language for
-cryptographic protocols; a small data description language; and relational
-algebra. Each example demonstrates particular design patterns inherent to
-dependently-typed programming. Documenting these techniques paves the way for
-further research in domain-specific embedded type systems.},
-journal = {SIGPLAN Not.},
-month = sep,
-pages = {39–50},
-numpages = {12},
-keywords = {domain-specific embedded languages, dependent types}
+  author = {Oury, Nicolas and Swierstra, Wouter},
+  title = {The power of Pi},
+  year = {2008},
+  issue_date = {September 2008},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {43},
+  number = {9},
+  issn = {0362-1340},
+  url = {https://doi.org/10.1145/1411203.1411213},
+  doi = {10.1145/1411203.1411213},
+  abstract = {This paper exhibits the power of programming with dependent types by
+    dint of embedding three domain-specific languages: Cryptol, a language for
+    cryptographic protocols; a small data description language; and relational
+    algebra. Each example demonstrates particular design patterns inherent to
+    dependently-typed programming. Documenting these techniques paves the way for
+    further research in domain-specific embedded type systems.},
+  journal = {SIGPLAN Not.},
+  month = sep,
+  pages = {39–50},
+  numpages = {12},
+  keywords = {domain-specific embedded languages, dependent types}
 }
 ```
 
