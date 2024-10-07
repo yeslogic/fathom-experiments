@@ -10,7 +10,7 @@ Papers:
 
 - [A typed, algebraic approach to parsing](./a-typed-algebraic-approach-to-parsing.md)
 - [Narcissus: correct-by-construction derivation of decoders and encoders from binary formats](./narcissus.md)
-- [EverParse: Veriﬁed Secure Zero-Copy Parsers for Authenticated Message Formats](./everparse.md)
+- [EverParse: Verified Secure Zero-Copy Parsers for Authenticated Message Formats](./everparse.md)
 - [flap: A Deterministic Parser with Fused Lexing](./flap-a-deterministic-parser-with-fused-lexing.md)
 - [The Next 700 Data Description Languages](./the-next-700-data-languages.md)
 - [The Power of Pi](./the-power-of-pi.md)
@@ -18,7 +18,12 @@ Papers:
 
 Blog posts:
 
-- [Linear-time parser combinators](./linear-time-parser-compinators.md)
+- [Linear-time parser combinators](./linear-time-parser-combinators.md)
+
+Projects:
+
+- [Doodle](./doodle.md)
+- [Fathom](./fathom.md)
 
 ## Programming Languages
 

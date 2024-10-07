@@ -2,7 +2,7 @@
 
 - **Authors**: Jeremy Yallop, Ningning Xie and Neel Krishnaswami
 - **Conference**: PLDI 2023
-- **DOI**: [doi:10.1145/3591269](https://doi.org/10.1145/3591269)
+- **DOI**: [10.1145/3591269](https://doi.org/10.1145/3591269)
 - **Source**: [gihub:yallop/ocaml-flap](https://github.com/yallop/ocaml-flap)
 - **Abstract**:
   > Lexers and parsers are typically defined separately and connected by a token
@@ -57,3 +57,12 @@ keywords = {fusion, lexing, multi-stage programming, optimization, parsing}
 ```
 
 </details>
+<!-- markdownlint-restore -->
+
+## Notes
+
+[@brendanzab](https://github.com/brendanzab):
+
+A continuation of their prior paper,
+[A typed, algebraic approach to parsing](./a-typed-algebraic-approach-to-parsing.md),
+this time with the addition of fused lexers.

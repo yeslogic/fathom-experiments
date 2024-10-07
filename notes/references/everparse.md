@@ -1,4 +1,4 @@
-# EverParse: Veriﬁed Secure Zero-Copy Parsers for Authenticated Message Formats
+# EverParse: Verified Secure Zero-Copy Parsers for Authenticated Message Formats
 
 - **Authors**: Tahina Ramananandro, Antoine Delignat-Lavaud, Cédric Fournet, Nikhil Swamy, Tej Chajed, Nadim Kobeissi, Jonathan Protzenko
 - **Conference**: 28th USENIX Security Symposium
