@@ -1,7 +1,7 @@
 # A Tutorial Implementation of a Dependently Typed Lambda Calculus
 
 - **Authors**: Andres Löh, Conor McBride, Wouter Swierstra
-- **Date**: 2009
+- **DOI**: [10.3233/FI-2010-304](https://doi.org/10.3233/FI-2010-304)
 - **Webpage**: <https://www.andres-loeh.de/LambdaPi/>
 - **Abstract**:
   > We present the type rules for a dependently-typed core calculus together with a
@@ -11,6 +11,35 @@
   > types and write several small example programs. The paper is accompanied by an
   > executable interpreter and example code that allows immediate experimentation
   > with the system we describe.
+
+<!-- markdownlint-disable no-inline-html -->
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{10.3233/FI-2010-304,
+  title={A tutorial implementation of a dependently typed lambda calculus},
+  author={L{\"o}h, Andres and McBride, Conor and Swierstra, Wouter},
+  journal={Fundamenta informaticae},
+  volume={102},
+  number={2},
+  pages={177--207},
+  year={2010},
+  publisher={IOS Press},
+  abstract = {We present the type rules for a dependently-typed core calculus
+    together with a straightforward implementation in Haskell. We explicitly
+    highlight the changes necessary to shift from a simply-typed lambda calculus to
+    the dependently-typed lambda calculus. We also describe how to extend our core
+    language with data types and write several small example programs. The paper is
+    accompanied by an executable interpreter and example code that allows immediate
+    experimentation with the system we describe.},
+  url = {https://doi.org/10.3233/FI-2010-304},
+  doi = {10.3233/FI-2010-304}
+}
+```
+
+</details>
+<!-- markdownlint-restore -->
 
 ## Notes
 
