@@ -4,6 +4,7 @@
 - **Conference**: PLDI
 - **Published**: 20 June 2024
 - **DOI**: [10.1145/3656410](https://doi.org/10.1145/3656410)
+- **Presentation**: [youtube:hs5fWi3vevk](https://www.youtube.com/watch?v=hs5fWi3vevk)
 - **Abstract**:
   > Despite decades of contributions to the theoretical foundations of parsing
   > and the many tools available to aid in parser development, many security
@@ -76,3 +77,16 @@
 
 </details>
 <!-- markdownlint-restore -->
+
+## Notes
+
+[@brendanzab](https://github.com/brendanzab):
+
+The determinisation pass reminds me of [ollef’s thoughts](https://github.com/ollef/Earley/blob/master/docs/implementation.md#how-not-to-repeat-yourself-yourself)
+about sharing work during parsing (in this case related to Earley parsing).
+This also reminds me of our work to try to produce deterministic LL(k) parsers based on parser combinators
+(see [doodle](./doodle.md)).
+
+They mention having an FFI to handle things like compression,
+rather than needing to have it in the DSL itself.
+This could also help with gradual migration of existing parsers or partial adoption.
