@@ -47,6 +47,7 @@ type format =
   | Bind of string * format * format
   | Pure of ty * expr
   | Fail of ty
+  | BoolElim of expr * format * format
 
 (** Top-level items *)
 type item =
@@ -182,6 +183,7 @@ module Semantics = struct
     | Bind (_, _, body_fmt) -> format_ty items body_fmt
     | Pure (ty, _) -> ty
     | Fail ty -> ty
+    | BoolElim (_, fmt1, _) -> format_ty items fmt1
 
 
   (** {1 Quotation} *)
@@ -241,6 +243,12 @@ module Semantics = struct
             decode_format (def :: locals) body_fmt ~input ~pos
         | Pure (_, expr) -> pos, eval_expr items locals expr
         | Fail _ -> raise (DecodeFailure pos)
+        | BoolElim (head, fmt1, fmt2) ->
+            begin match eval_expr items locals head with
+            | BoolLit true -> decode_format locals fmt1 ~input ~pos
+            | BoolLit false -> decode_format locals fmt2 ~input ~pos
+            | _ -> failwith "boolean expected"
+            end
 
     and decode_byte : vexpr decoder =
       fun ~input ~pos ->
@@ -380,6 +388,11 @@ module Compile = struct
           (compile_expr locals) expr
     | Fail _ ->
         Format.fprintf ppf "Err(())"
+    | BoolElim (head, fmt1, fmt2) ->
+        Format.fprintf ppf "if@ %a@ {@ %a@ }@ else@ {@ %a@ }"
+          (compile_expr locals) head
+          (compile_format locals) fmt1
+          (compile_format locals) fmt2
 
   let compile_item (items : program) (ppf : Format.formatter) (name, item : string * item) =
     match item with

@@ -61,6 +61,7 @@ type format_field =
   | Bind of binder * tm                     (* let x <- tm *)
   | LetField of binder * tm option * tm     (* x : tm := tm *)
   | BindField of binder * tm                (* x <- tm *)
+  (* TODO: add `where ...` *)
 
 type item =
   | RecordType of binder * (string located * tm) list
