@@ -97,6 +97,16 @@ end = struct
     locals : (string * Core.Semantics.vty) list;
   }
 
+  let extend_item (ctx : context) (name : string) (item : Core.item) : context = {
+    ctx with
+    items = (name, item) :: ctx.items;
+  }
+
+  let extend_local (ctx : context) (name : string) (vty : Core.Semantics.vty) : context = {
+    ctx with
+    locals = (name, vty) :: ctx.locals;
+  }
+
   let lookup_local (ctx : context) (name : string) : (Core.expr * Core.Semantics.vty) option =
     ctx.locals |> List.find_mapi @@ fun index (name', vt) ->
       if name = name' then Some (Core.LocalVar index, vt) else None
@@ -220,7 +230,7 @@ end = struct
               check_expr ctx def vty, vty
           | None -> infer_expr ctx def
         in
-        begin match infer { ctx with locals = (name.data, def_vty) :: ctx.locals } body with
+        begin match infer (extend_local ctx name.data def_vty) body with
         | ExprTm (body, vty) -> ExprTm (Let (name.data, quote_vty def_vty, def, body), vty)
         | FormatTm body_fmt -> FormatTm (Bind (name.data, Pure (quote_vty def_vty, def), body_fmt))
         | KindTm _ -> error tm.loc "expected expression or format, found kind"
@@ -230,7 +240,7 @@ end = struct
     | Bind (name, def_fmt, body_fmt) ->
         let def_fmt = check_format ctx def_fmt in
         let def_vty = eval_ty ctx (format_ty ctx def_fmt) in
-        let body_fmt = check_format { ctx with locals = (name.data, def_vty) :: ctx.locals } body_fmt in
+        let body_fmt = check_format (extend_local ctx name.data def_vty) body_fmt in
         FormatTm (Bind (name.data, def_fmt, body_fmt))
 
     | RecordLit _ ->
@@ -422,7 +432,7 @@ end = struct
       | [] -> List.rev ctx.items
       | id :: order ->
           let name, item = check_item ctx (List.nth items id) in
-          go { ctx with items = (name, item) :: ctx.items } order
+          go (extend_item ctx name item) order
     in
 
     (* TODO: Sort with strongly connected components, elaborating to fixed-points *)
