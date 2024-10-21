@@ -337,20 +337,78 @@ end = struct
   let check_item (ctx : context) (item : item) : string * Core.item =
     match item with
     | RecordType (name, field_tms) ->
-        let rec go field_tms field_tys =
+        let rec go field_tms decls =
           match field_tms with
-          | [] -> field_tys
+          | [] -> decls
           | (label, tm) :: field_tms  ->
-            if Core.LabelMap.mem label.data field_tys then
+            if Core.LabelMap.mem label.data decls then
               error label.loc (Format.asprintf "duplicate field labels `%s`" label.data)
             else
-              (go [@tailcall]) field_tms (Core.LabelMap.add label.data (check_type ctx tm) field_tys)
+              (go [@tailcall]) field_tms (Core.LabelMap.add label.data (check_type ctx tm) decls)
         in
         name.data, RecordType (go field_tms Core.LabelMap.empty)
-    | RecordFormat (name, field_tms) ->
-        name.data, FormatDef (failwith "TODO")
-    | FormatDef (name, tm) -> name.data, FormatDef (check_format ctx tm)
-    | TypeDef (name, tm) -> name.data, TypeDef (check_type ctx tm)
+
+    | RecordFormat (name, fmt_fields) ->
+        (* Generate name for record *)
+        (* Iterate through fields: *)
+        (* - accumulate type fields *)
+        (* - accumulate format *)
+        let guard_label label decls =
+          if Core.LabelMap.mem label.data decls then
+            error label.loc (Format.asprintf "duplicate field labels `%s`" label.data)
+        in
+
+        let rec go ctx fmt_fields decls : Core.ty Core.LabelMap.t * Core.format =
+          match fmt_fields with
+          | [] ->
+              let defns =
+                decls |> Core.LabelMap.mapi @@ fun label _ ->
+                  lookup_local ctx label |> Option.get |> fst
+              in
+              decls, Pure (ItemVar _, RecordLit (_, defns))
+
+          | Let (label, def_ty, def) :: fmt_fields ->
+              guard_label label decls;
+              let def, def_vty = infer_ann_expr ctx def def_ty in
+              let decls, body_fmt = go (extend_local ctx label.data def_vty) fmt_fields decls in
+              decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
+
+          | Bind (label, fmt) :: fmt_fields ->
+              guard_label label decls;
+              let fmt = check_format ctx fmt in
+              let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
+              let decls, body_fmt = go (extend_local ctx label.data fmt_vty) fmt_fields decls in
+              decls, Bind (label.data, fmt, body_fmt)
+
+          | LetField (label, def_ty, def) :: fmt_fields ->
+              guard_label label decls;
+              let def, def_vty = infer_ann_expr ctx def def_ty in
+              let decls, body_fmt =
+                let ctx = extend_local ctx label.data def_vty in
+                let decls = Core.LabelMap.add label.data (quote_vty def_vty) decls in
+                go ctx fmt_fields decls in
+              decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
+
+          | BindField (label, fmt) :: fmt_fields ->
+              guard_label label decls;
+              let fmt = check_format ctx fmt in
+              let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
+              let decls, body_fmt =
+                let ctx = extend_local ctx label.data fmt_vty in
+                let decls = Core.LabelMap.add label.data (quote_vty fmt_vty) decls in
+                go ctx fmt_fields decls in
+              decls, Bind (label.data, fmt, body_fmt)
+        in
+
+        let decls, fmt = go ctx fmt_fields Core.LabelMap.empty in
+        name.data, FormatDef fmt
+
+    | FormatDef (name, tm) ->
+        name.data, FormatDef (check_format ctx tm)
+
+    | TypeDef (name, tm) ->
+        name.data, TypeDef (check_type ctx tm)
+
     | TermDef (name, ann, tm) ->
         begin match infer_ann ctx tm ann with
         | KindTm _ -> error name.loc "kind definitions are not supported"
