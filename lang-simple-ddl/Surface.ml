@@ -154,6 +154,11 @@ end = struct
   (** Elaborate a surface term into a core expression, given an expected type. *)
   and check_expr (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.expr =
     match tm.data with
+    | Let (name, def_ty, def, body) ->
+        let def, def_vty = infer_ann_expr ctx def def_ty in
+        let body = check_expr (extend_local ctx name.data def_vty) body vty in
+        Let (name.data, quote_vty def_vty, def, body)
+
     | RecordLit field_tms ->
         begin match Core.Semantics.force_vty vty with
         | RecordType (name, field_tys) ->
@@ -187,6 +192,11 @@ end = struct
   (** Elaborate a surface term into a core format. *)
   and check_format (ctx : context) (tm : tm) : Core.format =
     match tm.data with
+    | Let (name, def_ty, def, body) ->
+        let def, def_vty = infer_ann_expr ctx def def_ty in
+        let body = check_format (extend_local ctx name.data def_vty) body in
+        Bind (name.data, Pure (quote_vty def_vty, def), body)
+
     (* Conversion *)
     |_ ->
       match infer ctx tm with
@@ -222,14 +232,7 @@ end = struct
         infer_ann ctx tm (Some ann)
 
     | Let (name, def_ty, def, body) ->
-        let def, def_vty =
-          match def_ty with
-          | Some def_ty ->
-              let ty = check_type ctx def_ty in
-              let vty = eval_ty ctx ty in
-              check_expr ctx def vty, vty
-          | None -> infer_expr ctx def
-        in
+        let def, def_vty = infer_ann_expr ctx def def_ty in
         begin match infer (extend_local ctx name.data def_vty) body with
         | ExprTm (body, vty) -> ExprTm (Let (name.data, quote_vty def_vty, def, body), vty)
         | FormatTm body_fmt -> FormatTm (Bind (name.data, Pure (quote_vty def_vty, def), body_fmt))
@@ -320,6 +323,14 @@ end = struct
     | KindTm _ -> error tm.loc "expected expression, found kind"
     | TypeTm _ -> error tm.loc "expected expression, found type"
     | FormatTm _ -> error tm.loc "expected expression, found format"
+
+  and infer_ann_expr (ctx : context) (tm : tm) (ty : tm option) : Core.expr * Core.Semantics.vty =
+    match ty with
+    | Some ty ->
+        let ty = check_type ctx ty in
+        let vty = eval_ty ctx ty in
+        check_expr ctx tm vty, vty
+    | None -> infer_expr ctx tm
 
   (** {1 Top-level elaboration} *)
 
