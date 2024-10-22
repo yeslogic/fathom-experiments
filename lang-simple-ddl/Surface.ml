@@ -385,6 +385,7 @@ end = struct
 
   (** {1 Top-level elaboration} *)
 
+  (** Elaborate and item and add it to the elaboration context *)
   let check_item (ctx : context) (item : item) : context =
     match item with
     | RecordType (name, field_tms) ->
@@ -403,6 +404,8 @@ end = struct
         (* TODO: Figure out a better solution to this! *)
         let record_name = name.data ^ "_record" in
 
+        (* Elaborate format fields into a list of field declarations (to be used
+           in the record type declaration) and a format for the record type. *)
         let rec go ctx fmt_fields decls : Core.ty Core.LabelMap.t * Core.format =
           match fmt_fields with
           | [] ->
@@ -436,10 +439,10 @@ end = struct
               in
 
               if Core.LabelMap.mem label.data decls then
-                error label.loc (Format.asprintf "duplicate field labels `%s`" label.data)
-              else
-                let decls, body_fmt = go (extend_local ctx label.data field_vty) fmt_fields decls in
-                decls, Bind (label.data, field_fmt, body_fmt)
+                error label.loc (Format.asprintf "duplicate field labels `%s`" label.data);
+
+              let decls, body_fmt = go (extend_local ctx label.data field_vty) fmt_fields decls in
+              decls, Bind (label.data, field_fmt, body_fmt)
         in
 
         let decls, fmt = go ctx fmt_fields Core.LabelMap.empty in
