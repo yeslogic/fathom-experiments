@@ -29,7 +29,7 @@ Features
 
 ## Future work
 
-Additional experiments could be added exploring the following:
+Additional experiments could be added as additional projects, exploring the following:
 
 - Steppable interpreter (similar to the CEK machine)
 - Documentation generation
