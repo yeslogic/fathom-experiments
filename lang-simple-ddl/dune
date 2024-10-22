@@ -2,5 +2,13 @@
   (name Main)
   (public_name simple-ddl)
   (package simple-ddl)
+  (preprocess
+    (pps sedlex.ppx))
   (libraries
+    menhirLib
+    sedlex
     tsort))
+
+(menhir
+  (modules Parser)
+  (explain true))
