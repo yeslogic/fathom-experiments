@@ -334,7 +334,7 @@ end = struct
 
   (** {1 Top-level elaboration} *)
 
-  let check_item (ctx : context) (item : item) : string * Core.item =
+  let check_item (ctx : context) (item : item) : context =
     match item with
     | RecordType (name, field_tms) ->
         let rec go field_tms decls =
@@ -346,13 +346,12 @@ end = struct
             else
               (go [@tailcall]) field_tms (Core.LabelMap.add label.data (check_type ctx tm) decls)
         in
-        name.data, RecordType (go field_tms Core.LabelMap.empty)
+        extend_item ctx name.data (RecordType (go field_tms Core.LabelMap.empty))
 
     | RecordFormat (name, fmt_fields) ->
-        (* Generate name for record *)
-        (* Iterate through fields: *)
-        (* - accumulate type fields *)
-        (* - accumulate format *)
+        (* TODO: Figure out a better solution to this! *)
+        let record_name = name.data ^ "_record" in
+
         let rec go ctx fmt_fields decls : Core.ty Core.LabelMap.t * Core.format =
           match fmt_fields with
           | [] ->
@@ -360,7 +359,7 @@ end = struct
                 decls |> Core.LabelMap.mapi @@ fun label _ ->
                   lookup_local ctx label |> Option.get |> fst
               in
-              decls, Pure (ItemVar _, RecordLit (_, defns))
+              decls, Pure (ItemVar record_name, RecordLit (record_name, defns))
 
           | fmt_field :: fmt_fields ->
               let decls, label, (field_fmt : Core.format), field_vty =
@@ -393,20 +392,21 @@ end = struct
         in
 
         let decls, fmt = go ctx fmt_fields Core.LabelMap.empty in
-        name.data, FormatDef fmt
+        let ctx = extend_item ctx record_name (RecordType decls) in
+        extend_item ctx name.data (FormatDef fmt)
 
     | FormatDef (name, tm) ->
-        name.data, FormatDef (check_format ctx tm)
+        extend_item ctx name.data (FormatDef (check_format ctx tm))
 
     | TypeDef (name, tm) ->
-        name.data, TypeDef (check_type ctx tm)
+        extend_item ctx name.data (TypeDef (check_type ctx tm))
 
     | TermDef (name, ann, tm) ->
         begin match infer_ann ctx tm ann with
         | KindTm _ -> error name.loc "kind definitions are not supported"
-        | TypeTm ty -> name.data, TypeDef ty
-        | ExprTm (expr, ty) -> name.data, ExprDef (quote_vty ty, expr)
-        | FormatTm fmt -> name.data, FormatDef fmt
+        | TypeTm ty -> extend_item ctx name.data (TypeDef ty)
+        | ExprTm (expr, ty) -> extend_item ctx name.data (ExprDef (quote_vty ty, expr))
+        | FormatTm fmt -> extend_item ctx name.data (FormatDef fmt)
         end
 
   let check_program (items : item list) : Core.program =
@@ -488,12 +488,10 @@ end = struct
         | TermDef (_, Some ann, tm) -> id, tm_deps StringSet.empty ann @ tm_deps StringSet.empty tm
     in
 
-    let[@tail_mod_cons] rec go (ctx : context) (order : int list) =
+    let rec go (ctx : context) (order : int list) =
       match order with
       | [] -> List.rev ctx.items
-      | id :: order ->
-          let name, item = check_item ctx (List.nth items id) in
-          go (extend_item ctx name item) order
+      | id :: order -> (go [@tailcall]) (check_item ctx (List.nth items id)) order
     in
 
     (* TODO: Sort with strongly connected components, elaborating to fixed-points *)
