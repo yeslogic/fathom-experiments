@@ -53,8 +53,13 @@ and tm_node =
   | RecordLit of (string located * tm) list
   | IntLit of int
   | Proj of tm * string located
+  | IfThenElse of tm * tm * tm
   | Op1 of op1 * tm
   | Op2 of op2 * tm * tm
+  (* TODO: Abstract the following nodes in a more systematic way *)
+  | RepeatLen of tm * tm
+  | Pure of tm * tm
+  | Fail of tm
 
 type format_field =
   | Let of binder * tm option * tm          (* let x : tm := tm *)
@@ -121,7 +126,7 @@ end = struct
     Core.Semantics.format_ty ctx.items fmt
 
   (* Compare two types for equality. *)
-  let unify_tys (ctx : context) (loc : loc) (vt1 : Core.Semantics.vty) (vt2 : Core.Semantics.vty) =
+  let unify_vtys (ctx : context) (loc : loc) (vt1 : Core.Semantics.vty) (vt2 : Core.Semantics.vty) =
     try Core.Semantics.unify_vtys ctx.items vt1 vt2 with
     | Core.Semantics.FailedToUnify ->
       error loc
@@ -183,10 +188,16 @@ end = struct
               Core.pp_print_ty (quote_vty vty))
         end
 
+    | IfThenElse (head, tm1, tm2) ->
+        let head = check_expr ctx head BoolType in
+        let expr1 = check_expr ctx tm1 vty in
+        let expr2 = check_expr ctx tm2 vty in
+        BoolElim (head, expr1, expr2)
+
     (* Conversion *)
     | _ ->
         let expr', vty' = infer_expr ctx tm in
-        unify_tys ctx tm.loc vty vty';
+        unify_vtys ctx tm.loc vty vty';
         expr'
 
   (** Elaborate a surface term into a core format. *)
@@ -196,6 +207,15 @@ end = struct
         let def, def_vty = infer_ann_expr ctx def def_ty in
         let body = check_format (extend_local ctx name.data def_vty) body in
         Bind (name.data, Pure (quote_vty def_vty, def), body)
+
+    | IfThenElse (head, tm1, tm2) ->
+        let head = check_expr ctx head BoolType in
+        let fmt1 = check_format ctx tm1 in
+        let fmt2 = check_format ctx tm2 in
+        let vty1 = eval_ty ctx (format_ty ctx fmt1) in
+        let vty2 = eval_ty ctx (format_ty ctx fmt2) in
+        unify_vtys ctx tm.loc vty1 vty2;
+        BoolElim (head, fmt1, fmt2)
 
     (* Conversion *)
     |_ ->
@@ -270,6 +290,22 @@ end = struct
         | _ -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
         end
 
+    | IfThenElse (head, tm1, tm2) ->
+        let head = check_expr ctx head BoolType in
+
+        begin match infer ctx tm1, infer ctx tm2 with
+        | ExprTm (expr1, vty1), ExprTm (expr2, vty2) ->
+            unify_vtys ctx tm.loc vty1 vty2;
+            ExprTm (BoolElim (head, expr1, expr2), vty1)
+        | FormatTm fmt1, FormatTm fmt2 ->
+            let vty1 = eval_ty ctx (format_ty ctx fmt1) in
+            let vty2 = eval_ty ctx (format_ty ctx fmt2) in
+            unify_vtys ctx tm.loc vty1 vty2;
+            FormatTm (BoolElim (head, fmt1, fmt2))
+        | _, _ ->
+            error tm.loc (Format.sprintf "mismatched arms of if expression")
+        end
+
     | Op1 (op, tm) ->
         let op : Core.prim =
           match op with
@@ -280,7 +316,7 @@ end = struct
         ExprTm (PrimApp (op, [expr]), IntType)
 
     | Op2 (op, tm1, tm2) ->
-        let (op : Core.prim), (ty : Core.Semantics.vty) =
+        let (op : Core.prim), (vty : Core.Semantics.vty) =
           match op with
           | `Eq -> IntEq, BoolType
           | `Add -> IntAdd, IntType
@@ -296,7 +332,21 @@ end = struct
         in
         let expr1 = check_expr ctx tm1 IntType in
         let expr2 = check_expr ctx tm2 IntType in
-        ExprTm (PrimApp (op, [expr1; expr2]), ty)
+        ExprTm (PrimApp (op, [expr1; expr2]), vty)
+
+    | RepeatLen (len, fmt) ->
+        let len = check_expr ctx len IntType in
+        let fmt = check_format ctx fmt in
+        FormatTm (RepeatLen (len, fmt))
+
+    | Pure (ty, expr) ->
+      let ty = check_type ctx ty in
+      let expr = check_expr ctx expr (eval_ty ctx ty) in
+      FormatTm (Pure (ty, expr))
+
+    | Fail ty ->
+        let ty = check_type ctx ty in
+        FormatTm (Fail ty)
 
   and infer_ann (ctx : context) (tm : tm) (ann : tm option) : elab_tm =
     match ann with
@@ -455,8 +505,16 @@ end = struct
           List.concat_map (fun (_, tm) -> tm_deps locals tm) field_tms
       | IntLit _ -> []
       | Proj (tm, _) -> tm_deps locals tm
+      | IfThenElse (head, tm1, tm2) ->
+          tm_deps locals head
+            @ tm_deps locals tm1
+            @ tm_deps locals tm2
       | Op1 (_, tm) -> tm_deps locals tm
       | Op2 (_, tm1, tm2) -> tm_deps locals tm1 @ tm_deps locals tm2
+
+      | RepeatLen (len, fmt) -> tm_deps locals len @ tm_deps locals fmt
+      | Pure (ty, expr) -> tm_deps locals ty @ tm_deps locals expr
+      | Fail ty -> tm_deps locals ty
     in
 
     (* Collect a dependency list for use when topologically sorting *)
