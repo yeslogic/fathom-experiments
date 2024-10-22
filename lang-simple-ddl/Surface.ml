@@ -362,6 +362,7 @@ end = struct
             error ann.loc "expected annotation, found expression"
         | FormatTm fmt ->
             let repr = eval_ty ctx (format_ty ctx fmt) in
+            (* TODO: Format projection in core language *)
             (* let repr = eval_ty ctx (FormatRepr fmt) in *)
             ExprTm (check_expr ctx tm repr, repr)
         end
