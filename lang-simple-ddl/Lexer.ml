@@ -42,7 +42,7 @@ let rec token lexbuf =
   | "!" -> BANG
   | ":" -> COLON
   | ":=" -> COLON_EQUALS
-  | "," -> COMMA
+  (* | "," -> COMMA *)
   | "." -> FULL_STOP
   | "-" -> HYPHEN
   | "<-" -> LESS_HYPHEN

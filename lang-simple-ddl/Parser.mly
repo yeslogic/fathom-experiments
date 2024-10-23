@@ -16,7 +16,7 @@
 %token BANG "!"
 %token COLON ":"
 %token COLON_EQUALS ":="
-%token COMMA ","
+// %token COMMA ","
 %token FULL_STOP "."
 %token HYPHEN "-"
 %token LESS_HYPHEN "<-"
@@ -66,8 +66,17 @@ let tm :=
       { Surface.Let(n, t1, t2, t3) }
   | "if"; t1 = located(tm); "then"; t2 = located(tm); "else"; t3 = located(tm);
       { Surface.IfThenElse(t1, t2, t3) }
-  | tm1 = located(proj_tm); ":"; tm2 = located(tm);
+  | tm1 = located(app_tm); ":"; tm2 = located(tm);
       { Surface.Ann (tm1, tm2) }
+  | app_tm
+
+let app_tm :=
+  | "repeat-len"; e = located(proj_tm); f = located(proj_tm);
+      { Surface.RepeatLen (e, f) }
+  | "pure"; t = located(proj_tm); e = located(proj_tm);
+      { Surface.Pure (t, e) }
+  | "fail"; t = located(proj_tm);
+      { Surface.Fail t }
   | proj_tm
 
 let proj_tm :=
@@ -88,12 +97,6 @@ let atomic_tm :=
       { Surface.Op1(`LogicalNot, f) }
   | "{"; fs = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
       { Surface.RecordLit fs }
-  | "repeat-len"; "("; e = located(tm); ","; f = located(tm); ")";
-      { Surface.RepeatLen (e, f) }
-  | "pure"; "("; t = located(tm); ","; e = located(tm); ")";
-      { Surface.Pure (t, e) }
-  | "fail"; "("; t = located(tm); ")";
-      { Surface.Fail t }
 
 // Utilities
 
