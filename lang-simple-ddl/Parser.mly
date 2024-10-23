@@ -2,8 +2,11 @@
 %token <string> NAME
 
 %token KEWORD_DEF "def"
+%token KEWORD_ELSE "else"
 %token KEWORD_FORMAT "format"
+%token KEWORD_IF "if"
 %token KEWORD_LET "let"
+%token KEWORD_THEN "then"
 %token KEWORD_TYPE "type"
 
 %token KEYWORD_FAIL "fail"
@@ -15,6 +18,7 @@
 %token COLON_EQUALS ":="
 %token COMMA ","
 %token FULL_STOP "."
+%token HYPHEN "-"
 %token LESS_HYPHEN "<-"
 %token SEMI ";"
 
@@ -60,6 +64,8 @@ let tm :=
       { Surface.Bind(n, t1, t2) }
   | "let"; n = located(NAME); ":="; t1 = option(":"; ~ = located(tm); <>); t2 = located(tm); ";"; t3 = located(tm);
       { Surface.Let(n, t1, t2, t3) }
+  | "if"; t1 = located(tm); "then"; t2 = located(tm); "else"; t3 = located(tm);
+      { Surface.IfThenElse(t1, t2, t3) }
   | tm1 = located(proj_tm); ":"; tm2 = located(tm);
       { Surface.Ann (tm1, tm2) }
   | proj_tm
@@ -76,6 +82,8 @@ let atomic_tm :=
       { Surface.Name n }
   | i = INT;
       { Surface.IntLit i }
+  | "-"; f = located(atomic_tm);
+      { Surface.Op1(`Neg, f) }
   | "!"; f = located(atomic_tm);
       { Surface.Op1(`LogicalNot, f) }
   | "{"; fs = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";

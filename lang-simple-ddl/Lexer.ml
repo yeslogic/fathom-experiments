@@ -29,8 +29,11 @@ let rec token lexbuf =
   | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | "def" -> KEWORD_DEF
+  | "else" -> KEWORD_ELSE
   | "format" -> KEWORD_FORMAT
+  | "if" -> KEWORD_IF
   | "let" -> KEWORD_LET
+  | "then" -> KEWORD_THEN
   | "type" -> KEWORD_TYPE
   | "fail" -> KEYWORD_FAIL
   | "pure" -> KEYWORD_PURE
@@ -41,6 +44,7 @@ let rec token lexbuf =
   | ":=" -> COLON_EQUALS
   | "," -> COMMA
   | "." -> FULL_STOP
+  | "-" -> HYPHEN
   | "<-" -> LESS_HYPHEN
   | ";" -> SEMI
   | '{' -> LBRACE
