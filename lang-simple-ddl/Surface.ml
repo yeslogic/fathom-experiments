@@ -242,6 +242,9 @@ end = struct
                 begin match name, args with
                 | "Type", [] -> KindTm `Type
                 | "Format", [] -> KindTm `Format
+                | "List", [ty] ->
+                    let ty = check_type ctx ty in
+                    TypeTm (ListType ty)
                 | "Int", [] -> TypeTm IntType
                 | "repeat-len", [len; fmt] ->
                     let len = check_expr ctx len IntType in
@@ -255,7 +258,7 @@ end = struct
                 | "fail", [ty] ->
                     let ty = check_type ctx ty in
                     FormatTm (Fail ty)
-                | ("Type" | "Format" | "Int" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
+                | ("Type" | "Format" | "List" | "Int" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
                     error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
                 | _, _ -> error tm.loc (Format.asprintf "unbound name `%s`" name)
                 end
