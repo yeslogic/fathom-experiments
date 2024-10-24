@@ -290,7 +290,7 @@ module Compile = struct
     match ty with
     | ItemVar name ->
         Format.fprintf ppf "%s"
-          (Case.pascal_case name) (* TODO: lookup name *)
+          (CaseConv.pascal_case name) (* TODO: lookup name *)
     | ListType ty ->
         Format.fprintf ppf "Vec<%a>"
           compile_ty ty
@@ -304,11 +304,11 @@ module Compile = struct
     match expr with
     | ItemVar name ->
         Format.fprintf ppf "%s()"
-          (Case.quiet_snake_case name) (* TODO: lookup name *)
+          (CaseConv.quiet_snake_case name) (* TODO: lookup name *)
     | LocalVar index ->
         Format.fprintf ppf "%s" (List.nth locals index)
     | Let (name, def_ty, def, body) ->
-        let name = Case.quiet_snake_case name in
+        let name = CaseConv.quiet_snake_case name in
         Format.fprintf ppf "let@ %s:@ %a @ =@ %a;@.%a"
           name
           compile_ty def_ty
@@ -318,17 +318,17 @@ module Compile = struct
         let pp_sep ppf () = Format.fprintf ppf ",@ " in
         let pp_field_def ppf (label, expr) =
           Format.fprintf ppf "%s:@ %a"
-            (Case.quiet_snake_case label) (* TODO: handle this better? *)
+            (CaseConv.quiet_snake_case label) (* TODO: handle this better? *)
             (compile_expr locals) expr
         in
         Format.fprintf ppf "%s@ {@ %a@ }"
-          (Case.pascal_case name) (* TODO: lookup name *)
+          (CaseConv.pascal_case name) (* TODO: lookup name *)
           (Format.pp_print_seq pp_field_def ~pp_sep)
           (LabelMap.to_seq field_exprs)
     | RecordProj (head, label) ->
         Format.fprintf ppf "%a.%s"
           (compile_expr locals) head
-          (Case.quiet_snake_case label) (* TODO: handle this better? *)
+          (CaseConv.quiet_snake_case label) (* TODO: handle this better? *)
     | ListLit exprs ->
         let pp_sep ppf () = Format.fprintf ppf ",@ " in
         Format.fprintf ppf "vec![%a]"
@@ -385,7 +385,7 @@ module Compile = struct
     match fmt with
     | ItemVar name ->
         Format.fprintf ppf "read_%s(input, pos)"
-          (Case.quiet_snake_case name) (* TODO: lookup name *)
+          (CaseConv.quiet_snake_case name) (* TODO: lookup name *)
     | Byte ->
         Format.fprintf ppf "{ let x = input.get(*pos).ok_or(())?; *pos +=1; x }"
     | RepeatLen (len, fmt) ->
@@ -394,14 +394,14 @@ module Compile = struct
           (compile_format locals) fmt
     (* Optimisation for let-bound formats *)
     | Bind (name, Pure (def_ty, def), body_fmt) ->
-        let name = Case.quiet_snake_case name in
+        let name = CaseConv.quiet_snake_case name in
         Format.fprintf ppf "let@ %s:@ %a @ =@ %a;@.%a"
           name
           compile_ty def_ty
           (compile_expr locals) def
           (compile_format (name :: locals)) body_fmt
     | Bind (name, def_fmt, body_fmt) ->
-        let name = Case.quiet_snake_case name in
+        let name = CaseConv.quiet_snake_case name in
         Format.fprintf ppf "let@ %s@ =@ (%a)?;@.%a"
           name
           (compile_format locals) def_fmt
@@ -421,7 +421,7 @@ module Compile = struct
     match item with
     | TypeDef ty ->
         Format.fprintf ppf "type@ %s@ =@ %a;@."
-          (Case.pascal_case name) (* TODO: bind name *)
+          (CaseConv.pascal_case name) (* TODO: bind name *)
           compile_ty ty
     | RecordType field_tys ->
         let pp_sep ppf () = Format.fprintf ppf ",@ " in
@@ -429,18 +429,18 @@ module Compile = struct
           Format.fprintf ppf "%s:@ %a" label compile_ty expr
         in
         Format.fprintf ppf "struct@ %s@ {@ %a@ }@."
-          (Case.pascal_case name) (* TODO: bind name *)
+          (CaseConv.pascal_case name) (* TODO: bind name *)
           (Format.pp_print_seq pp_field_decl ~pp_sep)
           (LabelMap.to_seq field_tys)
     | FormatDef fmt ->
         Format.fprintf ppf "fn read_%s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}@."
-          (Case.quiet_snake_case name) (* TODO: bind name *)
+          (CaseConv.quiet_snake_case name) (* TODO: bind name *)
           compile_ty (Semantics.format_ty items fmt)
           (compile_format []) fmt
     | ExprDef (def_ty, def) ->
         (* TODO: use constants if possible *)
         Format.fprintf ppf "fn %s() -> %a { %a }@."
-          (Case.quiet_snake_case name) (* TODO: bind name *)
+          (CaseConv.quiet_snake_case name) (* TODO: bind name *)
           compile_ty def_ty
           (compile_expr []) def
 

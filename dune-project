@@ -9,6 +9,7 @@
 (opam_file_location inside_opam_directory)
 
 (package (name byte-set))
+(package (name case-conv))
 
 (package (name ll1-combinators))
 (package (name ll1-dsl))
