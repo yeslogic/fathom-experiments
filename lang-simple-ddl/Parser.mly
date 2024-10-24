@@ -1,13 +1,13 @@
 %token <int> INT
 %token <string> NAME
 
-%token KEWORD_DEF "def"
-%token KEWORD_ELSE "else"
-%token KEWORD_FORMAT "format"
-%token KEWORD_IF "if"
-%token KEWORD_LET "let"
-%token KEWORD_THEN "then"
-%token KEWORD_TYPE "type"
+%token KEYWORD_DEF "def"
+%token KEYWORD_ELSE "else"
+%token KEYWORD_FORMAT "format"
+%token KEYWORD_IF "if"
+%token KEYWORD_LET "let"
+%token KEYWORD_THEN "then"
+%token KEYWORD_TYPE "type"
 
 %token BANG "!"
 %token COLON ":"

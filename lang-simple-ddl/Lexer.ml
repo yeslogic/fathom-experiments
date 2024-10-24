@@ -28,13 +28,13 @@ let rec token lexbuf =
   | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf
   | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
-  | "def" -> KEWORD_DEF
-  | "else" -> KEWORD_ELSE
-  | "format" -> KEWORD_FORMAT
-  | "if" -> KEWORD_IF
-  | "let" -> KEWORD_LET
-  | "then" -> KEWORD_THEN
-  | "type" -> KEWORD_TYPE
+  | "def" -> KEYWORD_DEF
+  | "else" -> KEYWORD_ELSE
+  | "format" -> KEYWORD_FORMAT
+  | "if" -> KEYWORD_IF
+  | "let" -> KEYWORD_LET
+  | "then" -> KEYWORD_THEN
+  | "type" -> KEYWORD_TYPE
   | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
   | "!" -> BANG
   | ":" -> COLON
