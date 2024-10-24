@@ -7,6 +7,8 @@ let print_error (severity : string) (start, _ : Lexing.position * Lexing.positio
       message
 
 let () =
+  Printexc.record_backtrace true;
+
   let lexbuf = Sedlexing.Utf8.from_channel stdin in
   Sedlexing.set_filename lexbuf "<input>";
 
