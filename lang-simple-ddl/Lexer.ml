@@ -27,8 +27,8 @@ let rec token lexbuf =
   | "--", Star (Compl '\n'), '\n' -> (token [@tailcall]) lexbuf
   | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf
 
-  | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
-  | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
+  | dec_number -> INT (Sedlexing.Latin1.lexeme lexbuf)
+  | hex_number -> INT (Sedlexing.Latin1.lexeme lexbuf)
 
   | "def" -> KEYWORD_DEF
   | "else" -> KEYWORD_ELSE

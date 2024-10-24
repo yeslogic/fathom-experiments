@@ -47,7 +47,7 @@ and tm_node =
   | Let of binder * tm option * tm * tm
   | Bind of binder * tm * tm
   | RecordLit of (string located * tm) list
-  | IntLit of int
+  | IntLit of string
   | Proj of tm * string located
   | IfThenElse of tm * tm * tm
   | Op1 of op1 * tm
@@ -284,9 +284,9 @@ end = struct
         (* TODO: postpone elaboration *)
         error tm.loc "ambiguous record literal"
 
-    | IntLit i ->
+    | IntLit s ->
         (* TODO: postpone elaboration *)
-        ExprTm (IntLit i, IntType)
+        ExprTm (IntLit (int_of_string s), IntType)
 
     | Proj (head, label) ->
         begin match infer ctx head with

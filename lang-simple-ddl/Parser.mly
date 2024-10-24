@@ -1,4 +1,4 @@
-%token <int> INT
+%token <string> INT
 %token <string> NAME
 
 %token KEYWORD_DEF "def"
