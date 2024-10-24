@@ -435,30 +435,37 @@ end = struct
               if Core.LabelMap.mem label.data decls then
                 error label.loc (Format.asprintf "duplicate field labels `%s`" label.data);
 
-              let decls, (field_fmt : Core.format), field_vty =
-                match fmt_field with
-                | Let (_, def_ty, def) ->
-                    let def, def_vty = infer_ann_expr ctx def def_ty in
-                    decls, Pure (quote_vty def_vty, def), def_vty
+              begin match fmt_field with
+              (* let x : def_ty := def; fmt_fields... *)
+              | Let (_, def_ty, def) ->
+                  let def, def_vty = infer_ann_expr ctx def def_ty in
+                  let decls, body_fmt = go (extend_local ctx label.data def_vty) fmt_fields decls in
+                  decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
 
-                | Bind (_, fmt) ->
-                    let fmt = check_format ctx fmt in
-                    decls, fmt, eval_ty ctx (format_ty ctx fmt)
+              (* let x <- fmt; fmt_fields... *)
+              | Bind (_, fmt) ->
+                  let fmt = check_format ctx fmt in
+                  let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
+                  let decls, body_fmt = go (extend_local ctx label.data fmt_vty) fmt_fields decls in
+                  decls, Bind (label.data, fmt, body_fmt)
 
-                | LetField (_, def_ty, def) ->
-                    let def, def_vty = infer_ann_expr ctx def def_ty in
-                    let decls = Core.LabelMap.add label.data (quote_vty def_vty) decls in
-                    decls, Pure (quote_vty def_vty, def), def_vty
+              (* x : def_ty := def; fmt_fields... *)
+              | LetField (_, def_ty, def) ->
+                  let def, def_vty = infer_ann_expr ctx def def_ty in
+                  (* Add a new field to the record type *)
+                  let decls = Core.LabelMap.add label.data (quote_vty def_vty) decls in
+                  let decls, body_fmt = go (extend_local ctx label.data def_vty) fmt_fields decls in
+                  decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
 
-                | BindField (_, fmt) ->
-                    let fmt = check_format ctx fmt in
-                    let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
-                    let decls = Core.LabelMap.add label.data (quote_vty fmt_vty) decls in
-                    decls, fmt, fmt_vty
-              in
-
-              let decls, body_fmt = go (extend_local ctx label.data field_vty) fmt_fields decls in
-              decls, Bind (label.data, field_fmt, body_fmt)
+              (* x <- fmt; fmt_fields... *)
+              | BindField (_, fmt) ->
+                  let fmt = check_format ctx fmt in
+                  let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
+                  (* Add a new field to the record type *)
+                  let decls = Core.LabelMap.add label.data (quote_vty fmt_vty) decls in
+                  let decls, body_fmt = go (extend_local ctx label.data fmt_vty) fmt_fields decls in
+                  decls, Bind (label.data, fmt, body_fmt)
+                end
         in
 
         let decls, fmt = go ctx fmt_fields Core.LabelMap.empty in
