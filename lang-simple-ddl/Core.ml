@@ -185,8 +185,8 @@ module Semantics = struct
     match fmt with
     | ItemVar name ->
         begin match List.assoc name items with
-        | TypeDef ty -> ty
-        | _ -> invalid_arg "expected type"
+        | FormatDef fmt -> format_ty items fmt
+        | _ -> invalid_arg "expected format"
         end
     | Byte -> IntType
     | RepeatLen (_, elem_fmt) -> ListType (format_ty items elem_fmt)
