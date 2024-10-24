@@ -46,7 +46,7 @@ type tm =
   tm_node located
 
 and tm_node =
-  | Name of string
+  | Name of string * tm list
   | Ann of tm * tm
   | Let of binder * tm option * tm * tm
   | Bind of binder * tm * tm
@@ -56,10 +56,6 @@ and tm_node =
   | IfThenElse of tm * tm * tm
   | Op1 of op1 * tm
   | Op2 of op2 * tm * tm
-  (* TODO: Abstract the following nodes in a more systematic way *)
-  | RepeatLen of tm * tm
-  | Pure of tm * tm
-  | Fail of tm
 
 type format_field =
   | Let of binder * tm option * tm          (* let x : tm := tm *)
@@ -228,23 +224,45 @@ end = struct
   (** Elaborate a surface term into a core term, inferring its type. *)
   and infer (ctx : context) (tm : tm) : elab_tm =
     match tm.data with
-    | Name name ->
+    | Name (name, args) ->
+        (* TODO: Clean this up and make it less error-prone! *)
         begin match lookup_local ctx name with
-        | Some (e, vt) -> ExprTm (e, vt)
+        | Some (e, vt) ->
+            begin match args with
+            | [] -> ExprTm (e, vt)
+            | _ -> error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
+            end
         | None ->
             begin match List.assoc_opt name ctx.items with
-            | Some (RecordType _) -> TypeTm (ItemVar name)
-            | Some (TypeDef _) -> TypeTm (ItemVar name)
-            | Some (FormatDef fmt) -> FormatTm fmt
-            | Some (ExprDef (ty, _)) -> ExprTm (ItemVar name, eval_ty ctx ty)
-            | None when name = "Type" -> KindTm `Type
-            | None when name = "Format" -> KindTm `Format
-            | None when name = "Int" -> TypeTm IntType
-            | None when name = "repeat-len" -> failwith "TODO"
-            | None when name = "pure" -> failwith "TODO"
-            | None when name = "byte" -> FormatTm Byte
-            | None when name = "fail" -> failwith "TODO"
-            | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+            | Some elab_tm ->
+                begin match elab_tm, args with
+                | RecordType _, [] -> TypeTm (ItemVar name)
+                | TypeDef _, [] -> TypeTm (ItemVar name)
+                | FormatDef fmt, [] -> FormatTm fmt
+                | ExprDef (ty, _), [] -> ExprTm (ItemVar name, eval_ty ctx ty)
+                | _, _ -> error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
+                end
+            | None ->
+                begin match name, args with
+                | "Type", [] -> KindTm `Type
+                | "Format", [] -> KindTm `Format
+                | "Int", [] -> TypeTm IntType
+                | "repeat-len", [len; fmt] ->
+                    let len = check_expr ctx len IntType in
+                    let fmt = check_format ctx fmt in
+                    FormatTm (RepeatLen (len, fmt))
+                | "pure", [ty; expr] ->
+                    let ty = check_type ctx ty in
+                    let expr = check_expr ctx expr (eval_ty ctx ty) in
+                    FormatTm (Pure (ty, expr))
+                | "byte", [] -> FormatTm Byte
+                | "fail", [ty] ->
+                    let ty = check_type ctx ty in
+                    FormatTm (Fail ty)
+                | ("Type" | "Format" | "Int" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
+                    error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
+                | _, _ -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+                end
             end
         end
 
@@ -333,20 +351,6 @@ end = struct
         let expr1 = check_expr ctx tm1 IntType in
         let expr2 = check_expr ctx tm2 IntType in
         ExprTm (PrimApp (op, [expr1; expr2]), vty)
-
-    | RepeatLen (len, fmt) ->
-        let len = check_expr ctx len IntType in
-        let fmt = check_format ctx fmt in
-        FormatTm (RepeatLen (len, fmt))
-
-    | Pure (ty, expr) ->
-      let ty = check_type ctx ty in
-      let expr = check_expr ctx expr (eval_ty ctx ty) in
-      FormatTm (Pure (ty, expr))
-
-    | Fail ty ->
-        let ty = check_type ctx ty in
-        FormatTm (Fail ty)
 
   and infer_ann (ctx : context) (tm : tm) (ann : tm option) : elab_tm =
     match ann with
@@ -490,8 +494,12 @@ end = struct
 
     let rec tm_deps (locals : StringSet.t)  (tm : tm) : int list =
       match tm.data with
-      | Name name when StringSet.mem name locals -> []
-      | Name name -> StringMap.find_opt name item_name_ids |> Option.to_list
+      | Name (name, args) ->
+          let name =
+            if StringSet.mem name locals then [] else
+              StringMap.find_opt name item_name_ids |> Option.to_list
+          in
+          name @ List.concat_map (tm_deps locals) args
       | Ann (tm, ann) ->
           tm_deps locals tm
             @ tm_deps locals ann
@@ -515,10 +523,6 @@ end = struct
             @ tm_deps locals tm2
       | Op1 (_, tm) -> tm_deps locals tm
       | Op2 (_, tm1, tm2) -> tm_deps locals tm1 @ tm_deps locals tm2
-
-      | RepeatLen (len, fmt) -> tm_deps locals len @ tm_deps locals fmt
-      | Pure (ty, expr) -> tm_deps locals ty @ tm_deps locals expr
-      | Fail ty -> tm_deps locals ty
     in
 
     (* Collect a dependency list for use when topologically sorting *)

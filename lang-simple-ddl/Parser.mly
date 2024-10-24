@@ -9,10 +9,6 @@
 %token KEWORD_THEN "then"
 %token KEWORD_TYPE "type"
 
-%token KEYWORD_FAIL "fail"
-%token KEYWORD_PURE "pure"
-%token KEYWORD_REPEAT_LEN "repeat-len"
-
 %token BANG "!"
 %token COLON ":"
 %token COLON_EQUALS ":="
@@ -50,34 +46,33 @@ let item :=
       { Surface.TermDef (n, tm1, tm2) }
 
 let record_format_field :=
-  | "let"; n = located(NAME); ":="; tm1 = option(":"; ~ = located(tm); <>); tm2 = located(tm);
+  | "let"; n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm);
       { Surface.Let(n, tm1, tm2) }
   | "let"; n = located(NAME); "<-"; tm = located(tm);
       { Surface.Bind(n, tm) }
-  | n = located(NAME); ":="; tm1 = option(":"; ~ = located(tm); <>); tm2 = located(tm);
+  | n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm);
       { Surface.LetField(n, tm1, tm2) }
   | n = located(NAME); "<-"; tm = located(tm);
       { Surface.BindField(n, tm) }
 
 let tm :=
-  | "let"; n = located(NAME); "<-"; tm1 = located(tm); ";"; tm2 = located(tm);
+  | tm1 = located(let_tm); ":"; tm2 = located(tm);
+      { Surface.Ann (tm1, tm2) }
+  | let_tm
+
+let let_tm :=
+  | "let"; n = located(NAME); "<-"; tm1 = located(tm); ";"; tm2 = located(let_tm);
       { Surface.Bind(n, tm1, tm2) }
-  | "let"; n = located(NAME); ":="; tm1 = option(":"; ~ = located(tm); <>); tm2 = located(tm); ";"; tm3 = located(tm);
+  | "let"; n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm); ";"; tm3 = located(let_tm);
       { Surface.Let(n, tm1, tm2, tm3) }
-  | "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+  | "if"; tm1 = located(tm); "then"; tm2 = located(let_tm); "else"; tm3 = located(let_tm);
       { Surface.IfThenElse(tm1, tm2, tm3) }
   // TODO: binary operators
-  | tm1 = located(app_tm); ":"; tm2 = located(tm);
-      { Surface.Ann (tm1, tm2) }
   | app_tm
 
 let app_tm :=
-  | "repeat-len"; tm1 = located(proj_tm); tm2 = located(proj_tm);
-      { Surface.RepeatLen (tm1, tm2) }
-  | "pure"; tm1 = located(proj_tm); tm2 = located(proj_tm);
-      { Surface.Pure (tm1, tm2) }
-  | "fail"; tm = located(proj_tm);
-      { Surface.Fail tm }
+  | n = NAME; tms = nonempty_list(located(proj_tm));
+      { Surface.Name(n, tms) }
   | proj_tm
 
 let proj_tm :=
@@ -89,7 +84,7 @@ let atomic_tm :=
   | "("; tm = tm; ")";
       { tm }
   | n = NAME;
-      { Surface.Name n }
+      { Surface.Name (n, []) }
   | i = INT;
       { Surface.IntLit i }
   | "-"; tm = located(atomic_tm);

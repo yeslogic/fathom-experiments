@@ -35,9 +35,6 @@ let rec token lexbuf =
   | "let" -> KEWORD_LET
   | "then" -> KEWORD_THEN
   | "type" -> KEWORD_TYPE
-  | "fail" -> KEYWORD_FAIL
-  | "pure" -> KEYWORD_PURE
-  | "repeat-len" -> KEYWORD_REPEAT_LEN
   | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
   | "!" -> BANG
   | ":" -> COLON
