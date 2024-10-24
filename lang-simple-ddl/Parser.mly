@@ -122,6 +122,10 @@ let mul_tm :=
 let app_tm :=
   | n = NAME; tms = nonempty_list(located(proj_tm));
       { Surface.Name(n, tms) }
+  | "-"; tm = located(atomic_tm);
+      { Surface.Op1(`Neg, tm) }
+  | "!"; tm = located(atomic_tm);
+      { Surface.Op1(`LogicalNot, tm) }
   | proj_tm
 
 let proj_tm :=
@@ -136,10 +140,6 @@ let atomic_tm :=
       { Surface.Name (n, []) }
   | i = INT;
       { Surface.IntLit i }
-  | "-"; tm = located(atomic_tm);
-      { Surface.Op1(`Neg, tm) }
-  | "!"; tm = located(atomic_tm);
-      { Surface.Op1(`LogicalNot, tm) }
   | "{"; tms = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
       { Surface.RecordLit tms }
 
