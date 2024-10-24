@@ -22,8 +22,8 @@ Intermediate languages
 
 Features
 
-- [ ] Lexer and Parser
-- [ ] Elaborator (WIP)
+- [x] Lexer and Parser
+- [x] Elaborator
 - [x] Tree-walking interpreter
 - [x] Rust compiler
 

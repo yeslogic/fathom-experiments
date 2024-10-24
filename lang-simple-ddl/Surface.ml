@@ -29,17 +29,13 @@ type op1 = [
 
 (** Binary operators *)
 type op2 = [
-  | `Eq
-  | `Add
-  | `Sub
-  | `Mul
-  | `Div
-  | `LogicalAnd
+  | [ `Eq | `Ne | `Le | `Lt | `Ge | `Gt ]
   | `LogicalOr
   | `LogicalXor
-  | `LogicalShl
-  | `ArithShr
-  | `LogicalShr
+  | `LogicalAnd
+  | [ `LogicalShl | `ArithShr | `LogicalShr ]
+  | [ `Add | `Sub ]
+  | [ `Mul | `Div ]
 ]
 
 type tm =
@@ -337,6 +333,11 @@ end = struct
         let (op : Core.prim), (vty : Core.Semantics.vty) =
           match op with
           | `Eq -> IntEq, BoolType
+          | `Ne -> IntNe, BoolType
+          | `Le -> IntLe, BoolType
+          | `Lt -> IntLt, BoolType
+          | `Gt -> IntGt, BoolType
+          | `Ge -> IntGe, BoolType
           | `Add -> IntAdd, IntType
           | `Sub -> IntSub, IntType
           | `Mul -> IntMul, IntType

@@ -9,13 +9,27 @@
 %token KEYWORD_THEN "then"
 %token KEYWORD_TYPE "type"
 
+%token AMPERSAND "&"
+%token ASTERISK "*"
 %token BANG "!"
+%token BANG_EQUALS "!="
+%token CARET "^"
 %token COLON ":"
 %token COLON_EQUALS ":="
+%token EQUALS "="
+%token GREATER ">"
+%token GREATER_EQUAL ">="
+%token GREATER_GREATER ">>"
 // %token COMMA ","
+%token FORWARD_SLASH "/"
 %token FULL_STOP "."
 %token HYPHEN "-"
 %token LESS_HYPHEN "<-"
+%token LESS "<"
+%token LESS_EQUAL "<="
+%token LESS_LESS "<<"
+%token PIPE "|"
+%token PLUS "+"
 %token SEMI ";"
 
 %token LBRACE "{"
@@ -67,7 +81,42 @@ let let_tm :=
       { Surface.Let(n, tm1, tm2, tm3) }
   | "if"; tm1 = located(tm); "then"; tm2 = located(let_tm); "else"; tm3 = located(let_tm);
       { Surface.IfThenElse(tm1, tm2, tm3) }
-  // TODO: binary operators
+  | cmp_tm
+
+let cmp_tm :=
+  | tm1 = located(or_tm); "="; tm2 = located(or_tm); { Surface.Op2 (`Eq, tm1, tm2) }
+  | tm1 = located(or_tm); "!="; tm2 = located(or_tm); { Surface.Op2 (`Ne, tm1, tm2) }
+  | tm1 = located(or_tm); "<="; tm2 = located(or_tm); { Surface.Op2 (`Le, tm1, tm2) }
+  | tm1 = located(or_tm); "<"; tm2 = located(or_tm); { Surface.Op2 (`Lt, tm1, tm2) }
+  | tm1 = located(or_tm); ">"; tm2 = located(or_tm); { Surface.Op2 (`Gt, tm1, tm2) }
+  | tm1 = located(or_tm); ">="; tm2 = located(or_tm); { Surface.Op2 (`Ge, tm1, tm2) }
+  | or_tm
+
+let or_tm :=
+  | tm1 = located(or_tm); "|"; tm2 = located(xor_tm); { Surface.Op2 (`LogicalOr, tm1, tm2) }
+  | xor_tm
+
+let xor_tm :=
+  | tm1 = located(xor_tm); "^"; tm2 = located(and_tm); { Surface.Op2 (`LogicalXor, tm1, tm2) }
+  | and_tm
+
+let and_tm :=
+  | tm1 = located(and_tm); "&"; tm2 = located(shift_tm); { Surface.Op2 (`LogicalOr, tm1, tm2) }
+  | shift_tm
+
+let shift_tm :=
+  | tm1 = located(shift_tm); "<<"; tm2 = located(add_tm); { Surface.Op2 (`LogicalShl, tm1, tm2) }
+  | tm1 = located(shift_tm); ">>"; tm2 = located(add_tm); { Surface.Op2 (`ArithShr, tm1, tm2) }
+  | add_tm
+
+let add_tm :=
+  | tm1 = located(mul_tm); "+"; tm2 = located(add_tm); { Surface.Op2 (`Add, tm1, tm2) }
+  | tm1 = located(mul_tm); "-"; tm2 = located(add_tm); { Surface.Op2 (`Sub, tm1, tm2) }
+  | mul_tm
+
+let mul_tm :=
+  | tm1 = located(app_tm); "*"; tm2 = located(mul_tm); { Surface.Op2 (`Mul, tm1, tm2) }
+  | tm1 = located(app_tm); "/"; tm2 = located(mul_tm); { Surface.Op2 (`Div, tm1, tm2) }
   | app_tm
 
 let app_tm :=

@@ -26,8 +26,10 @@ let rec token lexbuf =
   | ' ' | '\t' | '\n' -> (token [@tailcall]) lexbuf
   | "--", Star (Compl '\n'), '\n' -> (token [@tailcall]) lexbuf
   | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf
+
   | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
+
   | "def" -> KEYWORD_DEF
   | "else" -> KEYWORD_ELSE
   | "format" -> KEYWORD_FORMAT
@@ -35,18 +37,36 @@ let rec token lexbuf =
   | "let" -> KEYWORD_LET
   | "then" -> KEYWORD_THEN
   | "type" -> KEYWORD_TYPE
+
   | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
+
+  | "&" -> AMPERSAND
+  | "*" -> ASTERISK
   | "!" -> BANG
+  | "!=" -> BANG_EQUALS
+  | "^" -> CARET
   | ":" -> COLON
   | ":=" -> COLON_EQUALS
+  | "=" -> EQUALS
+  | ">" -> GREATER
+  | ">=" -> GREATER_EQUAL
+  | ">>" -> GREATER_GREATER
   (* | "," -> COMMA *)
+  | "/" -> FORWARD_SLASH
   | "." -> FULL_STOP
   | "-" -> HYPHEN
   | "<-" -> LESS_HYPHEN
+  | "<" -> LESS
+  | "<=" -> LESS_EQUAL
+  | "<<" -> LESS_LESS
+  | "|" -> PIPE
+  | "+" -> PLUS
   | ";" -> SEMI
+
   | '{' -> LBRACE
   | '}' -> RBRACE
   | '(' -> LPAREN
   | ')' -> RPAREN
+
   | eof -> END
   | _ -> raise UnexpectedChar

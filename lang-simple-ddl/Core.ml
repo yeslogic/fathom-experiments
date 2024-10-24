@@ -8,6 +8,11 @@ module LabelMap = Map.Make (String)
 
 type prim =
   | IntEq
+  | IntNe
+  | IntLe
+  | IntLt
+  | IntGe
+  | IntGt
   | IntNeg
   | IntAdd
   | IntSub
@@ -127,6 +132,11 @@ module Semantics = struct
   let prim_app (prim : prim) : vexpr list -> vexpr =
     match prim with
     | IntEq -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (Int.equal x y)
+    | IntNe -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (not (Int.equal x y))
+    | IntLe -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (x <= y)
+    | IntLt -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (x < y)
+    | IntGt -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (x < y)
+    | IntGe -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> BoolLit (x >= y)
     | IntNeg -> fun[@warning "-partial-match"] [IntLit x] -> IntLit (Int.neg x)
     | IntAdd -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> IntLit (Int.add x y)
     | IntSub -> fun[@warning "-partial-match"] [IntLit x; IntLit y] -> IntLit (Int.sub x y)
@@ -348,6 +358,11 @@ module Compile = struct
         (* See https://doc.rust-lang.org/reference/expressions/operator-expr.html
            for the semantics of Rust’s binary operators *)
         | IntEq -> infix ppf "==" args
+        | IntNe -> infix ppf "!=" args
+        | IntLe -> infix ppf "<=" args
+        | IntLt -> infix ppf "<" args
+        | IntGt -> infix ppf ">" args
+        | IntGe -> infix ppf ">=" args
         | IntNeg -> prefix ppf "-" args
         | IntAdd -> infix ppf "+" args
         | IntSub -> infix ppf "-" args
