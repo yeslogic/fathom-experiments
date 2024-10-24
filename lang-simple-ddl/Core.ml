@@ -444,7 +444,6 @@ module Compile = struct
           compile_ty def_ty
           (compile_expr []) def
 
-
   let compile_program (ppf : Format.formatter) (items : program) =
     Format.pp_print_list (compile_item items) ppf items
 
