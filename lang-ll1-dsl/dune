@@ -11,4 +11,4 @@
 
 (menhir
   (modules Parser)
-  (flags --explain --strict))
+  (explain true))
