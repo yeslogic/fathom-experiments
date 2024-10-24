@@ -5,16 +5,41 @@
   Because I didn't find any decent libraries.
 *)
 
-let from_humps (s : string) : string list =
-  (* FIXME: split on camel case boundaries *)
-  [s]
+let from_camel (s : string) : string list = begin
+  let words = ref [] in
+  let state = ref `Upper in
+  let start = ref 0 in
+
+  s |> String.iteri begin fun i c ->
+    match !state, c with
+    | `Lower, 'A'..'Z' ->
+        words := String.sub s !start (i - !start) :: !words;
+        state := `Upper;
+        start := i;
+    | `Upper, 'A'..'Z' -> ()
+    | _, _ -> state := `Lower;
+  end;
+
+  let tail_len = String.length s - !start in
+  if tail_len > 0 then
+    words := String.sub s !start tail_len :: !words;
+
+  List.rev !words
+end
+
+(* let () = begin
+  assert (from_camel "fooBar" = ["foo"; "Bar"]);
+  assert (from_camel "FooBar" = ["Foo"; "Bar"]);
+  assert (from_camel "HTMLfoo" = ["HTMLfoo"]);
+  assert (from_camel "FooABCyeah123_Hi" = ["Foo"; "ABCyeah123_"; "Hi"]);
+end *)
 
 let from_words (s : string) : string list = String.split_on_char ' ' s |> List.filter (( != ) "")
 let from_kebab (s : string) : string list = String.split_on_char '-' s |> List.filter (( != ) "")
 let from_snake (s : string) : string list = String.split_on_char '-' s |> List.filter (( != ) "")
 
 let from_any (s : string) : string list =
-  from_humps s
+  from_camel s
   |> List.concat_map from_words
   |> List.concat_map from_kebab
   |> List.concat_map from_snake
