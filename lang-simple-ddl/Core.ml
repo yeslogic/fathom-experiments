@@ -387,9 +387,9 @@ module Compile = struct
         Format.fprintf ppf "read_%s(input, pos)"
           (CaseConv.quiet_snake_case name) (* TODO: lookup name *)
     | Byte ->
-        Format.fprintf ppf "{ let x = input.get(*pos).ok_or(())?; *pos +=1; x }"
+        Format.fprintf ppf "read_byte(input, pos)"
     | RepeatLen (len, fmt) ->
-        Format.fprintf ppf "(0..%a).map(|_| %a).collect::<Result<_, _>>()"
+        Format.fprintf ppf "(0..%a).map(|_| {%a}).collect::<Result<_, _>>()"
           (compile_expr locals) len
           (compile_format locals) fmt
     (* Optimisation for let-bound formats *)
@@ -402,7 +402,7 @@ module Compile = struct
           (compile_format (name :: locals)) body_fmt
     | Bind (name, def_fmt, body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "let@ %s@ =@ (%a)?;@.%a"
+        Format.fprintf ppf "let@ %s@ =@ {%a}?;@.%a"
           name
           (compile_format locals) def_fmt
           (compile_format (name :: locals)) body_fmt
@@ -445,6 +445,11 @@ module Compile = struct
           (compile_expr []) def
 
   let compile_program (ppf : Format.formatter) (items : program) =
+    Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<u8, ()> {@.";
+    Format.fprintf ppf "let byte = input.get(*pos).ok_or(())?;@.";
+    Format.fprintf ppf "*pos +=1;@.";
+    Format.fprintf ppf "byte@.";
+    Format.fprintf ppf "}@.@.";
     Format.pp_print_list (compile_item items) ppf items
 
 end
