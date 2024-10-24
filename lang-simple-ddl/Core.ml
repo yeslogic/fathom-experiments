@@ -412,7 +412,7 @@ module Compile = struct
   let compile_item (items : program) (ppf : Format.formatter) (name, item : string * item) =
     match item with
     | TypeDef ty ->
-        Format.fprintf ppf "type@ %s@ =@ %a;"
+        Format.fprintf ppf "type@ %s@ =@ %a;@."
           name
           compile_ty ty
     | RecordType field_tys ->
@@ -420,18 +420,18 @@ module Compile = struct
         let pp_field_decl ppf (label, expr) =
           Format.fprintf ppf "%s:@ %a" label compile_ty expr
         in
-        Format.fprintf ppf "struct@ %s@ {@ %a@ }"
+        Format.fprintf ppf "struct@ %s@ {@ %a@ }@."
           name
           (Format.pp_print_seq pp_field_decl ~pp_sep)
           (LabelMap.to_seq field_tys)
     | FormatDef fmt ->
-        Format.fprintf ppf "fn read_%s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}"
+        Format.fprintf ppf "fn read_%s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}@."
           name
           compile_ty (Semantics.format_ty items fmt)
           (compile_format []) fmt
     | ExprDef (def_ty, def) ->
         (* TODO: use constants if possible *)
-        Format.fprintf ppf "fn %s() -> %a { %a }"
+        Format.fprintf ppf "fn %s() -> %a { %a }@."
           name
           compile_ty def_ty
           (compile_expr []) def
