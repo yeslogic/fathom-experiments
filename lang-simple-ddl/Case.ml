@@ -60,12 +60,10 @@ let sentenceify : string list -> string = String.concat " "
 
 let to_pascal_case            (words : string list) : string = words |> List.map capitalised |> smooshify
 let to_camel_case             (words : string list) : string = words |> List.mapi (head_tail lower capitalised) |> smooshify
-let to_mixed_kebab_case       (words : string list) : string = words |> kebabify
 let to_quiet_kebab_case       (words : string list) : string = words |> List.map lower |> kebabify
 let to_screaming_kebab_case   (words : string list) : string = words |> List.map upper |> kebabify
 let to_pascal_kebab_case      (words : string list) : string = words |> List.map capitalised |> kebabify
 let to_capitalised_kebab_case (words : string list) : string = words |> List.mapi (head_tail capitalised lower) |> kebabify
-let to_mixed_snake_case       (words : string list) : string = words |> snakeify
 let to_quiet_snake_case       (words : string list) : string = words |> List.map lower |> snakeify
 let to_screaming_snake_case   (words : string list) : string = words |> List.map upper |> snakeify
 let to_pascal_snake_case      (words : string list) : string = words |> List.map capitalised |> snakeify
@@ -77,12 +75,10 @@ let to_upper_sentence_case    (words : string list) : string = words |> List.map
 
 let pascal_case               (s : string) : string = from_any s |> to_pascal_case
 let camel_case                (s : string) : string = from_any s |> to_camel_case
-let mixed_kebab_case          (s : string) : string = from_any s |> to_mixed_kebab_case
 let quiet_kebab_case          (s : string) : string = from_any s |> to_quiet_kebab_case
 let screaming_kebab_case      (s : string) : string = from_any s |> to_screaming_kebab_case
 let pascal_kebab_case         (s : string) : string = from_any s |> to_pascal_kebab_case
 let capitalised_kebab_case    (s : string) : string = from_any s |> to_capitalised_kebab_case
-let mixed_snake_case          (s : string) : string = from_any s |> to_mixed_snake_case
 let quiet_snake_case          (s : string) : string = from_any s |> to_quiet_snake_case
 let screaming_snake_case      (s : string) : string = from_any s |> to_screaming_snake_case
 let pascal_snake_case         (s : string) : string = from_any s |> to_pascal_snake_case
