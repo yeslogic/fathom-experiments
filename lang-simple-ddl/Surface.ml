@@ -410,7 +410,7 @@ end = struct
 
     | RecordFormat (name, fmt_fields) ->
         (* TODO: Figure out a better solution to this! *)
-        let record_name = name.data ^ "_record" in
+        let record_name = name.data ^ "-record" in
 
         (* Elaborate format fields into a list of field declarations (to be used
            in the record type declaration) and a format for the record type. *)
