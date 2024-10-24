@@ -421,30 +421,38 @@ end = struct
               decls, Pure (ItemVar record_name, RecordLit (record_name, defns))
 
           | fmt_field :: fmt_fields ->
-              let decls, label, (field_fmt : Core.format), field_vty =
+              let label =
                 match fmt_field with
-                | Let (label, def_ty, def) ->
-                    let def, def_vty = infer_ann_expr ctx def def_ty in
-                    decls, label, Pure (quote_vty def_vty, def), def_vty
-
-                | Bind (label, fmt) ->
-                    let fmt = check_format ctx fmt in
-                    decls, label, fmt, eval_ty ctx (format_ty ctx fmt)
-
-                | LetField (label, def_ty, def) ->
-                    let def, def_vty = infer_ann_expr ctx def def_ty in
-                    let decls = Core.LabelMap.add label.data (quote_vty def_vty) decls in
-                    decls, label, Pure (quote_vty def_vty, def), def_vty
-
-                | BindField (label, fmt) ->
-                    let fmt = check_format ctx fmt in
-                    let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
-                    let decls = Core.LabelMap.add label.data (quote_vty fmt_vty) decls in
-                    decls, label, fmt, fmt_vty
+                | Let (label, _, _)
+                | Bind (label, _)
+                | LetField (label, _, _)
+                | BindField (label, _) -> label
               in
 
               if Core.LabelMap.mem label.data decls then
                 error label.loc (Format.asprintf "duplicate field labels `%s`" label.data);
+
+              let decls, (field_fmt : Core.format), field_vty =
+                match fmt_field with
+                | Let (_, def_ty, def) ->
+                    let def, def_vty = infer_ann_expr ctx def def_ty in
+                    decls, Pure (quote_vty def_vty, def), def_vty
+
+                | Bind (_, fmt) ->
+                    let fmt = check_format ctx fmt in
+                    decls, fmt, eval_ty ctx (format_ty ctx fmt)
+
+                | LetField (_, def_ty, def) ->
+                    let def, def_vty = infer_ann_expr ctx def def_ty in
+                    let decls = Core.LabelMap.add label.data (quote_vty def_vty) decls in
+                    decls, Pure (quote_vty def_vty, def), def_vty
+
+                | BindField (_, fmt) ->
+                    let fmt = check_format ctx fmt in
+                    let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
+                    let decls = Core.LabelMap.add label.data (quote_vty fmt_vty) decls in
+                    decls, fmt, fmt_vty
+              in
 
               let decls, body_fmt = go (extend_local ctx label.data field_vty) fmt_fields decls in
               decls, Bind (label.data, field_fmt, body_fmt)
