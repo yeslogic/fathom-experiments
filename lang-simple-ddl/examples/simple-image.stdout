@@ -1,7 +1,7 @@
-fn read_byte(input: &[u8], pos: &mut usize) -> Result<u8, ()> {
+fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
 let byte = input.get(*pos).ok_or(())?;
 *pos +=1;
-byte
+Ok(i64::from(*byte))
 }
 
 fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
