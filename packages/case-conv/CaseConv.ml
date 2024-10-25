@@ -55,7 +55,7 @@ let head_tail (type a) (head : a) (tail : a) : int -> a =
 
 let lower       : string -> string = String.lowercase_ascii
 let upper       : string -> string = String.uppercase_ascii
-let capitalised : string -> string = String.lowercase_ascii >> String.capitalize_ascii
+let capitalised : string -> string = String.mapi (head_tail Char.uppercase_ascii Char.lowercase_ascii)
 
 let smooshify   : string list -> string = String.concat ""
 let kebabify    : string list -> string = String.concat "-"
