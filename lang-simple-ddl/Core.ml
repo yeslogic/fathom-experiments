@@ -391,8 +391,8 @@ module Compile = struct
   let rec compile_format (src_ctx : source_context) (locals : string list) (ppf : Format.formatter) (fmt : format) =
     match fmt with
     | ItemVar name ->
-        Format.fprintf ppf "read_%s(input, pos)"
-          (CaseConv.quiet_snake_case name) (* TODO: lookup name *)
+        Format.fprintf ppf "%s(input, pos)"
+          (StringMap.find name src_ctx.target_names)
     | Byte ->
         Format.fprintf ppf "read_byte(input, pos)"
     | RepeatLen (len, fmt) ->
@@ -442,7 +442,7 @@ module Compile = struct
           (Format.pp_print_seq pp_field_decl ~pp_sep)
           (LabelMap.to_seq field_tys)
     | FormatDef fmt ->
-        Format.fprintf ppf "fn read_%s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}@."
+        Format.fprintf ppf "fn %s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}@."
           (StringMap.find name src_ctx.target_names)
           (compile_ty src_ctx) (Semantics.format_ty src_ctx.items fmt)
           (compile_format src_ctx []) fmt
@@ -455,11 +455,12 @@ module Compile = struct
 
   let compile_program (ppf : Format.formatter) (items : program) =
     let target_names =
+      (* Assign top-level item names in target program *)
       List.fold_left
         (fun acc (name, item) ->
           match item with
           | TypeDef _ | RecordType _ -> StringMap.add name (CaseConv.pascal_case name) acc
-          | FormatDef _ -> StringMap.add name (CaseConv.quiet_snake_case name) acc
+          | FormatDef _ -> StringMap.add name ("read_" ^ CaseConv.quiet_snake_case name) acc
           | ExprDef _ -> StringMap.add name (CaseConv.quiet_snake_case name) acc)
         StringMap.empty
         items
