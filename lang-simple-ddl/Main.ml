@@ -13,13 +13,15 @@ let () =
   Sedlexing.set_filename lexbuf "<input>";
 
   try
-    let program =
+    let rust_program =
       lexbuf
       |> Sedlexing.with_tokenizer Lexer.token
       |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
       |> Surface.Elab.check_program
+      |> Core.Compile.compile_program
     in
-    Format.printf "@[%a@]" Core.Compile.compile_program program;
+    Format.printf "@[%a@]"
+      Rust.pp_program rust_program;
   with
   | Lexer.UnexpectedChar -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
   | Lexer.UnclosedBlockComment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1

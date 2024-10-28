@@ -232,8 +232,7 @@ end = struct
             begin match List.assoc_opt name ctx.items with
             | Some elab_tm ->
                 begin match elab_tm, args with
-                | RecordType _, [] -> TypeTm (ItemVar name)
-                | TypeDef _, [] -> TypeTm (ItemVar name)
+                | RecordType _, [] | TypeDef _, [] -> TypeTm (ItemVar name)
                 | FormatDef _, [] -> FormatTm (ItemVar name)
                 | ExprDef (ty, _), [] -> ExprTm (ItemVar name, eval_ty ctx ty)
                 | _, _ -> error tm.loc (Format.asprintf "arity mismatch for `%s`" name)

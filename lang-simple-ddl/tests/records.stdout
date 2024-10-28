@@ -9,10 +9,6 @@ struct Point {
     y: i64,
 }
 
-fn test_point_1() -> Point {
-    Point { x: 1, y: 2 }
-}
+const TEST_POINT_1: Point = Point { x: 1, y: 2 };
 
-fn test_point_2() -> Point {
-    Point { x: 1, y: 2 }
-}
+const TEST_POINT_2: Point = Point { x: 1, y: 2 };

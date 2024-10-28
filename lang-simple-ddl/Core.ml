@@ -283,7 +283,6 @@ end
 
 module Compile = struct
 
-  (* TODO: An intermediate language would make this cleaner *)
   (* TODO: Name avoidance *)
 
   module StringMap = Map.Make (String)
@@ -293,167 +292,173 @@ module Compile = struct
     target_names : string StringMap.t;
   }
 
-  let rec compile_ty (src_ctx : source_context) (ppf : Format.formatter) (ty : ty) =
+  let rec compile_ty (src_ctx : source_context) (ty : ty) : Rust.ty =
     match ty with
     | ItemVar name ->
-        Format.fprintf ppf "%s"
-          (StringMap.find name src_ctx.target_names)
+        Path ([StringMap.find name src_ctx.target_names], [])
     | ListType ty ->
-        Format.fprintf ppf "Vec<%a>"
-          (compile_ty src_ctx) ty
+        Path (["Vec"], [compile_ty src_ctx ty])
     | IntType ->
-        Format.fprintf ppf "i64" (* TODO: More integer types *)
+        Path (["i64"], []) (* TODO: More integer types *)
     | BoolType ->
-        Format.fprintf ppf "bool"
+        Path (["bool"], [])
 
-  let rec compile_expr (src_ctx : source_context) (locals : string list) (ppf : Format.formatter) (expr : expr) =
-    (* TODO: Use correct pecedences *)
+  let rec compile_stmts (src_ctx : source_context) (locals : string list) (expr : expr) : Rust.stmts =
     match expr with
-    | ItemVar name ->
-        Format.fprintf ppf "%s()"
-          (StringMap.find name src_ctx.target_names)
-    | LocalVar index ->
-        Format.fprintf ppf "%s" (List.nth locals index)
     | Let (name, def_ty, def, body) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "@[let@ %s:@ %a @ =@ %a;@]@ %a"
-          name
-          (compile_ty src_ctx) def_ty
-          (compile_expr src_ctx locals) def
-          (compile_expr src_ctx (name :: locals)) body
+        let ty = compile_ty src_ctx def_ty in
+        let expr = compile_expr src_ctx locals def in
+        let stmts, body_expr = compile_stmts src_ctx (name :: locals) body in
+        Let (name, Some ty, expr) :: stmts, body_expr
+    | expr ->
+        [], Some (compile_expr src_ctx locals expr)
+
+  and compile_expr (src_ctx : source_context) (locals : string list) (expr : expr) : Rust.expr =
+    match expr with
+    | ItemVar name ->
+        (* FIXME: Check if constant *)
+        Path [StringMap.find name src_ctx.target_names]
+    | LocalVar index ->
+        Path [List.nth locals index]
+    | Let _ ->
+        Block (compile_stmts src_ctx locals expr)
     | RecordLit (name, field_exprs) ->
-        let pp_sep ppf () = Format.fprintf ppf ",@ " in
-        let pp_field_def ppf (label, expr) =
-          Format.fprintf ppf "%s:@ %a"
-            (CaseConv.quiet_snake_case label) (* TODO: handle this better? *)
-            (compile_expr src_ctx locals) expr
+        let name = StringMap.find name src_ctx.target_names in
+        let fields =
+          StringMap.to_seq field_exprs
+          |> Seq.map (fun (label, expr) ->
+              CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
+              compile_expr src_ctx locals expr)
+          |> List.of_seq
         in
-        Format.fprintf ppf "@[%s@ {@ %a@ }@]"
-          (StringMap.find name src_ctx.target_names)
-          (Format.pp_print_seq pp_field_def ~pp_sep)
-          (LabelMap.to_seq field_exprs)
+        StructLit (name, fields)
     | RecordProj (head, label) ->
-        Format.fprintf ppf "%a.%s"
-          (compile_expr src_ctx locals) head
-          (CaseConv.quiet_snake_case label) (* TODO: handle this better? *)
+        StructProj (
+          compile_expr src_ctx locals head,
+          CaseConv.quiet_snake_case label (* TODO: handle this better? *)
+        )
     | ListLit exprs ->
-        let pp_sep ppf () = Format.fprintf ppf ",@ " in
-        Format.fprintf ppf "vec![%a]"
-          (Format.pp_print_list (compile_expr src_ctx locals) ~pp_sep) exprs
-    | IntLit i -> Format.fprintf ppf "%i" i
-    | BoolLit true -> Format.fprintf ppf "true"
-    | BoolLit false -> Format.fprintf ppf "false"
+        VecLit (List.map (compile_expr src_ctx locals) exprs)
+    | IntLit i -> I64Lit i
+    | BoolLit b -> BoolLit b
     | BoolElim (head, expr1, expr2) ->
-        Format.fprintf ppf "if@ %a@ {@ %a@ }@ else@ {@ %a@ }"
-          (compile_expr src_ctx locals) head
-          (compile_expr src_ctx locals) expr1
-          (compile_expr src_ctx locals) expr2
+        IfElse (
+          compile_expr src_ctx locals head,
+          compile_stmts src_ctx locals expr1,
+          compile_stmts src_ctx locals expr2
+        )
     | PrimApp (prim, args) ->
-        let prefix ppf op args =
+        let prefix op args : Rust.expr =
           match args with
-          | [x] ->
-              Format.fprintf ppf "%s(%a)"
-                op
-                (compile_expr src_ctx locals) x
+          | [x] -> PrefixOp (op, compile_expr src_ctx locals x)
           | _ -> failwith "invalid prim"
-        in
-        let infix ppf op args =
+        and infix op args : Rust.expr =
           match args with
-          | [x; y] ->
-              Format.fprintf ppf "(%a)@ %s@ (%a)"
-                (compile_expr src_ctx locals) x
-                op
-                (compile_expr src_ctx locals) y
+          | [x; y] -> InfixOp (compile_expr src_ctx locals x, op, compile_expr src_ctx locals y)
           | _ -> failwith "invalid prim"
         in
         match prim with
         (* See https://doc.rust-lang.org/reference/expressions/operator-expr.html
            for the semantics of Rust’s binary operators *)
-        | IntEq -> infix ppf "==" args
-        | IntNe -> infix ppf "!=" args
-        | IntLe -> infix ppf "<=" args
-        | IntLt -> infix ppf "<" args
-        | IntGt -> infix ppf ">" args
-        | IntGe -> infix ppf ">=" args
-        | IntNeg -> prefix ppf "-" args
-        | IntAdd -> infix ppf "+" args
-        | IntSub -> infix ppf "-" args
-        | IntMul -> infix ppf "*" args
-        | IntDiv -> infix ppf "/" args
-        | IntLogicalNot -> prefix ppf "!" args
-        | IntLogicalAnd -> infix ppf "&" args
-        | IntLogicalOr -> infix ppf "|" args
-        | IntLogicalXor -> infix ppf "^" args
-        | IntLogicalShl -> infix ppf "<<" args
-        | IntArithShr -> infix ppf ">>" args
-        | IntLogicalShr -> Format.fprintf ppf "todo!(\"logical shift right\")"
+        | IntEq -> infix "==" args
+        | IntNe -> infix "!=" args
+        | IntLe -> infix "<=" args
+        | IntLt -> infix "<" args
+        | IntGt -> infix ">" args
+        | IntGe -> infix ">=" args
+        | IntNeg -> prefix "-" args
+        | IntAdd -> infix "+" args
+        | IntSub -> infix "-" args
+        | IntMul -> infix "*" args
+        | IntDiv -> infix "/" args
+        | IntLogicalNot -> prefix "!" args
+        | IntLogicalAnd -> infix "&" args
+        | IntLogicalOr -> infix "|" args
+        | IntLogicalXor -> infix "^" args
+        | IntLogicalShl -> infix "<<" args
+        | IntArithShr -> infix ">>" args
+        | IntLogicalShr -> Path ["todo!(\"logical shift right\")"] (* FIXME *)
 
-  let rec compile_format (src_ctx : source_context) (locals : string list) (ppf : Format.formatter) (fmt : format) =
+  let rec compile_format_stmts (src_ctx : source_context) (locals : string list) (fmt : format) : Rust.stmts =
     match fmt with
-    | ItemVar name ->
-        Format.fprintf ppf "%s(input, pos)"
-          (StringMap.find name src_ctx.target_names)
-    | Byte ->
-        Format.fprintf ppf "read_byte(input, pos)"
-    | RepeatLen (len, elem_fmt) ->
-        let elem_ty = Semantics.format_ty src_ctx.items fmt in
-        Format.fprintf ppf "(0..%a).map(|_| {%a}).collect::<Result<%a, _>>()"
-          (compile_expr src_ctx locals) len
-          (compile_format src_ctx locals) elem_fmt
-          (compile_ty src_ctx) elem_ty
-    (* Optimisation for let-bound formats *)
     | Bind (name, Pure (def_ty, def), body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "@[let@ %s:@ %a @ =@ %a;@]@ %a"
-          name
-          (compile_ty src_ctx) def_ty
-          (compile_expr src_ctx locals) def
-          (compile_format src_ctx (name :: locals)) body_fmt
+        let ty = compile_ty src_ctx def_ty in
+        let expr = compile_expr src_ctx locals def in
+        let stmts, body_expr = compile_format_stmts src_ctx (name :: locals) body_fmt in
+        Let (name, Some ty, expr) :: stmts, body_expr
+
     | Bind (name, def_fmt, body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "@[let@ %s@ =@ {%a}?;@]@ %a"
-          name
-          (compile_format src_ctx locals) def_fmt
-          (compile_format src_ctx (name :: locals)) body_fmt
-    | Pure (_, expr) ->
-        Format.fprintf ppf "@[Ok(%a)@]"
-          (compile_expr src_ctx locals) expr
-    | Fail _ ->
-        Format.fprintf ppf "Err(())"
-    | BoolElim (head, fmt1, fmt2) ->
-        Format.fprintf ppf "if@ %a@ {@ %a@ }@ else@ {@ %a@ }"
-          (compile_expr src_ctx locals) head
-          (compile_format src_ctx locals) fmt1
-          (compile_format src_ctx locals) fmt2
+        let expr = compile_format_expr src_ctx locals def_fmt in
+        let stmts, body_expr = compile_format_stmts src_ctx (name :: locals) body_fmt in
+        Let (name, None, PostfixOp (expr, "?")) :: stmts, body_expr
 
-  let compile_item (src_ctx : source_context) (ppf : Format.formatter) (name, item : string * item) =
+    | fmt ->
+        [], Some (compile_format_expr src_ctx locals fmt)
+
+  and compile_format_expr (src_ctx : source_context) (locals : string list) (fmt : format) : Rust.expr =
+    match fmt with
+    | ItemVar name ->
+        let name = StringMap.find name src_ctx.target_names in
+        Call (Path [name], [Path ["input"]; Path ["pos"]])
+    | Byte ->
+        Call (Path ["read_byte"], [Path ["input"]; Path ["pos"]])
+    | RepeatLen (len, elem_fmt) ->
+        let elem_ty = Semantics.format_ty src_ctx.items fmt in
+        RepeatCount (
+          compile_expr src_ctx locals len,
+          compile_format_expr src_ctx locals elem_fmt,
+          Path (["Result"], [compile_ty src_ctx elem_ty; Placeholder])
+        )
+    (* Optimisation for let-bound formats *)
+    | Bind _ ->
+        Block (compile_format_stmts src_ctx locals fmt)
+    | Pure (_, expr) ->
+        Call (Path ["Ok"], [compile_expr src_ctx locals expr])
+    | Fail _ ->
+        Call (Path ["Err"], [UnitLit])
+    | BoolElim (head, fmt1, fmt2) ->
+        IfElse (
+          compile_expr src_ctx locals head,
+          compile_format_stmts src_ctx locals fmt1,
+          compile_format_stmts src_ctx locals fmt2
+        )
+
+  let compile_item (src_ctx : source_context) (name, item : string * item) : Rust.item =
+    let name = StringMap.find name src_ctx.target_names in
+
     match item with
     | TypeDef ty ->
-        Format.fprintf ppf "type@ %s@ =@ %a;@."
-          (StringMap.find name src_ctx.target_names)
-          (compile_ty src_ctx) ty
-    | RecordType field_tys ->
-        let pp_sep ppf () = Format.fprintf ppf "@ " in
-        let pp_field_decl ppf (label, expr) =
-          Format.fprintf ppf "@[%s:@ %a,@]" label (compile_ty src_ctx) expr
-        in
-        Format.fprintf ppf "@[<v>@[struct@ %s@ {@]@;<1 4>@[<v>%a@]@ }@]@."
-          (StringMap.find name src_ctx.target_names)
-          (Format.pp_print_seq pp_field_decl ~pp_sep)
-          (LabelMap.to_seq field_tys)
-    | FormatDef fmt ->
-        Format.fprintf ppf "@[<v>@[fn %s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@]@;<1 4>@[<hv>%a@]@ }@]@."
-          (StringMap.find name src_ctx.target_names)
-          (compile_ty src_ctx) (Semantics.format_ty src_ctx.items fmt)
-          (compile_format src_ctx []) fmt
-    | ExprDef (def_ty, def) ->
-        (* TODO: use constants if possible *)
-        Format.fprintf ppf "@[<v>@[fn %s() -> %a {@]@;<1 4>%a@ }@]@."
-          (StringMap.find name src_ctx.target_names)
-          (compile_ty src_ctx) def_ty
-          (compile_expr src_ctx []) def
+        Type (name, compile_ty src_ctx ty)
 
-  let compile_program (ppf : Format.formatter) (items : program) =
+    | RecordType field_tys ->
+        let fields =
+          StringMap.to_seq field_tys
+          |> Seq.map (fun (label, ty) ->
+            CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
+            compile_ty src_ctx ty)
+          |> List.of_seq
+        in
+        Struct (name, fields)
+
+    | FormatDef fmt ->
+        let input_ty : Rust.ty = Ref (Slice (Path (["u8"], []))) in
+        let pos_ty : Rust.ty = RefMut (Path (["usize"], [])) in
+        let fmt_ty : Rust.ty = compile_ty src_ctx (Semantics.format_ty src_ctx.items fmt) in
+        let ret_ty : Rust.ty = Path (["Result"], [fmt_ty; Unit]) in
+        let body = compile_format_stmts src_ctx [] fmt in
+
+        Fn (name, ["input", input_ty; "pos", pos_ty], ret_ty, body)
+
+    | ExprDef (def_ty, def) ->
+        let ty = compile_ty src_ctx def_ty in
+        (* FIXME: check if the expression is a valid constant *)
+        let expr = compile_expr src_ctx [] def in
+        Const (name, ty, expr)
+
+  let compile_program (items : program) : Rust.item list =
     let target_names =
       (* Assign top-level item names in target program *)
       List.fold_left
@@ -461,16 +466,10 @@ module Compile = struct
           match item with
           | TypeDef _ | RecordType _ -> StringMap.add name (CaseConv.pascal_case name) acc
           | FormatDef _ -> StringMap.add name ("read_" ^ CaseConv.quiet_snake_case name) acc
-          | ExprDef _ -> StringMap.add name (CaseConv.quiet_snake_case name) acc)
+          | ExprDef _ -> StringMap.add name (CaseConv.screaming_snake_case name) acc)
         StringMap.empty
         items
     in
-    Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {@.";
-    Format.fprintf ppf "    let byte = input.get(*pos).ok_or(())?;@.";
-    Format.fprintf ppf "    *pos +=1;@.";
-    Format.fprintf ppf "    Ok(i64::from(*byte))@.";
-    Format.fprintf ppf "}@.";
-    Format.fprintf ppf "@.";
-    Format.pp_print_list (compile_item { items; target_names }) ppf items
+    List.map (compile_item { items; target_names }) items
 
 end
