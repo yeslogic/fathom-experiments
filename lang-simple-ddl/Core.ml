@@ -395,11 +395,11 @@ module Compile = struct
           (StringMap.find name src_ctx.target_names)
     | Byte ->
         Format.fprintf ppf "read_byte(input, pos)"
-    | RepeatLen (len, fmt) ->
+    | RepeatLen (len, elem_fmt) ->
         let elem_ty = Semantics.format_ty src_ctx.items fmt in
         Format.fprintf ppf "(0..%a).map(|_| {%a}).collect::<Result<%a, _>>()"
           (compile_expr src_ctx locals) len
-          (compile_format src_ctx locals) fmt
+          (compile_format src_ctx locals) elem_fmt
           (compile_ty src_ctx) elem_ty
     (* Optimisation for let-bound formats *)
     | Bind (name, Pure (def_ty, def), body_fmt) ->
