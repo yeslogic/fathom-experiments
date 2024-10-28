@@ -316,7 +316,7 @@ module Compile = struct
         Format.fprintf ppf "%s" (List.nth locals index)
     | Let (name, def_ty, def, body) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "let@ %s:@ %a @ =@ %a;@.%a"
+        Format.fprintf ppf "@[let@ %s:@ %a @ =@ %a;@]@ %a"
           name
           (compile_ty src_ctx) def_ty
           (compile_expr src_ctx locals) def
@@ -328,7 +328,7 @@ module Compile = struct
             (CaseConv.quiet_snake_case label) (* TODO: handle this better? *)
             (compile_expr src_ctx locals) expr
         in
-        Format.fprintf ppf "%s@ {@ %a@ }"
+        Format.fprintf ppf "@[%s@ {@ %a@ }@]"
           (StringMap.find name src_ctx.target_names)
           (Format.pp_print_seq pp_field_def ~pp_sep)
           (LabelMap.to_seq field_exprs)
@@ -404,19 +404,19 @@ module Compile = struct
     (* Optimisation for let-bound formats *)
     | Bind (name, Pure (def_ty, def), body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "let@ %s:@ %a @ =@ %a;@.%a"
+        Format.fprintf ppf "@[let@ %s:@ %a @ =@ %a;@]@ %a"
           name
           (compile_ty src_ctx) def_ty
           (compile_expr src_ctx locals) def
           (compile_format src_ctx (name :: locals)) body_fmt
     | Bind (name, def_fmt, body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        Format.fprintf ppf "let@ %s@ =@ {%a}?;@.%a"
+        Format.fprintf ppf "@[let@ %s@ =@ {%a}?;@]@ %a"
           name
           (compile_format src_ctx locals) def_fmt
           (compile_format src_ctx (name :: locals)) body_fmt
     | Pure (_, expr) ->
-        Format.fprintf ppf "Ok(%a)"
+        Format.fprintf ppf "@[Ok(%a)@]"
           (compile_expr src_ctx locals) expr
     | Fail _ ->
         Format.fprintf ppf "Err(())"
@@ -433,22 +433,22 @@ module Compile = struct
           (StringMap.find name src_ctx.target_names)
           (compile_ty src_ctx) ty
     | RecordType field_tys ->
-        let pp_sep ppf () = Format.fprintf ppf ",@ " in
+        let pp_sep ppf () = Format.fprintf ppf "@ " in
         let pp_field_decl ppf (label, expr) =
-          Format.fprintf ppf "%s:@ %a" label (compile_ty src_ctx) expr
+          Format.fprintf ppf "@[%s:@ %a,@]" label (compile_ty src_ctx) expr
         in
-        Format.fprintf ppf "struct@ %s@ {@ %a@ }@."
+        Format.fprintf ppf "@[<v>@[struct@ %s@ {@]@;<1 4>@[<v>%a@]@ }@]@."
           (StringMap.find name src_ctx.target_names)
           (Format.pp_print_seq pp_field_decl ~pp_sep)
           (LabelMap.to_seq field_tys)
     | FormatDef fmt ->
-        Format.fprintf ppf "fn %s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@.%a@.}@."
+        Format.fprintf ppf "@[<v>@[fn %s(input: &[u8], pos: &mut usize) -> Result<%a, ()> {@]@;<1 4>@[<hv>%a@]@ }@]@."
           (StringMap.find name src_ctx.target_names)
           (compile_ty src_ctx) (Semantics.format_ty src_ctx.items fmt)
           (compile_format src_ctx []) fmt
     | ExprDef (def_ty, def) ->
         (* TODO: use constants if possible *)
-        Format.fprintf ppf "fn %s() -> %a { %a }@."
+        Format.fprintf ppf "@[<v>@[fn %s() -> %a {@]@;<1 4>%a@ }@]@."
           (StringMap.find name src_ctx.target_names)
           (compile_ty src_ctx) def_ty
           (compile_expr src_ctx []) def
@@ -466,9 +466,9 @@ module Compile = struct
         items
     in
     Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {@.";
-    Format.fprintf ppf "let byte = input.get(*pos).ok_or(())?;@.";
-    Format.fprintf ppf "*pos +=1;@.";
-    Format.fprintf ppf "Ok(i64::from(*byte))@.";
+    Format.fprintf ppf "    let byte = input.get(*pos).ok_or(())?;@.";
+    Format.fprintf ppf "    *pos +=1;@.";
+    Format.fprintf ppf "    Ok(i64::from(*byte))@.";
     Format.fprintf ppf "}@.";
     Format.fprintf ppf "@.";
     Format.pp_print_list (compile_item { items; target_names }) ppf items

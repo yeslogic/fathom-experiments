@@ -1,64 +1,58 @@
 fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-let byte = input.get(*pos).ok_or(())?;
-*pos +=1;
-Ok(i64::from(*byte))
+    let byte = input.get(*pos).ok_or(())?;
+    *pos +=1;
+    Ok(i64::from(*byte))
 }
 
 fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-let b0 =
-{read_byte(input, pos)}?;
-let b1 =
-{read_byte(input, pos)}?;
-Ok((b0) | ((b1) <<
-(8)))
+    let b0 = {read_byte(input, pos)}?;
+    let b1 = {read_byte(input, pos)}?;
+    Ok((b0) | ((b1) << (8)))
 }
 
 fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-read_byte(input, pos)
+    read_byte(input, pos)
 }
 
 fn read_u16be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-let b0 =
-{read_byte(input, pos)}?;
-let b1 =
-{read_byte(input, pos)}?;
-Ok(((b0) << (8)) |
-(b1))
+    let b0 = {read_byte(input, pos)}?;
+    let b1 = {read_byte(input, pos)}?;
+    Ok(((b0) << (8)) | (b1))
 }
-struct PixelRecord { blue: i64, green: i64, red: i64
+
+struct PixelRecord {
+    blue: i64,
+    green: i64,
+    red: i64,
 }
 
 fn read_pixel(input: &[u8], pos: &mut usize) -> Result<PixelRecord, ()> {
-let red =
-{read_u8(input, pos)}?;
-let green =
-{read_u8(input, pos)}?;
-let blue =
-{read_u8(input, pos)}?;
-Ok(PixelRecord { blue: blue, green: green, red: red
-})
+    let red = {read_u8(input, pos)}?;
+    let green = {read_u8(input, pos)}?;
+    let blue = {read_u8(input, pos)}?;
+    Ok(PixelRecord { blue: blue, green: green, red: red })
 }
-struct InfoRecord { height: i64, width: i64
+
+struct InfoRecord {
+    height: i64,
+    width: i64,
 }
 
 fn read_info(input: &[u8], pos: &mut usize) -> Result<InfoRecord, ()> {
-let width =
-{read_u16be(input, pos)}?;
-let height =
-{read_u16be(input, pos)}?;
-Ok(InfoRecord { height: height, width: width
-})
+    let width = {read_u16be(input, pos)}?;
+    let height = {read_u16be(input, pos)}?;
+    Ok(InfoRecord { height: height, width: width })
 }
-struct ImageRecord { data: PixelRecord, info: InfoRecord
+
+struct ImageRecord {
+    data: PixelRecord,
+    info: InfoRecord,
 }
 
 fn read_image(input: &[u8], pos: &mut usize) -> Result<ImageRecord, ()> {
-let info =
-{read_info(input, pos)}?;
-let num_pixels: i64  = (info.width) *
-(info.height);
-let data =
-{(0..num_pixels).map(|_| {read_pixel(input, pos)}).collect::<Result<PixelRecord, _>>()}?;
-Ok(ImageRecord { data: data, info: info
-})
+    let info = {read_info(input, pos)}?;
+    let num_pixels: i64  = (info.width) * (info.height);
+    let data =
+    {(0..num_pixels).map(|_| {read_pixel(input, pos)}).collect::<Result<PixelRecord, _>>()}?;
+    Ok(ImageRecord { data: data, info: info })
 }
