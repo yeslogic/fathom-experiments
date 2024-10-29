@@ -59,7 +59,7 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) =
         pp_path parts
   | Path (parts, ty_args) ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
-      Format.fprintf ppf "@[<h>%a<%a>@]"
+      Format.fprintf ppf "@[<hv>%a<%a>@]"
         pp_path parts
         (Format.pp_print_list pp_ty ~pp_sep) ty_args
     | Ref ty ->
@@ -149,7 +149,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       Format.fprintf ppf "@[<hv>{%a@ }@]"
         (pp_indent_vbox pp_stmts) stmts
   | RepeatCount (count_expr, elem_expr, ty) ->
-      Format.fprintf ppf "@[<hv 4>@[(0..%a)@]@[.map(|_| %a)@]@[.collect::<%a>()@]@]"
+      Format.fprintf ppf "@[<hv 4>@[(0..%a)@]@,@[.map(|_| %a)@]@,@[.collect::<%a>()@]@]"
         pp_expr count_expr
         pp_expr elem_expr
         pp_ty ty

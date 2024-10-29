@@ -53,6 +53,8 @@ fn read_image(input: &[u8], pos: &mut usize) -> Result<ImageRecord, ()> {
     let info = read_info(input, pos)?;
     let num_pixels: i64 = info.width * info.height;
     let data =
-        (0..num_pixels).map(|_| read_pixel(input, pos)).collect::<Result<Vec<PixelRecord>, _>>()?;
+        (0..num_pixels)
+            .map(|_| read_pixel(input, pos))
+            .collect::<Result<Vec<PixelRecord>, _>>()?;
     Ok(ImageRecord { data, info })
 }
