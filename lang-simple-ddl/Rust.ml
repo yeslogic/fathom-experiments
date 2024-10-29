@@ -40,6 +40,9 @@ type item =
 (** The goal is not to replicate the output of rustfmt, but follow standard Rust
     conventions closely and be reasonably easy to audit. *)
 
+let pp_indent_vbox f ppf x =
+  Format.fprintf ppf "@;<1 4>@[<v>%a@]" f x
+
 let pp_path (ppf : Format.formatter) (parts : string list) =
   let pp_sep ppf () = Format.fprintf ppf "::" in
   Format.pp_print_list Format.pp_print_string ~pp_sep ppf parts
@@ -97,8 +100,8 @@ let rec pp_expr (ppf : Format.formatter) (expr : expr) =
   | IfElse (expr, stmts1, stmts2) ->
       Format.fprintf ppf "@[<hv>@[if@ %a@ {@]%a@ @[}@ else@ {@]%a@ }@]"
         pp_expr expr
-        pp_stmts stmts1
-        pp_stmts stmts2
+        (pp_indent_vbox pp_stmts) stmts1
+        (pp_indent_vbox pp_stmts) stmts2
   | expr ->
       pp_atomic_expr ppf expr
 
@@ -140,7 +143,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
         label
   | Block stmts ->
       Format.fprintf ppf "@[<hv>{%a@ }@]"
-        pp_stmts stmts
+        (pp_indent_vbox pp_stmts) stmts
   | RepeatCount (count_expr, elem_expr, ty) ->
       Format.fprintf ppf "@[<hv 4>@[(0..%a)@]@[.map(|_| %a)@]@[.collect::<%a>()@]@]"
         pp_expr count_expr
@@ -163,12 +166,12 @@ and pp_stmt (ppf : Format.formatter) (stmt : stmt) =
         pp_expr expr
 
 and pp_stmts (ppf : Format.formatter) (stmts, expr : stmts) =
-  let pp_sep ppf () = Format.fprintf ppf "" in
-  let pp_stmts_stmt ppf stmt = Format.fprintf ppf "@;<1 4>%a" pp_stmt stmt in
-  let pp_stmts_expr ppf expr = Format.fprintf ppf "@;<1 4>%a" pp_expr expr in
-  Format.fprintf ppf "%a%a"
-    (Format.pp_print_list pp_stmts_stmt ~pp_sep) stmts
-    (Format.pp_print_option pp_stmts_expr) expr
+  match stmts with
+  | [] -> Format.pp_print_option pp_expr ppf expr
+  | stmt :: stmts ->
+      Format.fprintf ppf "%a@ %a"
+        pp_stmt stmt
+        pp_stmts (stmts, expr)
 
 let pp_item (ppf : Format.formatter) (item : item) =
   match item with
@@ -180,9 +183,9 @@ let pp_item (ppf : Format.formatter) (item : item) =
       let pp_field ppf (label, ty) =
         Format.fprintf ppf "@[%s:@ %a,@]" label pp_ty ty
       in
-      Format.fprintf ppf "@[<v>@[struct@ %s@ {@]@;<1 4>@[<v>%a@]@ }@]@."
+      Format.fprintf ppf "@[<v>@[struct@ %s@ {@]%a@ }@]@."
         name
-        (Format.pp_print_list pp_field) fields
+        (pp_indent_vbox (Format.pp_print_list pp_field)) fields
   | Const (name, ty, expr) ->
       Format.fprintf ppf "@[<4>@[const@ %s:@ %a@ =@]@ %a;@]@."
         name
@@ -197,7 +200,7 @@ let pp_item (ppf : Format.formatter) (item : item) =
         name
         (Format.pp_print_list pp_param ~pp_sep) params
         pp_ty ret_ty
-        pp_stmts body
+        (pp_indent_vbox pp_stmts) body
 
 let pp_program (ppf : Format.formatter) (items : item list) =
   Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {@.";
