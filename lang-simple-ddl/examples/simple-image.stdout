@@ -45,7 +45,7 @@ fn read_info(input: &[u8], pos: &mut usize) -> Result<InfoRecord, ()> {
 }
 
 struct ImageRecord {
-    data: PixelRecord,
+    data: Vec<PixelRecord>,
     info: InfoRecord,
 }
 

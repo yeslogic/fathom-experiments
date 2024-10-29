@@ -203,7 +203,7 @@ module Semantics = struct
     | ItemVar (_, vty) when unfold_items -> quote_vty ~unfold_items (Lazy.force vty)
     | ItemVar (name, _) -> ItemVar name
     | RecordType (name, _) -> ItemVar name
-    | ListType vty -> quote_vty ~unfold_items vty
+    | ListType vty -> ListType (quote_vty ~unfold_items vty)
     | IntType -> IntType
     | BoolType -> BoolType
 
