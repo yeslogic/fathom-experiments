@@ -10,3 +10,17 @@ def test-point-1 : Point := {
 
 def test-point-2 :=
   { x := 1; y := 2 } : Point;
+
+type A-long-record {
+  foo : Int;
+  bar : Int;
+  baz : Int;
+  bananas : Int;
+}
+
+def test-long-record : A-long-record := {
+  foo := 1000000;
+  bar := 1000000;
+  baz := 1000000;
+  bananas := 1000000;
+};

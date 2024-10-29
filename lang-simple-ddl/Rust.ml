@@ -40,6 +40,9 @@ type item =
 (** The goal is not to replicate the output of rustfmt, but follow standard Rust
     conventions closely and be reasonably easy to audit. *)
 
+let pp_indent f ppf x =
+  Format.fprintf ppf "@;<1 4>%a" f x
+
 let pp_indent_vbox f ppf x =
   Format.fprintf ppf "@;<1 4>@[<v>%a@]" f x
 
@@ -131,12 +134,13 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       let pp_field ppf (label, expr) =
         (* Render field with punning if possible *)
         match expr with
-        | Path ([x]) when x = label -> Format.fprintf ppf "@;<1 4>%s" x
-        | _ -> Format.fprintf ppf "@;<1 4>%s:@ %a" label pp_expr expr
+        | Path ([x]) when x = label -> Format.fprintf ppf "%s" x
+        | _ -> Format.fprintf ppf "@[%s:@ %a@]" label pp_expr expr
       in
-      Format.fprintf ppf "@[%s@ {%a@ }@]"
+      Format.fprintf ppf "@[<hv>@[%s@ {@]%a@ }@]"
         name
-        (Format.pp_print_list pp_field ~pp_sep) fields
+        (Format.pp_print_list (pp_indent pp_field) ~pp_sep) fields
+        (* TODO: trailing comma with [pp_print_if_newline] *)
   | StructProj (expr, label) ->
       Format.fprintf ppf "%a.%s"
         pp_expr expr

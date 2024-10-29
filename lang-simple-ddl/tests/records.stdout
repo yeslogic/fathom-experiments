@@ -4,10 +4,25 @@ fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok(i64::from(*byte))
 }
 
+struct ALongRecord {
+    bananas: i64,
+    bar: i64,
+    baz: i64,
+    foo: i64,
+}
+
 struct Point {
     x: i64,
     y: i64,
 }
+
+const TEST_LONG_RECORD: ALongRecord =
+    ALongRecord {
+        bananas: 1000000,
+        bar: 1000000,
+        baz: 1000000,
+        foo: 1000000
+    };
 
 const TEST_POINT_1: Point = Point { x: 1, y: 2 };
 
