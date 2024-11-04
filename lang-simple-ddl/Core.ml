@@ -287,75 +287,93 @@ module Compile = struct
 
   module StringMap = Map.Make (String)
 
-  type source_context = {
-    items : program;
-    target_names : string StringMap.t;
+  type context = {
+    source_items : program;
+    target_item_names : string StringMap.t;
+    target_items : Rust.item list;
+    target_local_names : string list;
   }
 
-  let rec compile_ty (src_ctx : source_context) (ty : ty) : Rust.ty =
+  let empty_context (source_items : program) : context = {
+    source_items;
+    target_item_names = StringMap.empty;
+    target_items = [];
+    target_local_names = [];
+  }
+
+  let extend_source_local (ctx : context) (tgt_name : string) =
+    { ctx with target_local_names = tgt_name :: ctx.target_local_names }
+
+  let compile_item_var (ctx : context) (name : string) : string =
+    StringMap.find name ctx.target_item_names
+
+  let rec compile_ty (ctx : context) (ty : ty) : Rust.ty =
     match ty with
     | ItemVar name ->
-        Path ([StringMap.find name src_ctx.target_names], [])
+        Path ([compile_item_var ctx name], [])
     | ListType ty ->
-        Path (["Vec"], [compile_ty src_ctx ty])
+        Path (["Vec"], [compile_ty ctx ty])
     | IntType ->
         Path (["i64"], []) (* TODO: More integer types *)
     | BoolType ->
         Path (["bool"], [])
 
-  let rec compile_stmts (src_ctx : source_context) (locals : string list) (expr : expr) : Rust.stmts =
+  let rec compile_stmts (ctx : context) (expr : expr) : Rust.stmts =
     match expr with
     | Let (name, def_ty, def, body) ->
         let name = CaseConv.quiet_snake_case name in
-        let ty = compile_ty src_ctx def_ty in
-        let expr = compile_expr src_ctx locals def in
-        let stmts, body_expr = compile_stmts src_ctx (name :: locals) body in
+        let ty = compile_ty ctx def_ty in
+        let expr = compile_expr ctx def in
+        let stmts, body_expr = compile_stmts (extend_source_local ctx name) body in
         Let (name, Some ty, expr) :: stmts, body_expr
     | expr ->
-        [], Some (compile_expr src_ctx locals expr)
+        [], Some (compile_expr ctx expr)
 
-  and compile_expr (src_ctx : source_context) (locals : string list) (expr : expr) : Rust.expr =
+  and compile_expr (ctx : context) (expr : expr) : Rust.expr =
     match expr with
     | ItemVar name ->
         (* FIXME: Check if constant *)
-        Path [StringMap.find name src_ctx.target_names]
+        Path [compile_item_var ctx name]
     | LocalVar index ->
-        Path [List.nth locals index]
+        Path [List.nth ctx.target_local_names index]
     | Let _ ->
-        Block (compile_stmts src_ctx locals expr)
+        Block (compile_stmts ctx expr)
     | RecordLit (name, field_exprs) ->
-        let name = StringMap.find name src_ctx.target_names in
+        let name = compile_item_var ctx name in
+        (* TODO: lookup field mappings *)
         let fields =
           StringMap.to_seq field_exprs
           |> Seq.map (fun (label, expr) ->
               CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
-              compile_expr src_ctx locals expr)
+              compile_expr ctx expr)
           |> List.of_seq
         in
         StructLit (name, fields)
     | RecordProj (head, label) ->
+        (* TODO: get the type of the head *)
+        (* TODO: lookup field mappings *)
         StructProj (
-          compile_expr src_ctx locals head,
+          compile_expr ctx head,
           CaseConv.quiet_snake_case label (* TODO: handle this better? *)
         )
     | ListLit exprs ->
-        VecLit (List.map (compile_expr src_ctx locals) exprs)
+        VecLit (List.map (compile_expr ctx) exprs)
     | IntLit i -> I64Lit i
     | BoolLit b -> BoolLit b
     | BoolElim (head, expr1, expr2) ->
         IfElse (
-          compile_expr src_ctx locals head,
-          compile_stmts src_ctx locals expr1,
-          compile_stmts src_ctx locals expr2
+          compile_expr ctx head,
+          compile_stmts ctx expr1,
+          compile_stmts ctx expr2
         )
     | PrimApp (prim, args) ->
         let prefix op args : Rust.expr =
           match args with
-          | [x] -> PrefixOp (op, compile_expr src_ctx locals x)
+          | [x] -> PrefixOp (op, compile_expr ctx x)
           | _ -> failwith "invalid prim"
         and infix op args : Rust.expr =
           match args with
-          | [x; y] -> InfixOp (compile_expr src_ctx locals x, op, compile_expr src_ctx locals y)
+          | [x; y] -> InfixOp (compile_expr ctx x, op, compile_expr ctx y)
           | _ -> failwith "invalid prim"
         in
         match prim with
@@ -380,96 +398,105 @@ module Compile = struct
         | IntArithShr -> infix ">>" args
         | IntLogicalShr -> Path ["todo!(\"logical shift right\")"] (* FIXME *)
 
-  let rec compile_format_stmts (src_ctx : source_context) (locals : string list) (fmt : format) : Rust.stmts =
+  let rec compile_format_stmts (ctx : context) (fmt : format) : Rust.stmts =
     match fmt with
     | Bind (name, Pure (def_ty, def), body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        let ty = compile_ty src_ctx def_ty in
-        let expr = compile_expr src_ctx locals def in
-        let stmts, body_expr = compile_format_stmts src_ctx (name :: locals) body_fmt in
+        let ty = compile_ty ctx def_ty in
+        let expr = compile_expr ctx def in
+        let stmts, body_expr = compile_format_stmts (extend_source_local ctx name) body_fmt in
         Let (name, Some ty, expr) :: stmts, body_expr
 
     | Bind (name, def_fmt, body_fmt) ->
         let name = CaseConv.quiet_snake_case name in
-        let expr = compile_format_expr src_ctx locals def_fmt in
-        let stmts, body_expr = compile_format_stmts src_ctx (name :: locals) body_fmt in
+        let expr = compile_format_expr ctx def_fmt in
+        let stmts, body_expr = compile_format_stmts (extend_source_local ctx name) body_fmt in
         Let (name, None, PostfixOp (expr, "?")) :: stmts, body_expr
 
     | fmt ->
-        [], Some (compile_format_expr src_ctx locals fmt)
+        [], Some (compile_format_expr ctx fmt)
 
-  and compile_format_expr (src_ctx : source_context) (locals : string list) (fmt : format) : Rust.expr =
+  and compile_format_expr (ctx : context) (fmt : format) : Rust.expr =
     match fmt with
     | ItemVar name ->
-        let name = StringMap.find name src_ctx.target_names in
+        let name = compile_item_var ctx name in
         Call (Path [name], [Path ["input"]; Path ["pos"]])
     | Byte ->
         Call (Path ["read_byte"], [Path ["input"]; Path ["pos"]])
     | RepeatLen (len, elem_fmt) ->
-        let elem_ty = Semantics.format_ty src_ctx.items fmt in
+        let elem_ty = Semantics.format_ty ctx.source_items fmt in
         RepeatCount (
-          compile_expr src_ctx locals len,
-          compile_format_expr src_ctx locals elem_fmt,
-          Path (["Result"], [compile_ty src_ctx elem_ty; Placeholder])
+          compile_expr ctx len,
+          compile_format_expr ctx elem_fmt,
+          Path (["Result"], [compile_ty ctx elem_ty; Placeholder])
         )
     (* Optimisation for let-bound formats *)
     | Bind _ ->
-        Block (compile_format_stmts src_ctx locals fmt)
+        Block (compile_format_stmts ctx fmt)
     | Pure (_, expr) ->
-        Call (Path ["Ok"], [compile_expr src_ctx locals expr])
+        Call (Path ["Ok"], [compile_expr ctx expr])
     | Fail _ ->
         Call (Path ["Err"], [UnitLit])
     | BoolElim (head, fmt1, fmt2) ->
         IfElse (
-          compile_expr src_ctx locals head,
-          compile_format_stmts src_ctx locals fmt1,
-          compile_format_stmts src_ctx locals fmt2
+          compile_expr ctx head,
+          compile_format_stmts ctx fmt1,
+          compile_format_stmts ctx fmt2
         )
 
-  let compile_item (src_ctx : source_context) (name, item : string * item) : Rust.item =
-    let name = StringMap.find name src_ctx.target_names in
-
+  let compile_item (ctx : context) (name, item : string * item) : string * Rust.item =
     match item with
     | TypeDef ty ->
-        Type (name, compile_ty src_ctx ty)
+        let name = CaseConv.pascal_case name in
+        name, Type (name, compile_ty ctx ty)
 
     | RecordType field_tys ->
+        let name = CaseConv.pascal_case name in
         let fields =
           StringMap.to_seq field_tys
           |> Seq.map (fun (label, ty) ->
             CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
-            compile_ty src_ctx ty)
+            compile_ty ctx ty)
           |> List.of_seq
         in
-        Struct (name, fields)
+        name, Struct (name, fields)
 
     | FormatDef fmt ->
-        let input_ty : Rust.ty = Ref (Slice (Path (["u8"], []))) in
-        let pos_ty : Rust.ty = RefMut (Path (["usize"], [])) in
-        let fmt_ty : Rust.ty = compile_ty src_ctx (Semantics.format_ty src_ctx.items fmt) in
-        let ret_ty : Rust.ty = Path (["Result"], [fmt_ty; Unit]) in
-        let body = compile_format_stmts src_ctx [] fmt in
+        let name = "read_" ^ CaseConv.quiet_snake_case name in
+        let item : Rust.item =
+          Fn (
+            name,
+            [
+              "input", Ref (Slice (Path (["u8"], [])));
+              "pos", RefMut (Path (["usize"], []));
+            ],
+            Path (["Result"], [compile_ty ctx (Semantics.format_ty ctx.source_items fmt); Unit]),
+            compile_format_stmts ctx fmt
+          )
+        in
 
-        Fn (name, ["input", input_ty; "pos", pos_ty], ret_ty, body)
+        name, item
 
     | ExprDef (def_ty, def) ->
-        let ty = compile_ty src_ctx def_ty in
+        let name = CaseConv.screaming_snake_case name in
+        let ty = compile_ty ctx def_ty in
         (* FIXME: check if the expression is a valid constant *)
-        let expr = compile_expr src_ctx [] def in
-        Const (name, ty, expr)
+        let expr = compile_expr ctx def in
+        name, Const (name, ty, expr)
 
   let compile_program (items : program) : Rust.item list =
-    let target_names =
-      (* Assign top-level item names in target program *)
-      List.fold_left
-        (fun acc (name, item) ->
-          match item with
-          | TypeDef _ | RecordType _ -> StringMap.add name (CaseConv.pascal_case name) acc
-          | FormatDef _ -> StringMap.add name ("read_" ^ CaseConv.quiet_snake_case name) acc
-          | ExprDef _ -> StringMap.add name (CaseConv.screaming_snake_case name) acc)
-        StringMap.empty
-        items
+    let compile_items =
+      ListLabels.fold_left
+        ~init:(empty_context items)
+        ~f:(fun ctx (name, item) ->
+          let target_name, target_item =
+            compile_item ctx (name, item)
+          in
+          { ctx with
+            target_item_names = StringMap.add name target_name ctx.target_item_names;
+            target_items = target_item :: ctx.target_items;
+          })
     in
-    List.map (compile_item { items; target_names }) items
+    (compile_items items).target_items |> List.rev
 
 end
