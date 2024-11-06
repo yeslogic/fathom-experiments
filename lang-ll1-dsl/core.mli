@@ -33,7 +33,7 @@ module Semantics : sig
 
   (** {1 Decode semantics} *)
 
-  exception DecodeFailure of int
+  exception Decode_failure of int
 
   val decode : program -> format -> bytes -> int -> int * vexpr
 
@@ -88,14 +88,14 @@ module Refiner : sig
 
   module Format : sig
 
-    val item : item_var -> [`FormatExpected | `UnboundVariable] is_format_err
+    val item : item_var -> [`Format_expected | `Unbound_variable] is_format_err
     val fail : is_ty -> is_format
     val byte : Byte_set.t -> is_format
-    val seq : is_format -> is_format -> [`AmbiguousFormat] is_format_err
-    val union : is_format -> is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err
+    val seq : is_format -> is_format -> [`Ambiguous_format] is_format_err
+    val union : is_format -> is_format -> [`Ambiguous_format | `Repr_mismatch of ty * ty] is_format_err
     val pure : synth_ty -> is_format
     val map : (string * (local_var -> synth_ty)) -> is_format -> is_format
-    val flat_map : (string * (local_var -> is_format)) -> is_format -> [`AmbiguousFormat] is_format_err
+    val flat_map : (string * (local_var -> is_format)) -> is_format -> [`Ambiguous_format] is_format_err
 
     val repr : is_format -> is_ty
 
@@ -103,10 +103,10 @@ module Refiner : sig
 
   module Structural : sig
 
-    val item_ty : item_var -> [`TypeExpected | `UnboundVariable] is_ty_err
-    val item_expr : item_var -> [`ExprExpected | `UnboundVariable] synth_ty_err
-    val local : local_var -> [`UnboundVariable] synth_ty_err
-    val conv : synth_ty -> [`TypeMismatch of ty * ty] check_ty_err
+    val item_ty : item_var -> [`Type_expected | `Unbound_variable] is_ty_err
+    val item_expr : item_var -> [`Expr_expected | `Unbound_variable] synth_ty_err
+    val local : local_var -> [`Unbound_variable] synth_ty_err
+    val conv : synth_ty -> [`Type_mismatch of ty * ty] check_ty_err
     val ann : check_ty -> is_ty -> synth_ty
 
   end
@@ -129,18 +129,18 @@ module Refiner : sig
 
     val form : is_ty -> is_ty -> is_ty
     val intro : synth_ty -> synth_ty -> synth_ty
-    val fst : synth_ty -> [`UnexpectedType] synth_ty_err
-    val snd : synth_ty -> [`UnexpectedType] synth_ty_err
+    val fst : synth_ty -> [`Unexpected_type] synth_ty_err
+    val snd : synth_ty -> [`Unexpected_type] synth_ty_err
 
   end
 
   module Record : sig
 
     val form_empty : is_ty
-    val form : (string * is_ty) list -> [`DuplicateFieldLabel of string] is_ty_err
+    val form : (string * is_ty) list -> [`Duplicate_field_label of string] is_ty_err
     val intro_empty : synth_ty
-    val intro : (string * synth_ty) list -> [`DuplicateFieldLabel of string] synth_ty_err
-    val proj : synth_ty -> string -> [`UnknownFieldLabel of ty] synth_ty_err
+    val intro : (string * synth_ty) list -> [`Duplicate_field_label of string] synth_ty_err
+    val proj : synth_ty -> string -> [`Unknown_field_label of ty] synth_ty_err
 
   end
 

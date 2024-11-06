@@ -2,25 +2,25 @@ type ty =
   | Placeholder
   | Path of string list * ty list
   | Ref of ty
-  | RefMut of ty
+  | Ref_mut of ty
   | Slice of ty
   | Unit
 
 type expr =
   | Path of string list
   | Call of expr * expr list
-  | PrefixOp of string * expr
-  | PostfixOp of expr * string
-  | InfixOp of expr * string * expr
-  | VecLit of expr list
+  | Prefix_op of string * expr
+  | Postfix_op of expr * string
+  | Infix_op of expr * string * expr
+  | Vec_lit of expr list
   | I64Lit of int
-  | BoolLit of bool
-  | UnitLit
+  | Bool_lit of bool
+  | Unit_lit
   | StructLit of string * (string * expr) list
   | StructProj of expr * string
-  | IfElse of expr * stmts * stmts
+  | If_else of expr * stmts * stmts
   | Block of stmts
-  | RepeatCount of expr * expr * ty
+  | Repeat_count of expr * expr * ty
 
 and stmt =
   | Let of string * ty option * expr
@@ -65,7 +65,7 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) =
     | Ref ty ->
         Format.fprintf ppf "&%a"
           pp_ty ty
-    | RefMut ty ->
+    | Ref_mut ty ->
         Format.fprintf ppf "@[&mut@ %a@]"
           pp_ty ty
     | Slice ty ->
@@ -76,19 +76,19 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) =
 
 let rec pp_expr (ppf : Format.formatter) (expr : expr) =
   match expr with
-  | PrefixOp (op, expr) ->
+  | Prefix_op (op, expr) ->
       Format.fprintf ppf "%s%a"
         op
         pp_atomic_expr expr
-  | PostfixOp (expr, op) ->
+  | Postfix_op (expr, op) ->
       Format.fprintf ppf "%a%s"
         pp_atomic_expr expr
         op
-  | InfixOp (_, op, _) ->
+  | Infix_op (_, op, _) ->
       let rec go ppf expr =
         match expr with
         (* Print the same operator at same precedence *)
-        | InfixOp (expr1, op', expr2) when op = op' ->
+        | Infix_op (expr1, op', expr2) when op = op' ->
             Format.fprintf ppf "%a@ %s@ %a"
               go expr1
               op
@@ -100,7 +100,7 @@ let rec pp_expr (ppf : Format.formatter) (expr : expr) =
       in
       Format.fprintf ppf "@[%a@]"
         go expr
-  | IfElse (expr, stmts1, stmts2) ->
+  | If_else (expr, stmts1, stmts2) ->
       Format.fprintf ppf "@[<hv>@[if@ %a@ {@]%a@ @[}@ else@ {@]%a@ }@]"
         pp_expr expr
         (pp_indent_vbox pp_stmts) stmts1
@@ -117,17 +117,17 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       Format.fprintf ppf "@[%a(%a)@]"
         pp_expr expr
         (Format.pp_print_list pp_expr ~pp_sep) args
-  | VecLit exprs ->
+  | Vec_lit exprs ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
       Format.fprintf ppf "vec![%a]"
         (Format.pp_print_list pp_expr ~pp_sep) exprs
   | I64Lit i ->
       Format.pp_print_int ppf i
-  | BoolLit true ->
+  | Bool_lit true ->
       Format.fprintf ppf "true"
-  | BoolLit false ->
+  | Bool_lit false ->
       Format.fprintf ppf "false"
-  | UnitLit->
+  | Unit_lit->
       Format.fprintf ppf "()"
   | StructLit (name, fields) ->
       let pp_sep ppf () = Format.fprintf ppf "," in
@@ -148,7 +148,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
   | Block stmts ->
       Format.fprintf ppf "@[<hv>{%a@ }@]"
         (pp_indent_vbox pp_stmts) stmts
-  | RepeatCount (count_expr, elem_expr, ty) ->
+  | Repeat_count (count_expr, elem_expr, ty) ->
       Format.fprintf ppf "@[<hv 4>@[(0..%a)@]@,@[.map(|_| %a)@]@,@[.collect::<%a>()@]@]"
         pp_expr count_expr
         pp_expr elem_expr

@@ -25,7 +25,7 @@ module Tp : sig
         byte of each suffix. *)
   }
 
-  exception TypeError of string
+  exception Type_error of string
 
 
   val empty : t
@@ -76,7 +76,7 @@ end = struct
     Format.fprintf ppf "   follow = Byte_set.of_string \"%a\";\n" Byte_set.pp_print t.follow;
     Format.fprintf ppf "}\n"
 
-  exception TypeError of string
+  exception Type_error of string
 
   let empty = {
     null = true; (* Never consumes any input *)
@@ -126,7 +126,7 @@ end = struct
               else Byte_set.empty);
       }
     else begin
-      raise (TypeError "ambiguous sequencing")
+      raise (Type_error "ambiguous sequencing")
     end
 
   let alt t1 t2 =
@@ -137,7 +137,7 @@ end = struct
         follow = Byte_set.union t1.follow t2.follow;
       }
     else
-      raise (TypeError "ambiguous alternation")
+      raise (Type_error "ambiguous alternation")
 
   let equal t1 t2 =
     t1.null = t2.null
@@ -160,7 +160,7 @@ module Parser: sig
 
   type 'a t
 
-  exception ParseFailure of int
+  exception Parse_failure of int
 
   val map : ('a -> 'b) -> 'a t -> 'b t
 
@@ -190,7 +190,7 @@ end = struct
     parse : bytes -> int -> int * 'a;
   }
 
-  exception ParseFailure of int
+  exception Parse_failure of int
 
   let map f p = {
     tp = p.tp;
@@ -222,7 +222,7 @@ end = struct
 
   let fail = {
     tp = Tp.fail;
-    parse = fun _ pos -> raise (ParseFailure pos);
+    parse = fun _ pos -> raise (Parse_failure pos);
   }
 
   let get_byte input pos =
@@ -236,7 +236,7 @@ end = struct
     parse = fun input pos ->
       match get_byte input pos with
       | Some b' when b' = b -> pos + 1, ()
-      | _ -> raise (ParseFailure pos);
+      | _ -> raise (Parse_failure pos);
   }
 
   let byte_set s = {
@@ -244,7 +244,7 @@ end = struct
     parse = fun input pos ->
       match get_byte input pos with
       | Some b when Byte_set.mem b s -> pos + 1, b
-      | _ -> raise (ParseFailure pos);
+      | _ -> raise (Parse_failure pos);
   }
 
   let bytes s = {
@@ -254,12 +254,12 @@ end = struct
         let rec go off =
           match get_byte s off with
           | Some b when b = Bytes.get input (pos + off) -> (go [@tailcall]) (off + 1)
-          | Some _ -> raise (ParseFailure (pos + off))
+          | Some _ -> raise (Parse_failure (pos + off))
           | None -> pos + off, ()
         in
         go 0
       else
-        raise (ParseFailure pos);
+        raise (Parse_failure pos);
   }
 
   let alt p1 p2 = {
@@ -270,7 +270,7 @@ end = struct
       | Some b when Byte_set.mem b p2.tp.Tp.first -> p2.parse input pos
       | _ when p1.tp.Tp.null -> p1.parse input pos
       | _ when p2.tp.Tp.null -> p2.parse input pos
-      | _ -> raise (ParseFailure pos);
+      | _ -> raise (Parse_failure pos);
   }
 
   let one_of ps =
@@ -293,7 +293,7 @@ end = struct
 
 end
 
-module ParserUtil : sig
+module Parser_util : sig
   (** Derived parsers *)
 
   open Parser

@@ -19,8 +19,8 @@ let () =
     in
     Format.printf "@[%a@]" Core.pp_print_program program;
   with
-  | Lexer.UnexpectedChar -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
-  | Lexer.UnclosedBlockComment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
+  | Lexer.Unexpected_char -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
+  | Lexer.Unclosed_block_comment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
   | Parser.Error -> print_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
   | Surface.Elab.Error (loc, message) -> print_error "error" loc message; exit 1
   | Surface.Elab.Bug (loc, message) -> print_error "bug" loc message; exit 1

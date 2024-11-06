@@ -1,7 +1,7 @@
 open Parser
 
-exception UnexpectedChar
-exception UnclosedBlockComment
+exception Unexpected_char
+exception Unclosed_block_comment
 
 let dec_digit = [%sedlex.regexp? '0'..'9']
 let hex_digit = [%sedlex.regexp? '0'..'9' | 'A'..'F' | 'a'..'f']
@@ -18,8 +18,8 @@ let rec block_comment lexbuf level =
   | "/-" -> (block_comment [@tailcall]) lexbuf (level + 1)
   | "-/" -> if level = 0 then () else (block_comment [@tailcall]) lexbuf (level - 1)
   | any -> (block_comment [@tailcall]) lexbuf level
-  | eof -> raise UnclosedBlockComment
-  | _ -> raise UnexpectedChar
+  | eof -> raise Unclosed_block_comment
+  | _ -> raise Unexpected_char
 
 let rec token lexbuf =
   match%sedlex lexbuf with
@@ -48,4 +48,4 @@ let rec token lexbuf =
   | '(' -> LPAREN
   | ')' -> RPAREN
   | eof -> END
-  | _ -> raise UnexpectedChar
+  | _ -> raise Unexpected_char

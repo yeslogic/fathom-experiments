@@ -1,4 +1,4 @@
-module FormatInfo : sig
+module Format_info : sig
   (** Semantic information about a binary format. *)
 
   type t = {
@@ -100,22 +100,22 @@ end
 
 type ty =
   (* | Item of string *)
-  | UnitTy
-  | ByteTy
-  | PairTy of ty * ty
-  | RecordTy of (string * ty) list
+  | Unit_ty
+  | Byte_ty
+  | Pair_ty of ty * ty
+  | Record_ty of (string * ty) list
 
 type expr =
   (* | Item of string *)
   | Local of int
   | Ann of expr * ty
-  | UnitLit
-  | ByteLit of char
-  | PairLit of expr * expr
-  | PairFst of expr
-  | PairSnd of expr
-  | RecordLit of (string * expr) list
-  | RecordProj of expr * string
+  | Unit_lit
+  | Byte_lit of char
+  | Pair_lit of expr * expr
+  | Pair_fst of expr
+  | Pair_snd of expr
+  | Record_lit of (string * expr) list
+  | Record_proj of expr * string
 
 type format_node =
   | Item of string
@@ -125,11 +125,11 @@ type format_node =
   | Union of format * format
   | Pure of ty * expr
   | Map of ty * (string * expr) * format
-  | FlatMap of ty * (string * format) * format
+  | Flat_map of ty * (string * format) * format
 and format = {
   node : format_node;
   repr : ty;
-  info : FormatInfo.t;
+  info : Format_info.t;
 }
 
 type item =
@@ -145,11 +145,11 @@ type program = {
 
 let rec unify_ty (t1 : ty) (t2 : ty) : bool =
   match t1, t2 with
-  | UnitTy, UnitTy -> true
-  | ByteTy, ByteTy -> true
-  | PairTy (t1_1, t2_1), PairTy (t1_2, t2_2) ->
+  | Unit_ty, Unit_ty -> true
+  | Byte_ty, Byte_ty -> true
+  | Pair_ty (t1_1, t2_1), Pair_ty (t1_2, t2_2) ->
       unify_ty t1_1 t1_2 && unify_ty t2_1 t2_2
-  | RecordTy fields1, RecordTy fields2 ->
+  | Record_ty fields1, Record_ty fields2 ->
       (* There might be a nicer way to do this... *)
       let fields1 = List.sort (fun (l1, _) (l2, _) -> String.compare l1 l2) fields1 in
       let fields2 = List.sort (fun (l1, _) (l2, _) -> String.compare l1 l2) fields2 in
@@ -161,7 +161,7 @@ let rec unify_ty (t1 : ty) (t2 : ty) : bool =
 
 let rec pp_print_ty ppf t =
   match t with
-  | PairTy (t0, t1) ->
+  | Pair_ty (t0, t1) ->
       Format.fprintf ppf "Pair@ %a@ %a"
         pp_print_atomic_ty t0
         pp_print_atomic_ty t1
@@ -169,9 +169,9 @@ let rec pp_print_ty ppf t =
 
 and pp_print_atomic_ty ppf t =
   match t with
-  | UnitTy -> Format.fprintf ppf "Unit"
-  | ByteTy -> Format.fprintf ppf "Byte"
-  | RecordTy fields ->
+  | Unit_ty -> Format.fprintf ppf "Unit"
+  | Byte_ty -> Format.fprintf ppf "Byte"
+  | Record_ty fields ->
       Format.fprintf ppf "{@ %a@ }"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
@@ -181,7 +181,7 @@ and pp_print_atomic_ty ppf t =
 
 let rec pp_print_expr names ppf e =
   match e with
-  | PairLit (e0, e1) ->
+  | Pair_lit (e0, e1) ->
       Format.fprintf ppf "%a,@ %a"
         (pp_print_atomic_expr names) e0
         (pp_print_expr names) e1
@@ -190,17 +190,17 @@ let rec pp_print_expr names ppf e =
 and pp_print_atomic_expr names ppf e =
   match e with
   | Local index -> Format.pp_print_string ppf (List.nth names index)
-  | UnitLit -> Format.fprintf ppf "()"
-  | ByteLit c -> Format.fprintf ppf "%i" (Char.code c)
-  | PairFst e -> Format.fprintf ppf "%a.1" (pp_print_atomic_expr names) e
-  | PairSnd e -> Format.fprintf ppf "%a.2" (pp_print_atomic_expr names) e
-  | RecordLit fields ->
+  | Unit_lit -> Format.fprintf ppf "()"
+  | Byte_lit c -> Format.fprintf ppf "%i" (Char.code c)
+  | Pair_fst e -> Format.fprintf ppf "%a.1" (pp_print_atomic_expr names) e
+  | Pair_snd e -> Format.fprintf ppf "%a.2" (pp_print_atomic_expr names) e
+  | Record_lit fields ->
       Format.fprintf ppf "{@ %a@ }"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
           (fun ppf (l, f) -> Format.fprintf ppf "%s@ :=@ %a" l (pp_print_expr names) f))
         fields
-  | RecordProj (e, l) -> Format.fprintf ppf "%a.%s" (pp_print_atomic_expr names) e l
+  | Record_proj (e, l) -> Format.fprintf ppf "%a.%s" (pp_print_atomic_expr names) e l
   | e -> Format.fprintf ppf "(%a)" (pp_print_atomic_expr names) e
 
 let rec pp_print_format names ppf f =
@@ -239,7 +239,7 @@ and pp_print_app_format names ppf f =
         n
         (pp_print_expr (n :: names)) e
         (pp_print_atomic_format names) f
-  | FlatMap (t, (n, f1), f0) ->
+  | Flat_map (t, (n, f1), f0) ->
       Format.fprintf ppf "@[flat-map@ @@%a@ (%s@ =>@ %a)@ %a@]"
         pp_print_atomic_ty t
         n
@@ -287,10 +287,10 @@ let pp_print_program ppf p =
 module Semantics = struct
 
   type vexpr =
-    | UnitLit
-    | ByteLit of char
-    | PairLit of vexpr * vexpr
-    | RecordLit of (string * vexpr) list
+    | Unit_lit
+    | Byte_lit of char
+    | Pair_lit of vexpr * vexpr
+    | Record_lit of (string * vexpr) list
 
   type local_env =
     vexpr list
@@ -300,17 +300,17 @@ module Semantics = struct
 
   let pair_fst (ve : vexpr) : vexpr =
     match ve with
-    | PairLit (e0, _) -> e0
+    | Pair_lit (e0, _) -> e0
     | _ -> invalid_arg "expected pair"
 
   let pair_snd (ve : vexpr) : vexpr =
     match ve with
-    | PairLit (_, e1) -> e1
+    | Pair_lit (_, e1) -> e1
     | _ -> invalid_arg "expected pair"
 
   let record_proj (ve : vexpr) (l : string) : vexpr =
     match ve with
-    | RecordLit fs -> List.assoc l fs
+    | Record_lit fs -> List.assoc l fs
     | _ -> invalid_arg "expected pair"
 
   (* Evalution *)
@@ -323,20 +323,20 @@ module Semantics = struct
         | None -> invalid_arg "unbound local variable"
     end
     | Ann (e, _) -> eval locals e
-    | UnitLit -> UnitLit
-    | ByteLit c -> ByteLit c
-    | PairLit (e0, e1) -> PairLit (eval locals e0, eval locals e1)
-    | PairFst e -> pair_fst (eval locals e)
-    | PairSnd e -> pair_snd (eval locals e)
-    | RecordLit fs -> RecordLit (List.map (fun (l, e) -> l, eval locals e) fs)
-    | RecordProj (e, l) -> record_proj (eval locals e) l
+    | Unit_lit -> Unit_lit
+    | Byte_lit c -> Byte_lit c
+    | Pair_lit (e0, e1) -> Pair_lit (eval locals e0, eval locals e1)
+    | Pair_fst e -> pair_fst (eval locals e)
+    | Pair_snd e -> pair_snd (eval locals e)
+    | Record_lit fs -> Record_lit (List.map (fun (l, e) -> l, eval locals e) fs)
+    | Record_proj (e, l) -> record_proj (eval locals e) l
 
   let rec quote (ve : vexpr) : expr =
     match ve with
-    | UnitLit -> UnitLit
-    | ByteLit c -> ByteLit c
-    | PairLit (ve0, ve1) -> PairLit (quote ve0, quote ve1)
-    | RecordLit fs -> RecordLit (List.map (fun (l, ve) -> l, quote ve) fs)
+    | Unit_lit -> Unit_lit
+    | Byte_lit c -> Byte_lit c
+    | Pair_lit (ve0, ve1) -> Pair_lit (quote ve0, quote ve1)
+    | Record_lit fs -> Record_lit (List.map (fun (l, ve) -> l, quote ve) fs)
 
   let normalise (locals : local_env) (e : expr) : expr =
     quote (eval locals e)
@@ -344,7 +344,7 @@ module Semantics = struct
 
   (* Decode semantics *)
 
-  exception DecodeFailure of int
+  exception Decode_failure of int
 
   let get_byte input pos =
     if pos < Bytes.length input then
@@ -361,29 +361,29 @@ module Semantics = struct
           | Some _ -> invalid_arg "not a format item"
           | None -> invalid_arg "unbound item variable"
       end
-      | Fail _ -> raise (DecodeFailure pos)
+      | Fail _ -> raise (Decode_failure pos)
       | Byte s -> begin
           match get_byte input pos with
-          | Some c when Byte_set.mem c s -> pos + 1, ByteLit c
-          | _ -> raise (DecodeFailure pos)
+          | Some c when Byte_set.mem c s -> pos + 1, Byte_lit c
+          | _ -> raise (Decode_failure pos)
       end
       | Seq (f0, f1) ->
           let pos, e0 = go locals f0 input pos in
           let pos, e1 = go locals f1 input pos in
-          pos, PairLit (e0, e1)
+          pos, Pair_lit (e0, e1)
       | Union (f0, f1) -> begin
           match get_byte input pos with
           | Some b when Byte_set.mem b f0.info.first -> go locals f0 input pos
           | Some b when Byte_set.mem b f1.info.first -> go locals f1 input pos
           | _ when f0.info.nullable -> go locals f0 input pos
           | _ when f1.info.nullable -> go locals f1 input pos
-          | _ -> raise (DecodeFailure pos)
+          | _ -> raise (Decode_failure pos)
       end
       | Map (_, (_, e), f) ->
           let pos, ev = go locals f input pos in
           pos, eval (ev :: locals) e
     | Pure (_, e) -> pos, eval locals e
-      | FlatMap (_, (_, f1), f0) ->
+      | Flat_map (_, (_, f1), f0) ->
           let pos, ev0 = go locals f0 input pos in
           go (ev0 :: locals) f1 input pos
     in
@@ -398,7 +398,7 @@ module Refiner = struct
 
   type item =
     | Type of ty
-    | Format of { repr : ty; info : FormatInfo.t }
+    | Format of { repr : ty; info : Format_info.t }
     | Expr of expr * ty
 
   type item_context = (string * item) list
@@ -481,12 +481,12 @@ module Refiner = struct
 
   module Format = struct
 
-    let item (name : item_var) : [`FormatExpected | `UnboundVariable] is_format_err =
+    let item (name : item_var) : [`Format_expected | `Unbound_variable] is_format_err =
       fun items _ ->
         match List.assoc_opt name items with
         | Some (Format { repr; info }) -> Ok { node = Item name; repr; info }
-        | Some _ -> Error `FormatExpected
-        | None -> Error `UnboundVariable
+        | Some _ -> Error `Format_expected
+        | None -> Error `Unbound_variable
 
     let fail (t : is_ty) : is_format =
       fun items _ ->
@@ -494,43 +494,43 @@ module Refiner = struct
         {
           node = Fail t;
           repr = t;
-          info = FormatInfo.fail;
+          info = Format_info.fail;
         }
 
     let byte (s : Byte_set.t) : is_format =
       fun _ _ ->
         {
           node = Byte s;
-          repr = ByteTy;
-          info = FormatInfo.byte s;
+          repr = Byte_ty;
+          info = Format_info.byte s;
         }
 
-    let seq (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat] is_format_err =
+    let seq (f0 : is_format) (f1 : is_format) : [`Ambiguous_format] is_format_err =
       fun items locals ->
         let f0 = f0 items locals in
         let f1 = f1 items locals in
-        if not (FormatInfo.separate f0.info f1.info) then
-          Error `AmbiguousFormat
+        if not (Format_info.separate f0.info f1.info) then
+          Error `Ambiguous_format
         else
           Ok {
             node = Seq (f0, f1);
-            repr = PairTy (f0.repr, f1.repr);
-            info = FormatInfo.seq f0.info f1.info;
+            repr = Pair_ty (f0.repr, f1.repr);
+            info = Format_info.seq f0.info f1.info;
           }
 
-    let union (f0 : is_format) (f1 : is_format) : [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err =
+    let union (f0 : is_format) (f1 : is_format) : [`Ambiguous_format | `Repr_mismatch of ty * ty] is_format_err =
       fun items locals ->
         let f0 = f0 items locals in
         let f1 = f1 items locals in
-        if not (FormatInfo.non_overlapping f0.info f1.info) then
-          Error `AmbiguousFormat
+        if not (Format_info.non_overlapping f0.info f1.info) then
+          Error `Ambiguous_format
         else if not (unify_ty f0.repr f1.repr) then
-          Error (`ReprMismatch (f0.repr, f1.repr))
+          Error (`Repr_mismatch (f0.repr, f1.repr))
         else
           Ok {
             node = Union (f0, f1);
             repr = f0.repr;
-            info = FormatInfo.union f0.info f1.info;
+            info = Format_info.union f0.info f1.info;
           }
 
     let pure (e : synth_ty) : is_format =
@@ -539,7 +539,7 @@ module Refiner = struct
         {
           node = Pure (t, e);
           repr = t;
-          info = FormatInfo.empty;
+          info = Format_info.empty;
         }
 
     let map (x, e : string * (local_var -> synth_ty)) (f : is_format) : is_format =
@@ -552,17 +552,17 @@ module Refiner = struct
           info = f.info;
         }
 
-    let flat_map (x, f1 : string * (local_var -> is_format)) (f0 : is_format) : [`AmbiguousFormat] is_format_err =
+    let flat_map (x, f1 : string * (local_var -> is_format)) (f0 : is_format) : [`Ambiguous_format] is_format_err =
       fun items locals ->
         let f0 = f0 items locals in
         let f1 = f1 (List.length locals) items (f0.repr :: locals) in
-        if not (FormatInfo.separate f0.info f1.info) then
-          Error `AmbiguousFormat
+        if not (Format_info.separate f0.info f1.info) then
+          Error `Ambiguous_format
         else
           Ok {
-            node = FlatMap (f1.repr, (x, f1), f0);
+            node = Flat_map (f1.repr, (x, f1), f0);
             repr = f1.repr;
-            info = FormatInfo.seq f0.info f1.info;
+            info = Format_info.seq f0.info f1.info;
           }
 
     let repr (f : is_format) : is_ty =
@@ -573,34 +573,34 @@ module Refiner = struct
 
   module Structural = struct
 
-    let item_ty (name : item_var) : [`TypeExpected | `UnboundVariable] is_ty_err =
+    let item_ty (name : item_var) : [`Type_expected | `Unbound_variable] is_ty_err =
       fun items ->
         match List.assoc_opt name items with
         (* | Some (Type t) -> Ok (Item name) *)
         | Some (Type t) -> Ok t
-        | Some _ -> Error `TypeExpected
-        | None -> Error `UnboundVariable
+        | Some _ -> Error `Type_expected
+        | None -> Error `Unbound_variable
 
-    let item_expr (name : item_var) : [`ExprExpected | `UnboundVariable] synth_ty_err =
+    let item_expr (name : item_var) : [`Expr_expected | `Unbound_variable] synth_ty_err =
       fun items _ ->
         match List.assoc_opt name items with
         (* | Some (Expr (e, t)) -> Ok (Item name, t) *)
         | Some (Expr (e, t)) -> Ok (e, t)
-        | Some _ -> Error `ExprExpected
-        | None -> Error `UnboundVariable
+        | Some _ -> Error `Expr_expected
+        | None -> Error `Unbound_variable
 
-    let local (level : local_var) : [`UnboundVariable] synth_ty_err =
+    let local (level : local_var) : [`Unbound_variable] synth_ty_err =
       fun _ locals ->
         let index = List.length locals - level - 1 in
         match List.nth_opt locals index with
         | Some t -> Ok (Local index, t)
-        | None -> Error `UnboundVariable
+        | None -> Error `Unbound_variable
 
-    let conv (e : synth_ty) : [`TypeMismatch of ty * ty] check_ty_err =
+    let conv (e : synth_ty) : [`Type_mismatch of ty * ty] check_ty_err =
       fun t items locals ->
         let e, t' = e items locals in
         if unify_ty t t' then Ok e else
-          Error (`TypeMismatch (t, t'))
+          Error (`Type_mismatch (t, t'))
 
     let ann (e : check_ty) (t : is_ty) : synth_ty =
       fun items locals ->
@@ -614,11 +614,11 @@ module Refiner = struct
 
     let form : is_ty =
       fun _ ->
-        UnitTy
+        Unit_ty
 
     let intro : synth_ty =
       fun _ _ ->
-        UnitLit, UnitTy
+        Unit_lit, Unit_ty
 
   end
 
@@ -626,11 +626,11 @@ module Refiner = struct
 
     let form : is_ty =
       fun _ ->
-        ByteTy
+        Byte_ty
 
     let intro c : synth_ty =
       fun _ _ ->
-        ByteLit c, ByteTy
+        Byte_lit c, Byte_ty
 
   end
 
@@ -640,27 +640,27 @@ module Refiner = struct
       fun items ->
         let t0 = t0 items in
         let t1 = t1 items in
-        PairTy (t0, t1)
+        Pair_ty (t0, t1)
 
     let intro (e0 : synth_ty) (e1 : synth_ty) : synth_ty =
       fun items locals ->
         let e0, t0 = e0 items locals in
         let e1, t1 = e1 items locals in
-        PairLit (e0, e1), PairTy (t0, t1)
+        Pair_lit (e0, e1), Pair_ty (t0, t1)
 
-    let fst (e : synth_ty) : [`UnexpectedType] synth_ty_err =
+    let fst (e : synth_ty) : [`Unexpected_type] synth_ty_err =
       fun items locals ->
         let e, t = e items locals in
         match t with
-        | PairTy (t0, _) -> Ok (PairFst e, t0)
-        | _ -> Error `UnexpectedType
+        | Pair_ty (t0, _) -> Ok (Pair_fst e, t0)
+        | _ -> Error `Unexpected_type
 
-    let snd (e : synth_ty) : [`UnexpectedType] synth_ty_err =
+    let snd (e : synth_ty) : [`Unexpected_type] synth_ty_err =
       fun items locals ->
         let e, t = e items locals in
         match t with
-        | PairTy (_, t1) -> Ok (PairSnd e, t1)
-        | _ -> Error `UnexpectedType
+        | Pair_ty (_, t1) -> Ok (Pair_snd e, t1)
+        | _ -> Error `Unexpected_type
 
   end
 
@@ -670,52 +670,52 @@ module Refiner = struct
 
     let form_empty : is_ty =
       fun _ ->
-        RecordTy []
+        Record_ty []
 
-    let form (fields : (string * is_ty) list) : [`DuplicateFieldLabel of string] is_ty_err =
+    let form (fields : (string * is_ty) list) : [`Duplicate_field_label of string] is_ty_err =
       fun items ->
         let rec go seen =
           function
           | [] -> Ok []
           | (l, _) :: _ when List.mem l seen ->
-              Error (`DuplicateFieldLabel l) (* TODO: Collect multiple dupes *)
+              Error (`Duplicate_field_label l) (* TODO: Collect multiple dupes *)
           | (l, t) :: fields ->
               let t = t items in
               let* t_fields = go (l :: seen) fields in (* TODO: Make tail recursive *)
               Ok ((l, t) :: t_fields)
         in
         let* t_fields = go [] fields in
-        Ok (RecordTy t_fields)
+        Ok (Record_ty t_fields)
 
     let intro_empty : synth_ty =
       fun _ _ ->
-        RecordLit [], RecordTy []
+        Record_lit [], Record_ty []
 
-    let intro (fields : (string * synth_ty) list) : [`DuplicateFieldLabel of string] synth_ty_err =
+    let intro (fields : (string * synth_ty) list) : [`Duplicate_field_label of string] synth_ty_err =
       fun items locals ->
         let rec go seen =
           function
           | [] -> Ok ([], [])
           | (l, _) :: _ when List.mem l seen ->
-              Error (`DuplicateFieldLabel l) (* TODO: Collect multiple dupes *)
+              Error (`Duplicate_field_label l) (* TODO: Collect multiple dupes *)
           | (l, t) :: fields ->
               let e, t = t items locals in
               let* e_fields, t_fields = go (l :: seen) fields in (* TODO: Make tail recursive *)
               Ok ((l, e) :: e_fields, (l, t) :: t_fields)
         in
         let* e_fields, t_fields = go [] fields in
-        Ok (RecordLit e_fields, RecordTy t_fields)
+        Ok (Record_lit e_fields, Record_ty t_fields)
 
-    let proj (e : synth_ty) (l : string) : [`UnknownFieldLabel of ty] synth_ty_err =
+    let proj (e : synth_ty) (l : string) : [`Unknown_field_label of ty] synth_ty_err =
       fun items locals ->
         let e, t = e items locals in
         match t with
-        | RecordTy fs -> begin
+        | Record_ty fs -> begin
             match List.assoc_opt l fs with
-            | Some t -> Ok (RecordProj (e, l), t)
-            | None -> Error (`UnknownFieldLabel t)
+            | Some t -> Ok (Record_proj (e, l), t)
+            | None -> Error (`Unknown_field_label t)
         end
-        | _ -> Error (`UnknownFieldLabel t)
+        | _ -> Error (`Unknown_field_label t)
 
   end
 

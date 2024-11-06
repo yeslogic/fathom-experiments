@@ -37,9 +37,9 @@ let program :=
 
 let item :=
   | "format"; n = located(NAME); ":="; f = located(tm); ";";
-      { Surface.FormatDef (n, f) }
+      { Surface.Format_def (n, f) }
   | "type"; n = located(NAME); ":="; t = located(tm); ";";
-      { Surface.TypeDef (n, t) }
+      { Surface.Type_def (n, t) }
   | "def"; n = located(NAME); t = option(":"; ~ = located(tm); <>); ":="; e = located(tm); ";";
       { Surface.Def (n, t, e) }
 
@@ -57,11 +57,11 @@ let union_tm :=
 
 let range_tm :=
   | f = located(proj_tm); "{"; n = located(NAME); "=>"; b = located(tm); "}";
-      { Surface.ActionFormat (f, (n, b)) }
-  | start = inclusive; ".."; stop = inclusive; { Surface.RangeFormat (start, stop) }
-  | start = inclusive; "..<"; stop = exclusive; { Surface.RangeFormat (start, stop) }
-  | start = exclusive; ">.."; stop = inclusive; { Surface.RangeFormat (start, stop) }
-  | start = exclusive; ">..<"; stop = exclusive; { Surface.RangeFormat (start, stop) }
+      { Surface.Action_format (f, (n, b)) }
+  | start = inclusive; ".."; stop = inclusive; { Surface.Range_format (start, stop) }
+  | start = inclusive; "..<"; stop = exclusive; { Surface.Range_format (start, stop) }
+  | start = exclusive; ">.."; stop = inclusive; { Surface.Range_format (start, stop) }
+  | start = exclusive; ">..<"; stop = exclusive; { Surface.Range_format (start, stop) }
   | proj_tm
 
 let proj_tm :=
@@ -81,13 +81,13 @@ let atomic_tm :=
   | "!"; f = located(atomic_tm);
       { Surface.Op1(`Not, f) }
   | "{"; "}";
-      { Surface.RecordEmpty }
+      { Surface.Record_empty }
   | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); ":"; ~ = located(tm); <>); "}";
-      { Surface.RecordTy fs }
+      { Surface.Record_ty fs }
   | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
-      { Surface.RecordLit fs }
+      { Surface.Record_lit fs }
   | "{"; fs = trailing_nonempty_list(";", ~ = located(NAME); "<-"; ~ = located(tm); <>); "}";
-      { Surface.RecordFormat fs }
+      { Surface.Record_format fs }
   | "("; ")";
       { Surface.Tuple [] }
   | "("; t = located(tm); ","; ts = trailing_list(",", located(tm)); ")";

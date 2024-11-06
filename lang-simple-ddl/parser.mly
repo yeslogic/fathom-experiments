@@ -49,13 +49,13 @@ let program :=
 
 let item :=
   | "format"; n = located(NAME); ":="; tm = located(tm); ";";
-      { Surface.FormatDef (n, tm) }
+      { Surface.Format_def (n, tm) }
   | "format"; n = located(NAME); "{"; tms = trailing_list(";", record_format_field); "}";
-      { Surface.RecordFormat (n, tms) }
+      { Surface.Record_format (n, tms) }
   | "type"; n = located(NAME); ":="; tm = located(tm); ";";
-      { Surface.TypeDef (n, tm) }
+      { Surface.Type_def (n, tm) }
   | "type"; n = located(NAME); "{"; tms = trailing_list(";", ~ = located(NAME); ":"; ~ = located(tm); <>); "}";
-      { Surface.RecordType (n, tms) }
+      { Surface.Record_type (n, tms) }
   | "def"; n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm); ";";
       { Surface.TermDef (n, tm1, tm2) }
 
@@ -65,9 +65,9 @@ let record_format_field :=
   | "let"; n = located(NAME); "<-"; tm = located(tm);
       { Surface.Bind(n, tm) }
   | n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm);
-      { Surface.LetField(n, tm1, tm2) }
+      { Surface.Let_field(n, tm1, tm2) }
   | n = located(NAME); "<-"; tm = located(tm);
-      { Surface.BindField(n, tm) }
+      { Surface.Bind_field(n, tm) }
 
 let tm :=
   | tm1 = located(let_tm); ":"; tm2 = located(tm);
@@ -80,7 +80,7 @@ let let_tm :=
   | "let"; n = located(NAME); tm1 = option(":"; ~ = located(tm); <>); ":="; tm2 = located(tm); ";"; tm3 = located(let_tm);
       { Surface.Let(n, tm1, tm2, tm3) }
   | "if"; tm1 = located(tm); "then"; tm2 = located(let_tm); "else"; tm3 = located(let_tm);
-      { Surface.IfThenElse(tm1, tm2, tm3) }
+      { Surface.If_then_else(tm1, tm2, tm3) }
   | cmp_tm
 
 let cmp_tm :=
@@ -93,20 +93,20 @@ let cmp_tm :=
   | or_tm
 
 let or_tm :=
-  | tm1 = located(or_tm); "|"; tm2 = located(xor_tm); { Surface.Op2 (`LogicalOr, tm1, tm2) }
+  | tm1 = located(or_tm); "|"; tm2 = located(xor_tm); { Surface.Op2 (`Logical_or, tm1, tm2) }
   | xor_tm
 
 let xor_tm :=
-  | tm1 = located(xor_tm); "^"; tm2 = located(and_tm); { Surface.Op2 (`LogicalXor, tm1, tm2) }
+  | tm1 = located(xor_tm); "^"; tm2 = located(and_tm); { Surface.Op2 (`Logical_xor, tm1, tm2) }
   | and_tm
 
 let and_tm :=
-  | tm1 = located(and_tm); "&"; tm2 = located(shift_tm); { Surface.Op2 (`LogicalOr, tm1, tm2) }
+  | tm1 = located(and_tm); "&"; tm2 = located(shift_tm); { Surface.Op2 (`Logical_or, tm1, tm2) }
   | shift_tm
 
 let shift_tm :=
-  | tm1 = located(shift_tm); "<<"; tm2 = located(add_tm); { Surface.Op2 (`LogicalShl, tm1, tm2) }
-  | tm1 = located(shift_tm); ">>"; tm2 = located(add_tm); { Surface.Op2 (`ArithShr, tm1, tm2) }
+  | tm1 = located(shift_tm); "<<"; tm2 = located(add_tm); { Surface.Op2 (`Logical_shl, tm1, tm2) }
+  | tm1 = located(shift_tm); ">>"; tm2 = located(add_tm); { Surface.Op2 (`Arith_shr, tm1, tm2) }
   | add_tm
 
 let add_tm :=
@@ -125,7 +125,7 @@ let app_tm :=
   | "-"; tm = located(atomic_tm);
       { Surface.Op1(`Neg, tm) }
   | "!"; tm = located(atomic_tm);
-      { Surface.Op1(`LogicalNot, tm) }
+      { Surface.Op1(`Logical_not, tm) }
   | proj_tm
 
 let proj_tm :=
@@ -139,9 +139,9 @@ let atomic_tm :=
   | n = NAME;
       { Surface.Name (n, []) }
   | i = INT;
-      { Surface.IntLit i }
+      { Surface.Int_lit i }
   | "{"; tms = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
-      { Surface.RecordLit tms }
+      { Surface.Record_lit tms }
 
 // Utilities
 

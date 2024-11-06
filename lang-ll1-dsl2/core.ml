@@ -1,4 +1,4 @@
-module FormatInfo : sig
+module Format_info : sig
   (** Semantic information about a binary format. *)
 
   type t = {
@@ -98,25 +98,25 @@ end = struct
 end
 
 (** An unordered row of elements distinguished by label. *)
-module LabelMap = Map.Make (String)
+module Label_map = Map.Make (String)
 
 [@@@warning "-duplicate-definitions"]
 
 type ty =
   | Item of string
-  | ByteTy
-  | RecordTy of ty LabelMap.t
-  | TupleTy of ty list
-  | FormatRepr of format
+  | Byte_ty
+  | Record_ty of ty Label_map.t
+  | Tuple_ty of ty list
+  | Format_repr of format
 
 and expr =
   | Item of string
   | Local of int
-  | ByteLit of char
-  | RecordLit of expr LabelMap.t
-  | RecordProj of expr * string
-  | TupleLit of expr list
-  | TupleProj of expr * int
+  | Byte_lit of char
+  | Record_lit of expr Label_map.t
+  | Record_proj of expr * string
+  | Tuple_lit of expr list
+  | Tuple_proj of expr * int
 
 and format_node =
   | Item of string
@@ -126,11 +126,11 @@ and format_node =
   | Union of format * format
   | Pure of ty * expr
   | Map of ty * (string * expr) * format
-  | FlatMap of ty * (string * format) * format
+  | Flat_map of ty * (string * format) * format
 
 and format = {
   node : format_node;
-  info : FormatInfo.t;
+  info : Format_info.t;
 }
 
 type item =
@@ -152,20 +152,20 @@ let rec pp_print_ty ppf (t : ty) =
 and pp_print_atomic_ty ppf t =
   match t with
   | Item name -> Format.pp_print_string ppf name
-  | ByteTy -> Format.fprintf ppf "Byte"
-  | RecordTy fields ->
+  | Byte_ty -> Format.fprintf ppf "Byte"
+  | Record_ty fields ->
       Format.fprintf ppf "{@ %a@ }"
         (Format.pp_print_seq
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
           (fun ppf (l, t) -> Format.fprintf ppf "%s@ :@ %a" l pp_print_ty t))
-        (LabelMap.to_seq fields)
-  | TupleTy ts ->
+        (Label_map.to_seq fields)
+  | Tuple_ty ts ->
       Format.fprintf ppf "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
           pp_print_ty)
         ts
-  | FormatRepr f ->
+  | Format_repr f ->
       Format.fprintf ppf "%a.Repr"
         (pp_print_atomic_format []) f
   (* | t -> Format.fprintf ppf "(%a)" pp_print_ty t *)
@@ -176,22 +176,22 @@ and pp_print_expr names ppf (e : expr) =
 
 and pp_proj_expr names ppf e =
   match e with
-  | RecordProj (e, l) -> Format.fprintf ppf "%a.%s" (pp_proj_expr names) e l
-  | TupleProj (e, i) -> Format.fprintf ppf "%a.%i" (pp_proj_expr names) e i
+  | Record_proj (e, l) -> Format.fprintf ppf "%a.%s" (pp_proj_expr names) e l
+  | Tuple_proj (e, i) -> Format.fprintf ppf "%a.%i" (pp_proj_expr names) e i
   | e -> pp_print_atomic_expr names ppf e
 
 and pp_print_atomic_expr names ppf e =
   match e with
   | Item name -> Format.pp_print_string ppf name
   | Local index -> Format.pp_print_string ppf (List.nth names index)
-  | ByteLit c -> Format.fprintf ppf "%i" (Char.code c)
-  | RecordLit fields ->
+  | Byte_lit c -> Format.fprintf ppf "%i" (Char.code c)
+  | Record_lit fields ->
       Format.fprintf ppf "{@ %a@ }"
         (Format.pp_print_seq
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
           (fun ppf (l, f) -> Format.fprintf ppf "%s@ :=@ %a" l (pp_print_expr names) f))
-        (LabelMap.to_seq fields)
-  | TupleLit es ->
+        (Label_map.to_seq fields)
+  | Tuple_lit es ->
       Format.fprintf ppf "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
@@ -226,7 +226,7 @@ and pp_print_app_format names ppf f =
         n
         (pp_print_expr (n :: names)) e
         (pp_print_atomic_format names) f
-  | FlatMap (t, (n, f1), f0) ->
+  | Flat_map (t, (n, f1), f0) ->
       Format.fprintf ppf "@[#flat-map@ @@%a@ (%s@ =>@ %a)@ %a@]"
         pp_print_atomic_ty t
         n
@@ -280,14 +280,14 @@ let pp_print_program ppf p =
 module Semantics = struct
 
   type vty =
-    | ByteTy
-    | RecordTy of vty LabelMap.t
-    | TupleTy of vty list
+    | Byte_ty
+    | Record_ty of vty Label_map.t
+    | Tuple_ty of vty list
 
   type vexpr =
-    | ByteLit of char
-    | RecordLit of vexpr LabelMap.t
-    | TupleLit of vexpr list
+    | Byte_lit of char
+    | Record_lit of vexpr Label_map.t
+    | Tuple_lit of vexpr list
 
   type local_env =
     vexpr list
@@ -297,12 +297,12 @@ module Semantics = struct
 
   let record_proj (ve : vexpr) (l : string) : vexpr =
     match ve with
-    | RecordLit fs -> LabelMap.find l fs
+    | Record_lit fs -> Label_map.find l fs
     | _ -> invalid_arg "expected pair"
 
   let tuple_proj (ve : vexpr) (i : int) : vexpr =
     match ve with
-    | TupleLit ves -> List.nth ves i
+    | Tuple_lit ves -> List.nth ves i
     | _ -> invalid_arg "expected pair"
 
   (* Evalution *)
@@ -315,10 +315,10 @@ module Semantics = struct
       | Some _ -> invalid_arg "expected type"
       | None -> invalid_arg "unbound item variable"
     end
-    | ByteTy -> ByteTy
-    | RecordTy fs -> RecordTy (LabelMap.map (eval_ty items) fs)
-    | TupleTy ts -> TupleTy (List.map (eval_ty items) ts)
-    | FormatRepr f -> eval_format_repr items f
+    | Byte_ty -> Byte_ty
+    | Record_ty fs -> Record_ty (Label_map.map (eval_ty items) fs)
+    | Tuple_ty ts -> Tuple_ty (List.map (eval_ty items) ts)
+    | Format_repr f -> eval_format_repr items f
 
   and eval_format_repr (items : (string * item) list) (f : format) : vty =
     match f.node with
@@ -329,12 +329,12 @@ module Semantics = struct
       | None -> invalid_arg "unbound item variable"
     end
     | Fail t -> eval_ty items t
-    | Byte _ -> ByteTy
-    | Seq fs -> TupleTy (List.map (eval_format_repr items) fs)
+    | Byte _ -> Byte_ty
+    | Seq fs -> Tuple_ty (List.map (eval_format_repr items) fs)
     | Union (f1, _) -> eval_format_repr items f1
     | Map (t, (_, _), _) -> eval_ty items t
     | Pure (t, _) -> eval_ty items t
-    | FlatMap (t, (_, _), _) -> eval_ty items t
+    | Flat_map (t, (_, _), _) -> eval_ty items t
 
   let rec eval_expr (items : (string * item) list) (locals : local_env) (e : expr) : vexpr =
     match e with
@@ -349,23 +349,23 @@ module Semantics = struct
       | Some v -> v
       | None -> invalid_arg "unbound local variable"
     end
-    | ByteLit c -> ByteLit c
-    | RecordLit fs -> RecordLit (LabelMap.map (eval_expr items locals) fs)
-    | RecordProj (e, l) -> record_proj (eval_expr items locals e) l
-    | TupleLit es -> TupleLit (List.map (eval_expr items locals) es)
-    | TupleProj (e, i) -> tuple_proj (eval_expr items locals e) i
+    | Byte_lit c -> Byte_lit c
+    | Record_lit fs -> Record_lit (Label_map.map (eval_expr items locals) fs)
+    | Record_proj (e, l) -> record_proj (eval_expr items locals e) l
+    | Tuple_lit es -> Tuple_lit (List.map (eval_expr items locals) es)
+    | Tuple_proj (e, i) -> tuple_proj (eval_expr items locals e) i
 
   let rec quote_ty (vt : vty) : ty =
     match vt with
-    | ByteTy -> ByteTy
-    | RecordTy fs -> RecordTy (LabelMap.map quote_ty fs)
-    | TupleTy ts -> TupleTy (List.map quote_ty ts)
+    | Byte_ty -> Byte_ty
+    | Record_ty fs -> Record_ty (Label_map.map quote_ty fs)
+    | Tuple_ty ts -> Tuple_ty (List.map quote_ty ts)
 
   let rec quote_expr (ve : vexpr) : expr =
     match ve with
-    | ByteLit c -> ByteLit c
-    | RecordLit fs -> RecordLit (LabelMap.map quote_expr fs)
-    | TupleLit ves -> TupleLit (List.map quote_expr ves)
+    | Byte_lit c -> Byte_lit c
+    | Record_lit fs -> Record_lit (Label_map.map quote_expr fs)
+    | Tuple_lit ves -> Tuple_lit (List.map quote_expr ves)
 
   let normalise_expr (items : (string * item) list) (locals : local_env) (e : expr) : expr =
     quote_expr (eval_expr items locals e)
@@ -375,16 +375,16 @@ module Semantics = struct
 
   let rec unify_tys (vt1 : vty) (vt2 : vty) : bool =
     match vt1, vt2 with
-    | ByteTy, ByteTy -> true
-    | RecordTy fields1, RecordTy fields2 ->
-      LabelMap.equal unify_tys fields1 fields2
-    | TupleTy vts1, TupleTy vts2 ->
+    | Byte_ty, Byte_ty -> true
+    | Record_ty fields1, Record_ty fields2 ->
+      Label_map.equal unify_tys fields1 fields2
+    | Tuple_ty vts1, Tuple_ty vts2 ->
       List.equal unify_tys vts1 vts2
     | _, _ -> false
 
   (* Decode semantics *)
 
-  exception DecodeFailure of int
+  exception Decode_failure of int
 
   let get_byte input pos =
     if pos < Bytes.length input then
@@ -401,28 +401,28 @@ module Semantics = struct
           | Some _ -> invalid_arg "not a format item"
           | None -> invalid_arg "unbound item variable"
       end
-      | Fail _ -> raise (DecodeFailure pos)
+      | Fail _ -> raise (Decode_failure pos)
       | Byte s -> begin
           match get_byte input pos with
-          | Some c when Byte_set.mem c s -> pos + 1, ByteLit c
-          | _ -> raise (DecodeFailure pos)
+          | Some c when Byte_set.mem c s -> pos + 1, Byte_lit c
+          | _ -> raise (Decode_failure pos)
       end
       | Seq fs ->
           let pos, es = List.fold_left_map (go locals input) pos fs in
-          pos, TupleLit es
+          pos, Tuple_lit es
       | Union (f0, f1) -> begin
           match get_byte input pos with
           | Some b when Byte_set.mem b f0.info.first -> go locals input pos f0
           | Some b when Byte_set.mem b f1.info.first -> go locals input pos f1
           | _ when f0.info.nullable -> go locals input pos f0
           | _ when f1.info.nullable -> go locals input pos f1
-          | _ -> raise (DecodeFailure pos)
+          | _ -> raise (Decode_failure pos)
       end
       | Map (_, (_, e), f) ->
           let pos, ev = go locals input pos f in
           pos, eval_expr p.items (ev :: locals) e
       | Pure (_, e) -> pos, eval_expr p.items locals e
-      | FlatMap (_, (_, f1), f0) ->
+      | Flat_map (_, (_, f1), f0) ->
           let pos, ev0 = go locals input pos f0 in
           go (ev0 :: locals) input pos f1
     in

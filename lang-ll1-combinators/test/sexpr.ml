@@ -1,7 +1,7 @@
 module SExpr = struct
 
   open Ll1.Parser
-  open Ll1.ParserUtil
+  open Ll1.Parser_util
 
   let string_of_list cs =
     let buf = Buffer.create 0 in
