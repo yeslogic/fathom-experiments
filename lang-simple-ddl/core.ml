@@ -321,7 +321,7 @@ module Compile = struct
   let rec compile_stmts (ctx : context) (expr : expr) : Rust.stmts =
     match expr with
     | Let (name, def_ty, def, body) ->
-        let name = CaseConv.quiet_snake_case name in
+        let name = Case_conv.quiet_snake_case name in
         let ty = compile_ty ctx def_ty in
         let expr = compile_expr ctx def in
         let stmts, body_expr = compile_stmts (extend_source_local ctx name) body in
@@ -344,7 +344,7 @@ module Compile = struct
         let fields =
           StringMap.to_seq field_exprs
           |> Seq.map (fun (label, expr) ->
-              CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
+              Case_conv.quiet_snake_case label, (* TODO: handle this better? *)
               compile_expr ctx expr)
           |> List.of_seq
         in
@@ -354,7 +354,7 @@ module Compile = struct
         (* TODO: lookup field mappings *)
         StructProj (
           compile_expr ctx head,
-          CaseConv.quiet_snake_case label (* TODO: handle this better? *)
+          Case_conv.quiet_snake_case label (* TODO: handle this better? *)
         )
     | ListLit exprs ->
         VecLit (List.map (compile_expr ctx) exprs)
@@ -401,14 +401,14 @@ module Compile = struct
   let rec compile_format_stmts (ctx : context) (fmt : format) : Rust.stmts =
     match fmt with
     | Bind (name, Pure (def_ty, def), body_fmt) ->
-        let name = CaseConv.quiet_snake_case name in
+        let name = Case_conv.quiet_snake_case name in
         let ty = compile_ty ctx def_ty in
         let expr = compile_expr ctx def in
         let stmts, body_expr = compile_format_stmts (extend_source_local ctx name) body_fmt in
         Let (name, Some ty, expr) :: stmts, body_expr
 
     | Bind (name, def_fmt, body_fmt) ->
-        let name = CaseConv.quiet_snake_case name in
+        let name = Case_conv.quiet_snake_case name in
         let expr = compile_format_expr ctx def_fmt in
         let stmts, body_expr = compile_format_stmts (extend_source_local ctx name) body_fmt in
         Let (name, None, PostfixOp (expr, "?")) :: stmts, body_expr
@@ -447,22 +447,22 @@ module Compile = struct
   let compile_item (ctx : context) (name, item : string * item) : string * Rust.item =
     match item with
     | TypeDef ty ->
-        let name = CaseConv.pascal_case name in
+        let name = Case_conv.pascal_case name in
         name, Type (name, compile_ty ctx ty)
 
     | RecordType field_tys ->
-        let name = CaseConv.pascal_case name in
+        let name = Case_conv.pascal_case name in
         let fields =
           StringMap.to_seq field_tys
           |> Seq.map (fun (label, ty) ->
-            CaseConv.quiet_snake_case label, (* TODO: handle this better? *)
+            Case_conv.quiet_snake_case label, (* TODO: handle this better? *)
             compile_ty ctx ty)
           |> List.of_seq
         in
         name, Struct (name, fields)
 
     | FormatDef fmt ->
-        let name = "read_" ^ CaseConv.quiet_snake_case name in
+        let name = "read_" ^ Case_conv.quiet_snake_case name in
         let item : Rust.item =
           Fn (
             name,
@@ -478,7 +478,7 @@ module Compile = struct
         name, item
 
     | ExprDef (def_ty, def) ->
-        let name = CaseConv.screaming_snake_case name in
+        let name = Case_conv.screaming_snake_case name in
         let ty = compile_ty ctx def_ty in
         (* FIXME: check if the expression is a valid constant *)
         let expr = compile_expr ctx def in

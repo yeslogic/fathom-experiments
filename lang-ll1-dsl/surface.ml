@@ -148,7 +148,7 @@ end = struct
       error loc ("integer `" ^ string_of_int i ^ "` is outside the range `0..255`")
 
   let byte_set_of_int loc i =
-    ByteSet.singleton (byte_of_int loc i)
+    Byte_set.singleton (byte_of_int loc i)
 
   let byte_set_of_range start stop =
     let start =
@@ -164,7 +164,7 @@ end = struct
       | Exclusive { data = Int stop; _ } -> stop - 1 (* TODO: Check [stop] is in 0..<255 *)
       | Inclusive { loc; _ } | Exclusive { loc; _ } -> error loc "integer literal expected"
     in
-    ByteSet.range (Char.chr start) (Char.chr stop)
+    Byte_set.range (Char.chr start) (Char.chr stop)
 
   let rec elab_check_ty (context : LocalContext.t) (t : tm) : R.check_ty =
     fun ty ->
@@ -236,9 +236,9 @@ end = struct
     | Not t -> begin
         match t.data with
         | Int i ->
-            R.Format.byte (byte_set_of_int t.loc i |> ByteSet.neg)
+            R.Format.byte (byte_set_of_int t.loc i |> Byte_set.neg)
         | Range (start, stop) ->
-            R.Format.byte (byte_set_of_range start stop |> ByteSet.neg)
+            R.Format.byte (byte_set_of_range start stop |> Byte_set.neg)
         | _ ->
             error t.loc "Can only apply `!_` to bytes and byte ranges"
     end

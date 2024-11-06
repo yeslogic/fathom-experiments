@@ -1,17 +1,17 @@
 module SExpr = struct
 
-  open LL1.Parser
-  open LL1.ParserUtil
+  open Ll1.Parser
+  open Ll1.ParserUtil
 
   let string_of_list cs =
     let buf = Buffer.create 0 in
     List.iter (Buffer.add_char buf) cs;
     Buffer.contents buf
 
-  let letter = byte_set ByteSet.(union (range 'a' 'z') (range 'A' 'Z'))
-  let digit = byte_set ByteSet.(range '0' '9')
+  let letter = byte_set Byte_set.(union (range 'a' 'z') (range 'A' 'Z'))
+  let digit = byte_set Byte_set.(range '0' '9')
 
-  let space = byte_set ByteSet.(of_string " \t\n")
+  let space = byte_set Byte_set.(of_string " \t\n")
   let spaces0 = skip_many0 space
   let spaces1 = skip_many1 space
 
@@ -93,7 +93,7 @@ let s100 () = string_of_sexp (generate_sexp 100)
 
 let test str =
   let len = Bytes.length str in
-  let t = str |> time (fun s -> LL1.Parser.parse sexp s 0) in
+  let t = str |> time (fun s -> Ll1.Parser.parse sexp s 0) in
   let rate = (float_of_int len /. t) in begin
     Printf.printf "String length: %d bytes\n" len;
     Printf.printf "Parser elapsed time: %.3f sec\n" t;

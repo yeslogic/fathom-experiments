@@ -6,11 +6,11 @@ module FormatInfo : sig
     (** The {i nullability predicate}, i.e. whether the parser might succeed
         while consuming no input. *)
 
-    first : ByteSet.t;
+    first : Byte_set.t;
     (** The {i first set}, i.e. the set of bytes that can appear as the first
         byte of this parser. *)
 
-    follow_last : ByteSet.t;
+    follow_last : Byte_set.t;
     (** The {i follow set}, i.e. the set of bytes that can appear at the first
         byte of each suffix. *)
   }
@@ -35,7 +35,7 @@ module FormatInfo : sig
   val empty : t
   (** [empty] describes a language containing only the empty string. *)
 
-  val byte : ByteSet.t -> t
+  val byte : Byte_set.t -> t
   (** [byte c] describes a language containg a single byte in the set [s]. *)
 
   val fail : t
@@ -53,46 +53,46 @@ end = struct
 
   type t = {
     nullable : bool;
-    first : ByteSet.t;
-    follow_last : ByteSet.t;
+    first : Byte_set.t;
+    follow_last : Byte_set.t;
   }
 
   let empty = {
     nullable = true; (* Never consumes any input *)
-    first = ByteSet.empty;
-    follow_last = ByteSet.empty;
+    first = Byte_set.empty;
+    follow_last = Byte_set.empty;
   }
 
   let byte s = {
     nullable = false; (* Always consumes exactly one byte from the input *)
     first = s;
-    follow_last = ByteSet.empty;
+    follow_last = Byte_set.empty;
   }
 
-  let fail = byte ByteSet.empty
+  let fail = byte Byte_set.empty
 
   let separate i1 i2 =
     (* TODO: Could it be ok for either [i1] or [i2] to be nullable? *)
-    not i1.nullable && ByteSet.disjoint i1.follow_last i2.first
+    not i1.nullable && Byte_set.disjoint i1.follow_last i2.first
 
   let non_overlapping i1 i2 =
-    not (i1.nullable && i2.nullable) && ByteSet.disjoint i1.first i2.first
+    not (i1.nullable && i2.nullable) && Byte_set.disjoint i1.first i2.first
 
   let seq i1 i2 = {
     nullable = i1.nullable && i2.nullable;
     first = i1.first;
     follow_last =
-      ByteSet.union
+      Byte_set.union
         i2.follow_last
         (if i2.nullable
-          then ByteSet.union i2.first i1.follow_last
-          else ByteSet.empty);
+          then Byte_set.union i2.first i1.follow_last
+          else Byte_set.empty);
   }
 
   let union i1 i2 = {
     nullable = i1.nullable || i2.nullable;
-    first = ByteSet.union i1.first i2.first;
-    follow_last = ByteSet.union i1.follow_last i2.follow_last;
+    first = Byte_set.union i1.first i2.first;
+    follow_last = Byte_set.union i1.follow_last i2.follow_last;
   }
 
 end
@@ -121,7 +121,7 @@ and expr =
 and format_node =
   | Item of string
   | Fail of ty
-  | Byte of ByteSet.t
+  | Byte of Byte_set.t
   | Seq of format list
   | Union of format * format
   | Pure of ty * expr
@@ -238,7 +238,7 @@ and pp_print_app_format names ppf f =
 and pp_print_atomic_format names ppf f =
   match f.node with
   | Item name -> Format.fprintf ppf "%s" name
-  | Byte s -> Format.fprintf ppf "@[%a@]" ByteSet.pp_print s (* TODO: Custom printing *)
+  | Byte s -> Format.fprintf ppf "@[%a@]" Byte_set.pp_print s (* TODO: Custom printing *)
   | Seq fs ->
       Format.fprintf ppf "(%a)"
         (Format.pp_print_list
@@ -404,7 +404,7 @@ module Semantics = struct
       | Fail _ -> raise (DecodeFailure pos)
       | Byte s -> begin
           match get_byte input pos with
-          | Some c when ByteSet.mem c s -> pos + 1, ByteLit c
+          | Some c when Byte_set.mem c s -> pos + 1, ByteLit c
           | _ -> raise (DecodeFailure pos)
       end
       | Seq fs ->
@@ -412,8 +412,8 @@ module Semantics = struct
           pos, TupleLit es
       | Union (f0, f1) -> begin
           match get_byte input pos with
-          | Some b when ByteSet.mem b f0.info.first -> go locals input pos f0
-          | Some b when ByteSet.mem b f1.info.first -> go locals input pos f1
+          | Some b when Byte_set.mem b f0.info.first -> go locals input pos f0
+          | Some b when Byte_set.mem b f1.info.first -> go locals input pos f1
           | _ when f0.info.nullable -> go locals input pos f0
           | _ when f1.info.nullable -> go locals input pos f1
           | _ -> raise (DecodeFailure pos)

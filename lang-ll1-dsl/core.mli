@@ -90,7 +90,7 @@ module Refiner : sig
 
     val item : item_var -> [`FormatExpected | `UnboundVariable] is_format_err
     val fail : is_ty -> is_format
-    val byte : ByteSet.t -> is_format
+    val byte : Byte_set.t -> is_format
     val seq : is_format -> is_format -> [`AmbiguousFormat] is_format_err
     val union : is_format -> is_format -> [`AmbiguousFormat | `ReprMismatch of ty * ty] is_format_err
     val pure : synth_ty -> is_format

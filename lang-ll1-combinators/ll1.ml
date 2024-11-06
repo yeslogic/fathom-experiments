@@ -16,11 +16,11 @@ module Tp : sig
     (** The {i nullability predicate}, i.e. whether the parser might succeed
         while consuming no input. *)
 
-    first : ByteSet.t;
+    first : Byte_set.t;
     (** The {i first set}, i.e. the set of bytes that can appear as the first
         byte of this parser. *)
 
-    follow : ByteSet.t;
+    follow : Byte_set.t;
     (** The {i follow set}, i.e. the set of bytes that can appear at the first
         byte of each suffix. *)
   }
@@ -34,7 +34,7 @@ module Tp : sig
   val byte : char -> t
   (** [byte c] is the type of the singleton language containing the byte [b]. *)
 
-  val byte_set : ByteSet.t -> t
+  val byte_set : Byte_set.t -> t
   (** [byte_set s] is the type of the language containg single byte strings
       corresponding to each element of [s]. *)
 
@@ -65,33 +65,33 @@ end = struct
 
   type t = {
     null : bool;
-    first : ByteSet.t;
-    follow : ByteSet.t;
+    first : Byte_set.t;
+    follow : Byte_set.t;
   }
 
   let pp_print ppf t =
     Format.fprintf ppf "{\n";
     Format.fprintf ppf "   null = %a;\n" Format.pp_print_bool t.null;
-    Format.fprintf ppf "   first = ByteSet.of_string \"%a\";\n" ByteSet.pp_print t.first;
-    Format.fprintf ppf "   follow = ByteSet.of_string \"%a\";\n" ByteSet.pp_print t.follow;
+    Format.fprintf ppf "   first = Byte_set.of_string \"%a\";\n" Byte_set.pp_print t.first;
+    Format.fprintf ppf "   follow = Byte_set.of_string \"%a\";\n" Byte_set.pp_print t.follow;
     Format.fprintf ppf "}\n"
 
   exception TypeError of string
 
   let empty = {
     null = true; (* Never consumes any input *)
-    first = ByteSet.empty;
-    follow = ByteSet.empty;
+    first = Byte_set.empty;
+    follow = Byte_set.empty;
   }
 
   let byte_set s = {
     null = false; (* Always consumes exactly one byte from the input *)
     first = s;
-    follow = ByteSet.empty;
+    follow = Byte_set.empty;
   }
 
-  let byte b = byte_set (ByteSet.singleton b)
-  let fail = byte_set ByteSet.empty
+  let byte b = byte_set (Byte_set.singleton b)
+  let fail = byte_set Byte_set.empty
 
   let bytes s =
     if Bytes.length s = 0 then
@@ -105,13 +105,13 @@ end = struct
       start parsing a parser of type [t2] without needing to backtrack. *)
   let separate t1 t2 =
     (* TODO: Could it be ok for either [t1] or [t2] to be nullable? *)
-    not t1.null && ByteSet.disjoint t1.follow t2.first
+    not t1.null && Byte_set.disjoint t1.follow t2.first
 
   (** [non_overlapping t1 t2] checks if the two types can be uniquely
       distinguished based on their first sets. This is important to avoid
       ambiguities in alternation and hence avoid backtracking. *)
   let non_overlapping t1 t2 =
-    not (t1.null && t2.null) && ByteSet.disjoint t1.first t2.first
+    not (t1.null && t2.null) && Byte_set.disjoint t1.first t2.first
 
   let seq t1 t2 =
     if separate t1 t2 then
@@ -119,11 +119,11 @@ end = struct
         null = false;
         first = t1.first;
         follow =
-          ByteSet.union
+          Byte_set.union
             t2.follow
             (if t2.null
-              then ByteSet.union t2.first t1.follow
-              else ByteSet.empty);
+              then Byte_set.union t2.first t1.follow
+              else Byte_set.empty);
       }
     else begin
       raise (TypeError "ambiguous sequencing")
@@ -133,16 +133,16 @@ end = struct
     if non_overlapping t1 t2 then
       {
         null = t1.null || t2.null;
-        first = ByteSet.union t1.first t2.first;
-        follow = ByteSet.union t1.follow t2.follow;
+        first = Byte_set.union t1.first t2.first;
+        follow = Byte_set.union t1.follow t2.follow;
       }
     else
       raise (TypeError "ambiguous alternation")
 
   let equal t1 t2 =
     t1.null = t2.null
-      && ByteSet.equal t1.first t2.first
-      && ByteSet.equal t1.follow t2.follow
+      && Byte_set.equal t1.first t2.first
+      && Byte_set.equal t1.follow t2.follow
 
   let fix f =
     let rec loop t =
@@ -173,7 +173,7 @@ module Parser: sig
   val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
 
   val byte : char -> unit t
-  val byte_set : ByteSet.t -> char t
+  val byte_set : Byte_set.t -> char t
   val bytes : bytes -> unit t
 
   val fail : 'a t
@@ -243,7 +243,7 @@ end = struct
     tp = Tp.byte_set s;
     parse = fun input pos ->
       match get_byte input pos with
-      | Some b when ByteSet.mem b s -> pos + 1, b
+      | Some b when Byte_set.mem b s -> pos + 1, b
       | _ -> raise (ParseFailure pos);
   }
 
@@ -266,8 +266,8 @@ end = struct
     tp = Tp.alt p1.tp p2.tp;
     parse = fun input pos ->
       match get_byte input pos with
-      | Some b when ByteSet.mem b p1.tp.Tp.first -> p1.parse input pos
-      | Some b when ByteSet.mem b p2.tp.Tp.first -> p2.parse input pos
+      | Some b when Byte_set.mem b p1.tp.Tp.first -> p1.parse input pos
+      | Some b when Byte_set.mem b p2.tp.Tp.first -> p2.parse input pos
       | _ when p1.tp.Tp.null -> p1.parse input pos
       | _ when p2.tp.Tp.null -> p2.parse input pos
       | _ -> raise (ParseFailure pos);

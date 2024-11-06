@@ -1,5 +1,5 @@
 (executable
-  (name Main)
+  (name main)
   (public_name simple-ddl)
   (package simple-ddl)
   (preprocess
@@ -11,5 +11,5 @@
     tsort))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (explain true))

@@ -84,7 +84,7 @@ end = struct
       error loc (Format.asprintf "integer `%i` is outside the range `0..255`" i)
 
   let byte_set_of_int loc i =
-    ByteSet.singleton (byte_of_int loc i)
+    Byte_set.singleton (byte_of_int loc i)
 
   let byte_set_of_range (start : bound) (stop : bound) =
     let start =
@@ -98,7 +98,7 @@ end = struct
       | Inclusive stop -> byte_of_int stop.loc stop.data
       | Exclusive stop -> byte_of_int stop.loc (stop.data - 1)
     in
-    ByteSet.range start stop
+    Byte_set.range start stop
 
   let format_of_byte_set s : Core.format = {
     node = Byte s;
@@ -355,7 +355,7 @@ end = struct
           | RangeFormat (start, stop) -> byte_set_of_range start stop
           | _ -> error tm.loc "negation is only supported for integer and range formats"
         in
-        FormatTm (format_of_byte_set (ByteSet.neg s))
+        FormatTm (format_of_byte_set (Byte_set.neg s))
 
     | Op2 (`Or, f1, f2) ->
       let f1 = check_format ctx f1 in

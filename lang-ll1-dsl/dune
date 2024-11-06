@@ -1,5 +1,5 @@
 (executable
-  (name Main)
+  (name main)
   (public_name ll1-dsl)
   (package ll1-dsl)
   (preprocess
@@ -10,5 +10,5 @@
     sedlex))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (explain true))

@@ -1,18 +1,18 @@
 module Lookahead = struct
 
-  type t = ByteSet.t list
+  type t = Byte_set.t list
 
   let pp_print fmt l =
     Format.fprintf fmt "@[[%a]@]"
       (Format.pp_print_list
-        ByteSet.pp_print
+        Byte_set.pp_print
         ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) l
 
   let rec alt (l0 : t) (l1 : t) : t =
     match l0, l1 with
     | [], _ | _, [] -> []
     | s0 :: l0, s1 :: l1 ->
-        ByteSet.union s0 s1 :: alt l0 l1
+        Byte_set.union s0 s1 :: alt l0 l1
 
   let cat (l0 : t) (l1 : t) : t =
     l0 @ l1
@@ -25,7 +25,7 @@ module Format = struct
   type t =
     | Zero
     | Unit
-    | Byte of ByteSet.t
+    | Byte of Byte_set.t
     | Alt of t * t
     | Cat of t * t
     | Repeat of t * t
@@ -41,7 +41,7 @@ module Format = struct
     | Unit -> Some input
     | Byte s ->
         begin match input with
-        | s' :: _ when ByteSet.disjoint s s' -> None
+        | s' :: _ when Byte_set.disjoint s s' -> None
         | _ :: input -> Some input
         | [] -> Some []
         end
@@ -95,7 +95,7 @@ module DetFormat = struct
   type t =
     | Zero
     | Unit
-    | Byte of ByteSet.t
+    | Byte of Byte_set.t
     | If of Lookahead.t * t * t
     | Cat of t * t
     | While of Lookahead.t * t
@@ -106,7 +106,7 @@ module DetFormat = struct
     function
     | Zero -> Format.fprintf fmt "zero"
     | Unit -> Format.fprintf fmt "unit"
-    | Byte s -> Format.fprintf fmt "%a" ByteSet.pp_print s
+    | Byte s -> Format.fprintf fmt "%a" Byte_set.pp_print s
     | If (l, f0, f1) ->
         Format.fprintf fmt "if@ %a@ @[(%a)@]@ @[(%a)@]"
           Lookahead.pp_print l
@@ -172,8 +172,8 @@ let rec compile (n : int) : Format.t -> (DetFormat.t, string) result =
 
 
 let () =
-  let is i : Format.t = Byte ByteSet.(singleton i) in
-  let not i : Format.t = Byte ByteSet.(singleton i |> neg) in
+  let is i : Format.t = Byte Byte_set.(singleton i) in
+  let not i : Format.t = Byte Byte_set.(singleton i |> neg) in
 
   let ( <|> ) f0 f1 : Format.t = Alt (f0, f1) in
   let ( <+> ) f0 f1 : Format.t = Cat (f0, f1) in

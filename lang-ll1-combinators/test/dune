@@ -1,5 +1,5 @@
 (test
-  (name SExpr)
+  (name sexpr)
   (package ll1-combinators)
   (libraries
     byte-set
