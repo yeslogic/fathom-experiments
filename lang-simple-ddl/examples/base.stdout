@@ -4,18 +4,6 @@ fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok(i64::from(*byte))
 }
 
-fn read_u16be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-    let b0 = read_byte(input, pos)?;
-    let b1 = read_byte(input, pos)?;
-    Ok((b0 << 8) | b1)
-}
-
-fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-    let b0 = read_byte(input, pos)?;
-    let b1 = read_byte(input, pos)?;
-    Ok(b0 | (b1 << 8))
-}
-
 fn read_u64le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b0 = read_byte(input, pos)?;
     let b1 = read_byte(input, pos)?;
@@ -42,16 +30,10 @@ fn read_u64be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
        (b5 << 16) | (b6 << 8) | b7)
 }
 
-fn read_u32be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b0 = read_byte(input, pos)?;
     let b1 = read_byte(input, pos)?;
-    let b2 = read_byte(input, pos)?;
-    let b3 = read_byte(input, pos)?;
-    Ok((b0 << 24) | (b1 << 16) | (b2 << 8) | b3)
-}
-
-fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-    read_byte(input, pos)
+    Ok(b0 | (b1 << 8))
 }
 
 fn read_u32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
@@ -60,4 +42,36 @@ fn read_u32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b2 = read_byte(input, pos)?;
     let b3 = read_byte(input, pos)?;
     Ok(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24))
+}
+
+fn read_u24be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    Ok((b0 << 16) | (b1 << 16) | b2)
+}
+
+fn read_u16be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    Ok((b0 << 8) | b1)
+}
+
+fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    read_byte(input, pos)
+}
+
+fn read_u32be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    let b3 = read_byte(input, pos)?;
+    Ok((b0 << 24) | (b1 << 16) | (b2 << 8) | b3)
+}
+
+fn read_u24le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8) | (b2 << 16))
 }
