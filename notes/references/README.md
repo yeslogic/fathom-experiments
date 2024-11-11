@@ -24,6 +24,10 @@ Projects:
 
 - [Doodle](./doodle.md)
 - [Fathom](./fathom.md)
+- [Daedalus](https://github.com/GaloisInc/daedalus)
+- [Everparse](https://github.com/project-everest/everparse)
+- [Kaitai Struct](https://kaitai.io/)
+- [restructure](https://github.com/foliojs/restructure)
 
 ## Programming Languages
 
