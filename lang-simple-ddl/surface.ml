@@ -123,8 +123,8 @@ end = struct
     | Core.Semantics.Failed_to_unify ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_print_ty (quote_vty vt1)
-          Core.pp_print_ty (quote_vty vt2))
+          Core.pp_ty (quote_vty vt1)
+          Core.pp_ty (quote_vty vt2))
 
 
   (** {1 Bidirectional elaboration} *)
@@ -177,7 +177,7 @@ end = struct
           error tm.loc
             (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %s@]@ @[found: %a@]@]"
               "record type"
-              Core.pp_print_ty (quote_vty vty))
+              Core.pp_ty (quote_vty vty))
         end
 
     | If_then_else (head, tm1, tm2) ->

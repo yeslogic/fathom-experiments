@@ -6,6 +6,7 @@
     (pps sedlex.ppx))
   (libraries
     case-conv
+    cmdliner
     menhirLib
     sedlex
     tsort))

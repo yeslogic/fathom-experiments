@@ -53,6 +53,7 @@
   (name simple-ddl)
   (depends
     case-conv
+    (cmdliner (>= "1.3"))
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (sedlex (>= "3.2"))

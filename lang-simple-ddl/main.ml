@@ -6,24 +6,48 @@ let print_error (severity : string) (start, _ : Lexing.position * Lexing.positio
       severity
       message
 
-let () =
+let elab_program (filename : string) (input : in_channel) =
   Printexc.record_backtrace true;
 
-  let lexbuf = Sedlexing.Utf8.from_channel stdin in
-  Sedlexing.set_filename lexbuf "<input>";
+  let lexbuf = Sedlexing.Utf8.from_channel input in
+  Sedlexing.set_filename lexbuf filename;
 
   try
-    let rust_program =
-      lexbuf
-      |> Sedlexing.with_tokenizer Lexer.token
-      |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
-      |> Surface.Elab.check_program
-      |> Core.Compile.compile_program
-    in
-    Format.printf "@[%a@]"
-      Rust.pp_program rust_program;
+    lexbuf
+    |> Sedlexing.with_tokenizer Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
+    |> Surface.Elab.check_program
   with
   | Lexer.Unexpected_char -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
   | Lexer.Unclosed_block_comment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
   | Parser.Error -> print_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
   | Surface.Elab.Error (loc, message) -> print_error "error" loc message; exit 1
+
+(** {1 Subcommands} *)
+
+let elab_cmd () : unit =
+  elab_program "<input>" stdin
+  |> Format.printf "@[%a@]" Core.pp_program
+
+let compile_cmd () : unit =
+  elab_program "<input>" stdin
+  |> Core.Compile.compile_program
+  |> Format.printf "@[%a@]" Rust.pp_program
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  Cmd.group (Cmd.info "stlc-bidirectional") [
+    Cmd.v (Cmd.info "elab" ~doc:"elaborate a program from standard input")
+      Term.(const elab_cmd $ const ());
+    Cmd.v (Cmd.info "compile" ~doc:"compile a program from standard input to rust")
+      Term.(const compile_cmd $ const ());
+  ]
+
+(** {1 Main entrypoint} *)
+
+let () =
+  Printexc.record_backtrace true;
+  exit (Cmdliner.Cmd.eval cmd)
