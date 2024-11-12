@@ -10,7 +10,7 @@ type Point {
   y : #Int;
 }
 
-def test-long-record: A-long-record =
+def test-long-record : A-long-record =
   A-long-record {
     bananas := 1000000;
     bar := 1000000;
@@ -18,6 +18,6 @@ def test-long-record: A-long-record =
     foo := 1000000
   };
 
-def test-point-1: Point = Point { x := 1; y := 2 };
+def test-point-1 : Point = Point { x := 1; y := 2 };
 
-def test-point-2: Point = Point { x := 1; y := 2 };
+def test-point-2 : Point = Point { x := 1; y := 2 };

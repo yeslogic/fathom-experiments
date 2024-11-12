@@ -100,12 +100,12 @@ and pp_atomic_ty ppf ty =
   | Bool_type -> Format.pp_print_string ppf "#Bool"
   | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
 
+and pp_name_ann ppf (name, ty) =
+  Format.fprintf ppf "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+
 and pp_expr names ppf (expr : expr) =
   match expr with
   | Let _ as expr ->
-      let pp_name_ann ppf (name, ty) =
-        Format.fprintf ppf "@[<2>@[%s :@]@ %a@]" name pp_ty ty
-      in
       let rec go names ppf expr =
         match expr with
         | Let (name, def_ty, def, body) ->
@@ -231,9 +231,8 @@ let pp_item (ppf : Format.formatter) (item :  string * item) =
         name
         (pp_format []) ty
   | name, Expr_def (ty, expr) ->
-      Format.fprintf ppf "@[<hv 2>@[def@ %s:@ %a@ =@]@ %a;@]@."
-        name
-        pp_ty ty
+      Format.fprintf ppf "@[<hv 2>@[def@ %a@ =@]@ %a;@]@."
+        pp_name_ann (name, ty)
         (pp_expr []) expr
 
 let pp_program (ppf : Format.formatter) (items : program) =
