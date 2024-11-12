@@ -39,7 +39,7 @@ let compile_cmd () : unit =
 let cmd =
   let open Cmdliner in
 
-  Cmd.group (Cmd.info "stlc-bidirectional") [
+  Cmd.group (Cmd.info "simple-ddl") [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a program from standard input")
       Term.(const elab_cmd $ const ());
     Cmd.v (Cmd.info "compile" ~doc:"compile a program from standard input to rust")
