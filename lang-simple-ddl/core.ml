@@ -232,7 +232,7 @@ let pp_item (ppf : Format.formatter) (item :  string * item) =
         name
         (pp_format []) ty
   | name, Expr_def (ty, expr) ->
-      Format.fprintf ppf "@[<hv 2>@[def@ %a@ =@]@ %a;@]@."
+      Format.fprintf ppf "@[<hv 2>@[def@ %a@ :=@]@ %a;@]@."
         pp_name_ann (name, ty)
         (pp_expr []) expr
 

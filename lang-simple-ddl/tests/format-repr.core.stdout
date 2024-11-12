@@ -10,4 +10,4 @@ format point :=
   let z <- byte;
   #pure point-record (point-record { x := x; y := y; z := z });
 
-def my-point : point-record = point-record { x := 1; y := 2; z := 3 };
+def my-point : point-record := point-record { x := 1; y := 2; z := 3 };
