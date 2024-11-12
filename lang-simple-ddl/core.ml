@@ -31,9 +31,9 @@ type ty =
   | List_type of ty
   | Int_type
   | Bool_type
-  (* TODO: | Repr of format *)
+  | Format_repr of format
 
-type expr =
+and expr =
   | Item_var of string
   | Local_var of index
   | Let of string * ty * expr * expr
@@ -45,7 +45,7 @@ type expr =
   | Bool_elim of expr * expr * expr
   | Prim_app of prim * expr list
 
-type format =
+and format =
   | Item_var of string
   | Byte
   | Repeat_len of expr * format
@@ -98,6 +98,7 @@ and pp_atomic_ty ppf ty =
   | Item_var name -> Format.pp_print_string ppf name
   | Int_type -> Format.pp_print_string ppf "#Int"
   | Bool_type -> Format.pp_print_string ppf "#Bool"
+  | Format_repr fmt -> Format.fprintf ppf "%a.Repr" (pp_atomic_format []) fmt
   | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
 
 and pp_name_ann ppf (name, ty) =
@@ -288,6 +289,22 @@ module Semantics = struct
     | List_type elem_ty -> List_type (eval_ty items elem_ty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
+    | Format_repr fmt ->
+        eval_ty items (format_ty items fmt)
+
+  and format_ty (items : program) (fmt : format) : ty =
+    match fmt with
+    | Item_var name ->
+        begin match List.assoc name items with
+        | Format_def fmt -> format_ty items fmt
+        | _ -> invalid_arg "expected format"
+        end
+    | Byte -> Int_type
+    | Repeat_len (_, elem_fmt) -> List_type (format_ty items elem_fmt)
+    | Bind (_, _, body_fmt) -> format_ty items body_fmt
+    | Pure (ty, _) -> ty
+    | Fail ty -> ty
+    | Bool_elim (_, fmt1, _) -> format_ty items fmt1
 
   let prim_app (prim : prim) : vexpr list -> vexpr =
     match prim with
@@ -340,20 +357,6 @@ module Semantics = struct
         end
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval_expr items locals) args)
-
-  let rec format_ty (items : program) (fmt : format) : ty =
-    match fmt with
-    | Item_var name ->
-        begin match List.assoc name items with
-        | Format_def fmt -> format_ty items fmt
-        | _ -> invalid_arg "expected format"
-        end
-    | Byte -> Int_type
-    | Repeat_len (_, elem_fmt) -> List_type (format_ty items elem_fmt)
-    | Bind (_, _, body_fmt) -> format_ty items body_fmt
-    | Pure (ty, _) -> ty
-    | Fail ty -> ty
-    | Bool_elim (_, fmt1, _) -> format_ty items fmt1
 
 
   (** {1 Quotation} *)
@@ -477,6 +480,8 @@ module Compile = struct
         Path (["i64"], []) (* TODO: More integer types *)
     | Bool_type ->
         Path (["bool"], [])
+    | Format_repr fmt ->
+        compile_ty ctx (Semantics.format_ty ctx.source_items fmt)
 
   let rec compile_stmts (ctx : context) (expr : expr) : Rust.stmts =
     match expr with

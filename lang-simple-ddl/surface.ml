@@ -143,8 +143,7 @@ end = struct
     | _ ->
       match infer ctx tm with
       | Type_tm ty -> ty
-      | Format_tm fmt -> Core.Semantics.format_ty ctx.items fmt
-      (* | Format_tm fmt -> Format_repr fmt *)
+      | Format_tm fmt -> Format_repr fmt
       | Kind_tm _ -> error tm.loc "expected type, found kind"
       | Expr_tm (_, _) -> error tm.loc "expected type, found expression"
 
@@ -301,8 +300,7 @@ end = struct
                 end
             | _ -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
             end
-        | Format_tm fmt when label.data = "Repr" -> Type_tm (format_ty ctx fmt)
-        (* | Format_tm fmt when label.data = "Repr" -> Type_tm (Format_repr fmt) *)
+        | Format_tm fmt when label.data = "Repr" -> Type_tm (Format_repr fmt)
         | _ -> error label.loc (Format.sprintf "unknown field `%s`" label.data)
         end
 
@@ -368,9 +366,7 @@ end = struct
         | Expr_tm _ ->
             error ann.loc "expected annotation, found expression"
         | Format_tm fmt ->
-            let repr = eval_ty ctx (format_ty ctx fmt) in
-            (* TODO: Format projection in core language *)
-            (* let repr = eval_ty ctx (Format_repr fmt) in *)
+            let repr = eval_ty ctx (Format_repr fmt) in
             Expr_tm (check_expr ctx tm repr, repr)
         end
 

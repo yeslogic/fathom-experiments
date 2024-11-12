@@ -1,0 +1,11 @@
+format point {
+  x <- byte;
+  y <- byte;
+  z <- byte;
+}
+
+def my-point : point.Repr := {
+  x := 1;
+  y := 2;
+  z := 3;
+};

@@ -1,0 +1,20 @@
+fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let byte = input.get(*pos).ok_or(())?;
+    *pos +=1;
+    Ok(i64::from(*byte))
+}
+
+struct PointRecord {
+    x: i64,
+    y: i64,
+    z: i64,
+}
+
+fn read_point(input: &[u8], pos: &mut usize) -> Result<PointRecord, ()> {
+    let x = read_byte(input, pos)?;
+    let y = read_byte(input, pos)?;
+    let z = read_byte(input, pos)?;
+    Ok(PointRecord { x, y, z })
+}
+
+const MY_POINT: PointRecord = PointRecord { x: 1, y: 2, z: 3 };
