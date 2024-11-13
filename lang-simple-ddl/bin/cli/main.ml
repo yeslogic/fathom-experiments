@@ -1,3 +1,5 @@
+open Simple_ddl
+
 let print_error (severity : string) (start, _ : Lexing.position * Lexing.position) (message : string) =
   Printf.eprintf "%s:%d:%d: %s: %s\n"
       start.pos_fname

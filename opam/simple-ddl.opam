@@ -4,10 +4,13 @@ homepage: "https://github.com/yeslogic/fathom-experiments"
 bug-reports: "https://github.com/yeslogic/fathom-experiments/issues"
 depends: [
   "dune" {>= "3.14"}
-  "case-conv"
   "cmdliner" {>= "1.3"}
-  "menhir" {>= "20240715" & build}
   "menhirLib" {>= "20240715"}
+  "brr" {>= "0.0.7"}
+  "js_of_ocaml-compiler" {>= "5.8.2"}
+  "js_of_ocaml" {>= "5.8.2"}
+  "case-conv"
+  "menhir" {>= "20240715" & build}
   "sedlex" {>= "3.2"}
   "tsort" {>= "2.1"}
   "odoc" {with-doc}

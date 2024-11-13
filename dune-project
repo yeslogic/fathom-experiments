@@ -52,9 +52,17 @@
 (package
   (name simple-ddl)
   (depends
-    case-conv
+    ; CLI
     (cmdliner (>= "1.3"))
-    (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
+
+    ; Web interface
+    (brr (>= "0.0.7"))
+    (js_of_ocaml-compiler (>= "5.8.2"))
+    (js_of_ocaml (>= "5.8.2"))
+
+    ; Core library
+    case-conv
+    (menhir (and (>= "20240715") :build))
     (sedlex (>= "3.2"))
     (tsort (>= "2.1"))))

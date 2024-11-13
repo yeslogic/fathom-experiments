@@ -1,0 +1,9 @@
+(executable
+  (name main)
+  (public_name simple-ddl)
+  (package simple-ddl)
+  (libraries
+    cmdliner
+    menhirLib
+    sedlex
+    simple-ddl))

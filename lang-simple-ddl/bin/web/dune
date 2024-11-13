@@ -1,0 +1,19 @@
+(alias
+  (name simple-ddl)
+  (package simple-ddl))
+
+(alias
+  (name all)
+  (package simple-ddl)
+  (deps
+    index.html
+    index.bc.js))
+
+(executable
+  (name index)
+  (modes js)
+  (libraries
+    brr
+    menhirLib
+    sedlex
+    simple-ddl))
