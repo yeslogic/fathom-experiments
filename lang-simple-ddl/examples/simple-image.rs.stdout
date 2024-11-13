@@ -20,41 +20,41 @@ fn read_u16be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok((b0 << 8) | b1)
 }
 
-struct PixelRecord {
+struct Pixel {
     blue: i64,
     green: i64,
     red: i64,
 }
 
-fn read_pixel(input: &[u8], pos: &mut usize) -> Result<PixelRecord, ()> {
+fn read_pixel(input: &[u8], pos: &mut usize) -> Result<Pixel, ()> {
     let red = read_u8(input, pos)?;
     let green = read_u8(input, pos)?;
     let blue = read_u8(input, pos)?;
-    Ok(PixelRecord { blue, green, red })
+    Ok(Pixel { blue, green, red })
 }
 
-struct InfoRecord {
+struct Info {
     height: i64,
     width: i64,
 }
 
-fn read_info(input: &[u8], pos: &mut usize) -> Result<InfoRecord, ()> {
+fn read_info(input: &[u8], pos: &mut usize) -> Result<Info, ()> {
     let width = read_u16be(input, pos)?;
     let height = read_u16be(input, pos)?;
-    Ok(InfoRecord { height, width })
+    Ok(Info { height, width })
 }
 
-struct ImageRecord {
-    data: Vec<PixelRecord>,
-    info: InfoRecord,
+struct Image {
+    data: Vec<Pixel>,
+    info: Info,
 }
 
-fn read_image(input: &[u8], pos: &mut usize) -> Result<ImageRecord, ()> {
+fn read_image(input: &[u8], pos: &mut usize) -> Result<Image, ()> {
     let info = read_info(input, pos)?;
     let num_pixels: i64 = info.width * info.height;
     let data =
         (0..num_pixels)
             .map(|_| read_pixel(input, pos))
-            .collect::<Result<Vec<PixelRecord>, _>>()?;
-    Ok(ImageRecord { data, info })
+            .collect::<Result<Vec<Pixel>, _>>()?;
+    Ok(Image { data, info })
 }

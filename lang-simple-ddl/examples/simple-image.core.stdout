@@ -10,7 +10,7 @@ format u16be :=
   let b1 <- byte;
   #pure #Int (#int-logical-or (#int-logical-shl b0 8) b1);
 
-type pixel-record {
+type Pixel {
   blue : #Int;
   green : #Int;
   red : #Int;
@@ -20,11 +20,9 @@ format pixel :=
   let red <- u8;
   let green <- u8;
   let blue <- u8;
-  #pure
-    pixel-record
-    (pixel-record { blue := blue; green := green; red := red });
+  #pure Pixel (Pixel { blue := blue; green := green; red := red });
 
-type info-record {
+type Info {
   height : #Int;
   width : #Int;
 }
@@ -32,15 +30,15 @@ type info-record {
 format info :=
   let width <- u16be;
   let height <- u16be;
-  #pure info-record (info-record { height := height; width := width });
+  #pure Info (Info { height := height; width := width });
 
-type image-record {
-  data : #List pixel-record;
-  info : info-record;
+type Image {
+  data : #List Pixel;
+  info : Info;
 }
 
 format image :=
   let info <- info;
   let num-pixels <- #pure #Int (#int-mul info.width info.height);
   let data <- #repeat-len num-pixels pixel;
-  #pure image-record (image-record { data := data; info := info });
+  #pure Image (Image { data := data; info := info });
