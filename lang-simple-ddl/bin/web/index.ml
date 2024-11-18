@@ -1,7 +1,7 @@
 open Simple_ddl
 
-let print_error (severity : string) (start, _ : Lexing.position * Lexing.position) (message : string) =
-  Printf.eprintf "%s:%d:%d: %s: %s\n"
+let format_error (severity : string) (start, _ : Lexing.position * Lexing.position) (message : string) =
+  Printf.sprintf "%s:%d:%d: %s: %s\n"
     start.pos_fname
     start.pos_lnum
     (start.pos_cnum - start.pos_bol)
@@ -19,11 +19,12 @@ let elab_program (filename : string) (input : string) =
     |> Sedlexing.with_tokenizer Lexer.token
     |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
     |> Surface.Elab.check_program
+    |> Result.ok
   with
-  | Lexer.Unexpected_char -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
-  | Lexer.Unclosed_block_comment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
-  | Parser.Error -> print_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
-  | Surface.Elab.Error (loc, message) -> print_error "error" loc message; exit 1
+  | Lexer.Unexpected_char -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character")
+  | Lexer.Unclosed_block_comment -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment")
+  | Parser.Error -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error")
+  | Surface.Elab.Error (loc, message) -> Error (format_error "error" loc message)
 
 let test = String.concat "\n" [
   "format u16le :=";
@@ -54,14 +55,14 @@ let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
     El.as_target button_el |> Ev.(listen click) @@ fun _ ->
       print_endline "elaborate";
 
-      let program =
-        el_value input_el
-        |> elab_program "<input>"
-        |> Format.asprintf "%a\n" Core.pp_program
+      let output_text =
+        match el_value input_el |> elab_program "<input>" with
+        | Ok program -> Format.asprintf "%a\n" Core.pp_program program
+        | Error error -> error
       in
 
       El.set_children output_el El.[
-        txt' program;
+        txt' output_text;
       ];
   in
 
@@ -78,15 +79,16 @@ let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
     El.as_target button_el |> Ev.(listen click) @@ fun _ ->
       print_endline "compile";
 
-      let program =
-        el_value input_el
-        |> elab_program "<input>"
-        |> Core.Compile.compile_program
-        |> Format.asprintf "%a\n" Rust.pp_program
+      let output_text =
+        match el_value input_el |> elab_program "<input>" with
+        | Ok program ->
+            Core.Compile.compile_program program
+            |> Format.asprintf "%a\n" Rust.pp_program
+        | Error error -> error
       in
 
       El.set_children output_el El.[
-        txt' program;
+        txt' output_text;
       ];
   in
 
