@@ -26,17 +26,33 @@ let elab_program (filename : string) (input : string) =
   | Parser.Error -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error")
   | Surface.Elab.Error (loc, message) -> Error (format_error "error" loc message)
 
-let test = String.concat "\n" [
-  "format u16le :=";
-  "  let b0 <- byte;";
-  "  let b1 <- byte;";
-  "  pure Int (b0 | (b1 << 8));";
-  "";
-  "format image {";
-  "  width <- u16le;";
-  "  height <- u16le;";
-  "  data <- repeat-len (width * height) byte;";
-  "}";
+let initial_example = "simple-image"
+
+let examples = [
+  (
+    "simple-image",
+    String.concat "\n" [
+      "format u16le :=";
+      "  let b0 <- byte;";
+      "  let b1 <- byte;";
+      "  pure Int (b0 | (b1 << 8));";
+      "";
+      "format image {";
+      "  width <- u16le;";
+      "  height <- u16le;";
+      "  data <- repeat-len (width * height) byte;";
+      "}"
+    ]
+  );
+  (
+    "record-type",
+    String.concat "\n" [
+      "type Point {";
+      "  x : Int;";
+      "  y : Int;";
+      "}";
+    ]
+  );
 ]
 
 open Brr
@@ -97,6 +113,28 @@ let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
   button_el
 
 
+let example_select_el ~(input_el : El.t) : El.t =
+  let open El in
+
+  let select_el =
+    select (examples |> List.map (fun (n, _) ->
+      option ~at:At.[if' (n = initial_example) selected] [txt' n]))
+  in
+
+  let _ : Ev.listener =
+    El.as_target select_el |> Ev.(listen change) @@ fun _ ->
+      let example_name = el_value select_el in
+
+      print_endline ("select example: " ^ example_name);
+
+      El.set_children input_el El.[
+        txt' (List.assoc example_name examples);
+      ];
+  in
+
+  select_el
+
+
 let input_el () : El.t =
   let open El in
 
@@ -107,7 +145,7 @@ let input_el () : El.t =
       cols 80;
       spellcheck (Jstr.v "false");
     ]
-    [ txt' test ]
+    [ txt' (List.assoc initial_example examples) ]
 
 
 let output_el () : El.t =
@@ -122,15 +160,13 @@ let main_el () =
   let input_el = input_el () in
   let output_el = output_el () in
 
-  let elab_button_el = elab_button_el ~input_el ~output_el in
-  let compile_button_el = compile_button_el ~input_el ~output_el in
-
   El.v (Jstr.v "main") [
     h1 [txt' "Simple DDL"];
 
     nav [
-      elab_button_el;
-      compile_button_el;
+      elab_button_el ~input_el ~output_el;
+      compile_button_el ~input_el ~output_el;
+      example_select_el ~input_el;
     ];
 
     input_el;
