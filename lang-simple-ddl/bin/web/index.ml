@@ -50,6 +50,7 @@ let () = begin
         id (Jstr.v "input");
         rows 20;
         cols 80;
+        spellcheck (Jstr.v "false");
       ] [
         txt' test;
       ];
