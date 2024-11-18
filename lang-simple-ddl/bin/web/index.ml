@@ -44,6 +44,7 @@ open Brr
 let el_value (el : El.t) : string =
   El.(prop Prop.value) el |> Jstr.to_string
 
+
 let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
   let open El in
 
@@ -67,6 +68,7 @@ let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
   in
 
   button_el
+
 
 let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
   let open El in
@@ -93,6 +95,7 @@ let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
   in
 
   button_el
+
 
 let input_el () : El.t =
   let open El in
@@ -134,8 +137,8 @@ let main_el () =
     output_el;
   ]
 
-let () = begin
 
+let () = begin
 
   El.set_children (Document.body G.document) [
     main_el ();
