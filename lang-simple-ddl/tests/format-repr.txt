@@ -9,3 +9,6 @@ def my-point : point.Repr := {
   y := 2;
   z := 3;
 };
+
+format repeat-pure :=
+  repeat-len 3 (pure Int 42);

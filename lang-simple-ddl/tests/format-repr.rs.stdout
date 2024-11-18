@@ -4,6 +4,13 @@ fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok(i64::from(*byte))
 }
 
+fn read_repeat_len<T>(
+    len: i64,
+    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
+) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
+    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
+}
+
 struct Point {
     x: i64,
     y: i64,
@@ -15,6 +22,10 @@ fn read_point(input: &[u8], pos: &mut usize) -> Result<Point, ()> {
     let y = read_byte(input, pos)?;
     let z = read_byte(input, pos)?;
     Ok(Point { x, y, z })
+}
+
+fn read_repeat_pure(input: &[u8], pos: &mut usize) -> Result<Vec<i64>, ()> {
+    read_repeat_len(3, |input, pos| Ok(42))(input, pos)
 }
 
 const MY_POINT: Point = Point { x: 1, y: 2, z: 3 };

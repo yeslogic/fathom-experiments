@@ -205,7 +205,7 @@ and pp_atomic_format names ppf (fmt : format) =
   match fmt with
   | Item_var name -> Format.pp_print_string ppf name
   | Byte -> Format.pp_print_string ppf "byte"
-  | fmt -> pp_atomic_format names ppf fmt
+  | fmt -> Format.fprintf ppf "@[(%a)@]" (pp_format names) fmt
 
 let pp_indent f ppf x =
   Format.fprintf ppf "@;<1 2>%a" f x
