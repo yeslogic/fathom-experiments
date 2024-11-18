@@ -448,6 +448,7 @@ module Compile = struct
 
   (* TODO: Name avoidance *)
 
+  module String_set = Set.Make (String)
   module String_map = Map.Make (String)
 
   type context = {
@@ -455,6 +456,7 @@ module Compile = struct
     target_item_names : string String_map.t;
     target_items : Rust.item list;
     target_local_names : string list;
+    target_deps : String_set.t ref;
   }
 
   let empty_context (source_items : program) : context = {
@@ -462,6 +464,7 @@ module Compile = struct
     target_item_names = String_map.empty;
     target_items = [];
     target_local_names = [];
+    target_deps = ref String_set.empty;
   }
 
   let extend_source_local (ctx : context) (tgt_name : string) =
@@ -604,8 +607,10 @@ module Compile = struct
     | Item_var name ->
         Path [compile_item_var ctx name]
     | Byte ->
+        ctx.target_deps := String_set.add "read_byte" !(ctx.target_deps);
         Path ["read_byte"]
     | Repeat_len (len, elem_fmt) ->
+        ctx.target_deps := String_set.add "read_repeat_len" !(ctx.target_deps);
         Call (Path ["read_repeat_len"], [compile_expr ctx len; compile_format_fun_expr ctx elem_fmt])
     | fmt ->
         Closure (["input"; "pos"], compile_format_expr ctx fmt)
@@ -650,9 +655,9 @@ module Compile = struct
         let expr = compile_expr ctx def in
         name, Const (name, ty, expr)
 
-  let compile_program (items : program) : Rust.item list =
-    let compile_items =
-      ListLabels.fold_left
+  let compile_program (items : program) : Rust.program =
+    let ctx =
+      items |> ListLabels.fold_left
         ~init:(empty_context items)
         ~f:(fun ctx (name, item) ->
           let target_name, target_item =
@@ -663,6 +668,9 @@ module Compile = struct
             target_items = target_item :: ctx.target_items;
           })
     in
-    (compile_items items).target_items |> List.rev
+    {
+      deps = !(ctx.target_deps) |> String_set.to_list;
+      items = ctx.target_items |> List.rev;
+    }
 
 end

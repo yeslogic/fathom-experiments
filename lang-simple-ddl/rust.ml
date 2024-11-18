@@ -34,6 +34,11 @@ type item =
   | Const of string * ty * expr
   | Fn of string * (string * ty) list * ty * stmts
 
+type program = {
+  deps : string list;
+  items : item list;
+}
+
 
 (** {1 Pretty printing} *)
 
@@ -206,18 +211,24 @@ let pp_item (ppf : Format.formatter) (item : item) =
         pp_ty ret_ty
         (pp_indent_vbox pp_stmts) body
 
-let pp_program (ppf : Format.formatter) (items : item list) =
-  Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {@.";
-  Format.fprintf ppf "    let byte = input.get(*pos).ok_or(())?;@.";
-  Format.fprintf ppf "    *pos +=1;@.";
-  Format.fprintf ppf "    Ok(i64::from(*byte))@.";
-  Format.fprintf ppf "}@.";
-  Format.fprintf ppf "@.";
-  Format.fprintf ppf "fn read_repeat_len<T>(@.";
-  Format.fprintf ppf "    len: i64,@.";
-  Format.fprintf ppf "    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,@.";
-  Format.fprintf ppf ") -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {@.";
-  Format.fprintf ppf "    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()@.";
-  Format.fprintf ppf "}@.";
-  Format.fprintf ppf "@.";
-  Format.pp_print_list pp_item ppf items
+let pp_program (ppf : Format.formatter) (program : program) =
+  if List.mem "read_byte" program.deps then begin
+    Format.fprintf ppf "fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {@.";
+    Format.fprintf ppf "    let byte = input.get(*pos).ok_or(())?;@.";
+    Format.fprintf ppf "    *pos +=1;@.";
+    Format.fprintf ppf "    Ok(i64::from(*byte))@.";
+    Format.fprintf ppf "}@.";
+    Format.fprintf ppf "@.";
+  end;
+
+  if List.mem "read_repeat_len" program.deps then begin
+    Format.fprintf ppf "fn read_repeat_len<T>(@.";
+    Format.fprintf ppf "    len: i64,@.";
+    Format.fprintf ppf "    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,@.";
+    Format.fprintf ppf ") -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {@.";
+    Format.fprintf ppf "    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()@.";
+    Format.fprintf ppf "}@.";
+    Format.fprintf ppf "@.";
+  end;
+
+  Format.pp_print_list pp_item ppf program.items

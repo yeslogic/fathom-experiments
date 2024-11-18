@@ -4,13 +4,6 @@ fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok(i64::from(*byte))
 }
 
-fn read_repeat_len<T>(
-    len: i64,
-    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
-) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
-    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
-}
-
 struct Point {
     x: i64,
     y: i64,
