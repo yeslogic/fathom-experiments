@@ -26,9 +26,14 @@ let elab_program (filename : string) (input : string) =
   | Surface.Elab.Error (loc, message) -> print_error "error" loc message; exit 1
 
 let test = String.concat "\n" [
+  "format u16le :=";
+  "  let b0 <- byte;";
+  "  let b1 <- byte;";
+  "  pure Int (b0 | (b1 << 8));";
+  "";
   "format image {";
-  "  width <- byte;";
-  "  height <- byte;";
+  "  width <- u16le;";
+  "  height <- u16le;";
   "  data <- repeat-len (width * height) byte;";
   "}";
 ]
