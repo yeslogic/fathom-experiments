@@ -38,63 +38,105 @@ let test = String.concat "\n" [
   "}";
 ]
 
-let () = begin
+open Brr
 
-  let open Brr in
+let el_value (el : El.t) : string =
+  El.(prop Prop.value) el |> Jstr.to_string
 
-  El.set_children (Document.body G.document) El.[
+let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
+  let open El in
+
+  let button_el =
+    button ~at:At.[id (Jstr.v "elab")] [txt' "Elaborate"];
+  in
+
+  let _ : Ev.listener =
+    El.as_target button_el |> Ev.(listen click) @@ fun _ ->
+      print_endline "elaborate";
+
+      let program =
+        el_value input_el
+        |> elab_program "<input>"
+        |> Format.asprintf "%a\n" Core.pp_program
+      in
+
+      El.set_children output_el El.[
+        txt' program;
+      ];
+  in
+
+  button_el
+
+let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
+  let open El in
+
+  let button_el =
+    button ~at:At.[id (Jstr.v "compile")] [txt' "Compile"]
+  in
+
+  let _ : Ev.listener =
+    El.as_target button_el |> Ev.(listen click) @@ fun _ ->
+      print_endline "compile";
+
+      let program =
+        el_value input_el
+        |> elab_program "<input>"
+        |> Core.Compile.compile_program
+        |> Format.asprintf "%a\n" Rust.pp_program
+      in
+
+      El.set_children output_el El.[
+        txt' program;
+      ];
+  in
+
+  button_el
+
+let input_el () : El.t =
+  let open El in
+
+  textarea
+    ~at:At.[
+      id (Jstr.v "input");
+      rows 20;
+      cols 80;
+      spellcheck (Jstr.v "false");
+    ]
+    [ txt' test ]
+
+
+let output_el () : El.t =
+  let open El in
+
+  pre ~at:At.[id (Jstr.v "output")] []
+
+
+let main_el () =
+  let open El in
+
+  let input_el = input_el () in
+  let output_el = output_el () in
+
+  let elab_button_el = elab_button_el ~input_el ~output_el in
+  let compile_button_el = compile_button_el ~input_el ~output_el in
+
+  El.v (Jstr.v "main") [
     h1 [txt' "Simple DDL"];
 
-    div [
-      button ~at:At.[id (Jstr.v "elab")] [txt' "Elaborate"];
-      button ~at:At.[id (Jstr.v "compile")] [txt' "Compile"];
+    nav [
+      elab_button_el;
+      compile_button_el;
     ];
 
-    textarea
-      ~at:At.[
-        id (Jstr.v "input");
-        rows 20;
-        cols 80;
-        spellcheck (Jstr.v "false");
-      ] [
-        txt' test;
-      ];
+    input_el;
+    output_el;
+  ]
 
-    pre ~at:At.[id (Jstr.v "output")] [
-      txt' "output";
-    ];
+let () = begin
+
+
+  El.set_children (Document.body G.document) [
+    main_el ();
   ];
-
-  let elab_button = Document.find_el_by_id G.document (Jstr.v "elab") |> Option.get in
-  let compile_button = Document.find_el_by_id G.document (Jstr.v "compile") |> Option.get in
-  let input_el = Document.find_el_by_id G.document (Jstr.v "input") |> Option.get in
-  let output_el = Document.find_el_by_id G.document (Jstr.v "output") |> Option.get in
-
-  ignore
-    (Ev.listen Ev.click
-      (fun _ ->
-        print_endline "elaborate";
-        let program =
-          elab_program "<input>" El.(prop Prop.value input_el |> Jstr.to_string)
-          |> Format.asprintf "%a\n" Core.pp_program
-        in
-        El.set_children output_el El.[
-          txt' program;
-        ])
-      (El.as_target elab_button));
-
-  ignore
-    (Ev.listen Ev.click
-      (fun _ ->
-        print_endline "compile";
-        let program =
-          elab_program "<input>" El.(prop Prop.value input_el |> Jstr.to_string)
-          |> Core.Compile.compile_program
-          |> Format.asprintf "%a\n" Rust.pp_program
-        in
-        El.set_children output_el El.[
-          txt' program;
-        ])
-      (El.as_target compile_button));
 
 end
