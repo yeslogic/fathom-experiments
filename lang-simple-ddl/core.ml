@@ -568,6 +568,7 @@ module Compile = struct
 
   let rec compile_format_stmts (ctx : context) (fmt : format) : Rust.stmts =
     match fmt with
+    (* Optimisation for let-bound formats *)
     | Bind (name, Pure (def_ty, def), body_fmt) ->
         let name = Case_conv.quiet_snake_case name in
         let ty = compile_ty ctx def_ty in
@@ -588,7 +589,6 @@ module Compile = struct
     match fmt with
     | Item_var _ | Byte | Repeat_len _ ->
         Call (compile_format_fun_expr ctx fmt, [Path ["input"]; Path ["pos"]])
-    (* Optimisation for let-bound formats *)
     | Bind _ ->
         Block (compile_format_stmts ctx fmt)
     | Pure (_, expr) ->
