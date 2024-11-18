@@ -4,6 +4,13 @@ fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     Ok(i64::from(*byte))
 }
 
+fn read_repeat_len<T>(
+    len: i64,
+    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
+) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
+    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
+}
+
 fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b0 = read_byte(input, pos)?;
     let b1 = read_byte(input, pos)?;
@@ -52,9 +59,6 @@ struct Image {
 fn read_image(input: &[u8], pos: &mut usize) -> Result<Image, ()> {
     let info = read_info(input, pos)?;
     let num_pixels: i64 = info.width * info.height;
-    let data =
-        (0..num_pixels)
-            .map(|_| read_pixel(input, pos))
-            .collect::<Result<Vec<Pixel>, _>>()?;
+    let data = read_repeat_len(num_pixels, read_pixel)(input, pos)?;
     Ok(Image { data, info })
 }

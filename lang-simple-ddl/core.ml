@@ -583,18 +583,8 @@ module Compile = struct
 
   and compile_format_expr (ctx : context) (fmt : format) : Rust.expr =
     match fmt with
-    | Item_var name ->
-        let name = compile_item_var ctx name in
-        Call (Path [name], [Path ["input"]; Path ["pos"]])
-    | Byte ->
-        Call (Path ["read_byte"], [Path ["input"]; Path ["pos"]])
-    | Repeat_len (len, elem_fmt) ->
-        let elem_ty = Semantics.format_ty ctx.source_items fmt in
-        Repeat_count (
-          compile_expr ctx len,
-          compile_format_expr ctx elem_fmt,
-          Path (["Result"], [compile_ty ctx elem_ty; Placeholder])
-        )
+    | Item_var _ | Byte | Repeat_len _ ->
+        Call (compile_format_fun_expr ctx fmt, [Path ["input"]; Path ["pos"]])
     (* Optimisation for let-bound formats *)
     | Bind _ ->
         Block (compile_format_stmts ctx fmt)
@@ -608,6 +598,17 @@ module Compile = struct
           compile_format_stmts ctx fmt1,
           compile_format_stmts ctx fmt2
         )
+
+  and compile_format_fun_expr (ctx : context) (fmt : format) : Rust.expr =
+    match fmt with
+    | Item_var name ->
+        Path [compile_item_var ctx name]
+    | Byte ->
+        Path ["read_byte"]
+    | Repeat_len (len, elem_fmt) ->
+        Call (Path ["read_repeat_len"], [compile_expr ctx len; compile_format_fun_expr ctx elem_fmt])
+    | fmt ->
+        Closure (["input"; "pos"], compile_format_expr ctx fmt)
 
   let compile_item (ctx : context) (name, item : string * item) : string * Rust.item =
     match item with

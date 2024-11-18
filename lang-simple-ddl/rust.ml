@@ -9,6 +9,7 @@ type ty =
 type expr =
   | Path of string list
   | Call of expr * expr list
+  | Closure of string list * expr
   | Prefix_op of string * expr
   | Postfix_op of expr * string
   | Infix_op of expr * string * expr
@@ -20,7 +21,6 @@ type expr =
   | StructProj of expr * string
   | If_else of expr * stmts * stmts
   | Block of stmts
-  | Repeat_count of expr * expr * ty
 
 and stmt =
   | Let of string * ty option * expr
@@ -76,6 +76,11 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) =
 
 let rec pp_expr (ppf : Format.formatter) (expr : expr) =
   match expr with
+  | Closure (params, body) ->
+      let pp_sep ppf () = Format.fprintf ppf ",@ " in
+      Format.fprintf ppf "@[<hv 4>@[|%a|@]@ %a@]"
+        (Format.pp_print_list Format.pp_print_string ~pp_sep) params
+        pp_expr body
   | Prefix_op (op, expr) ->
       Format.fprintf ppf "%s%a"
         op
@@ -148,11 +153,6 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
   | Block stmts ->
       Format.fprintf ppf "@[<hv>{%a@ }@]"
         (pp_indent_vbox pp_stmts) stmts
-  | Repeat_count (count_expr, elem_expr, ty) ->
-      Format.fprintf ppf "@[<hv 4>@[(0..%a)@]@,@[.map(|_| %a)@]@,@[.collect::<%a>()@]@]"
-        pp_expr count_expr
-        pp_expr elem_expr
-        pp_ty ty
   | expr ->
       Format.fprintf ppf "(%a)"
         pp_expr expr
@@ -211,6 +211,13 @@ let pp_program (ppf : Format.formatter) (items : item list) =
   Format.fprintf ppf "    let byte = input.get(*pos).ok_or(())?;@.";
   Format.fprintf ppf "    *pos +=1;@.";
   Format.fprintf ppf "    Ok(i64::from(*byte))@.";
+  Format.fprintf ppf "}@.";
+  Format.fprintf ppf "@.";
+  Format.fprintf ppf "fn read_repeat_len<T>(@.";
+  Format.fprintf ppf "    len: i64,@.";
+  Format.fprintf ppf "    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,@.";
+  Format.fprintf ppf ") -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {@.";
+  Format.fprintf ppf "    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()@.";
   Format.fprintf ppf "}@.";
   Format.fprintf ppf "@.";
   Format.pp_print_list pp_item ppf items
