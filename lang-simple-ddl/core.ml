@@ -40,7 +40,7 @@ and expr =
   | Record_lit of string * expr Label_map.t
   | Record_proj of expr * string
   | List_lit of expr list
-  | Int_lit of int
+  | Int_lit of int64
   | Bool_lit of bool
   | Bool_elim of expr * expr * expr
   | Prim_app of prim * expr list
@@ -160,7 +160,7 @@ and pp_atomic_expr names ppf expr =
       let pp_sep fmt () = Format.fprintf fmt ",@ " in
       Format.fprintf ppf "@[[%a]@]"
         (Format.pp_print_list ~pp_sep (pp_print_proj_expr names)) elems
-  | Int_lit i -> Format.pp_print_int ppf i
+  | Int_lit i -> Format.pp_print_string ppf (Int64.to_string i)
   | Bool_lit true -> Format.pp_print_string ppf "true"
   | Bool_lit false -> Format.pp_print_string ppf "false"
   | expr -> Format.fprintf ppf "@[(%a)@]" (pp_expr names) expr
@@ -258,7 +258,7 @@ module Semantics = struct
   *)
 
   type vexpr =
-    | Int_lit of int
+    | Int_lit of int64
     | Bool_lit of bool
     | List_lit of vexpr list
     | Record_lit of string * vexpr Label_map.t
@@ -308,24 +308,24 @@ module Semantics = struct
 
   let prim_app (prim : prim) : vexpr list -> vexpr =
     match prim with
-    | Int_eq -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (Int.equal x y)
-    | Int_ne -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (not (Int.equal x y))
+    | Int_eq -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (Int64.equal x y)
+    | Int_ne -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (not (Int64.equal x y))
     | Int_le -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (x <= y)
     | Int_lt -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (x < y)
     | Int_gt -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (x < y)
     | Int_ge -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Bool_lit (x >= y)
-    | Int_neg -> fun[@warning "-partial-match"] [Int_lit x] -> Int_lit (Int.neg x)
-    | Int_add -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.add x y)
-    | Int_sub -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.sub x y)
-    | Int_mul -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.mul x y)
-    | Int_div -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.div x y)
-    | Int_logical_not -> fun[@warning "-partial-match"] [Int_lit x] -> Int_lit (Int.lognot x)
-    | Int_logical_and -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.logand x y)
-    | Int_logical_or -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.logor x y)
-    | Int_logical_xor -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.logxor x y)
-    | Int_logical_shl -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.shift_left x y)
-    | Int_arith_shr -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.shift_right x y)
-    | Int_logical_shr -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int.shift_right_logical x y)
+    | Int_neg -> fun[@warning "-partial-match"] [Int_lit x] -> Int_lit (Int64.neg x)
+    | Int_add -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.add x y)
+    | Int_sub -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.sub x y)
+    | Int_mul -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.mul x y)
+    | Int_div -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.div x y)
+    | Int_logical_not -> fun[@warning "-partial-match"] [Int_lit x] -> Int_lit (Int64.lognot x)
+    | Int_logical_and -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.logand x y)
+    | Int_logical_or -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.logor x y)
+    | Int_logical_xor -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit (Int64.logxor x y)
+    | Int_logical_shl -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit Int64.(shift_left x (to_int y))
+    | Int_arith_shr -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit Int64.(shift_right x (to_int y))
+    | Int_logical_shr -> fun[@warning "-partial-match"] [Int_lit x; Int_lit y] -> Int_lit Int64.(shift_right_logical x (to_int y))
 
   let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
     match expr with
@@ -426,18 +426,18 @@ module Semantics = struct
     and decode_byte : vexpr decoder =
       fun ~input ~pos ->
         if pos < Bytes.length input then
-          pos + 1, Int_lit (int_of_char (Bytes.unsafe_get input pos))
+          pos + 1, Int_lit (Int64.of_int (int_of_char (Bytes.unsafe_get input pos)))
         else
           raise (Decode_failure pos)
 
-    and decode_elems (locals : env) (len : int) (elem_fmt : format) : vexpr list decoder =
+    and decode_elems (locals : env) (len : int64) (elem_fmt : format) : vexpr list decoder =
       fun ~input ~pos ->
-        match len with
-        | 0 -> pos, []
-        | len ->
-            let pos, vexpr = decode_format locals elem_fmt ~input ~pos in
-            let pos, vexprs = decode_elems locals (len - 1) elem_fmt ~input ~pos in
-            pos, vexpr :: vexprs
+        if Int64.zero = len then
+          pos, []
+        else
+          let pos, vexpr = decode_format locals elem_fmt ~input ~pos in
+          let pos, vexprs = decode_elems locals (Int64.pred len) elem_fmt ~input ~pos in
+          pos, vexpr :: vexprs
     in
 
     decode_format [] fmt

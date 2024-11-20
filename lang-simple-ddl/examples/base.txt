@@ -30,7 +30,6 @@ format u64le :=
   let b5 <- byte;
   let b6 <- byte;
   let b7 <- byte;
-  -- FIXME: Will overflow
   pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56));
 
 format u16be :=
@@ -60,5 +59,4 @@ format u64be :=
   let b5 <- byte;
   let b6 <- byte;
   let b7 <- byte;
-  -- FIXME: Will overflow
   pure Int ((b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | b7);

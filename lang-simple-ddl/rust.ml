@@ -14,7 +14,7 @@ type expr =
   | Postfix_op of expr * string
   | Infix_op of expr * string * expr
   | Vec_lit of expr list
-  | I64Lit of int
+  | I64Lit of int64
   | Bool_lit of bool
   | Unit_lit
   | StructLit of string * (string * expr) list
@@ -132,7 +132,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       Format.fprintf ppf "vec![%a]"
         (Format.pp_print_list pp_expr ~pp_sep) exprs
   | I64Lit i ->
-      Format.pp_print_int ppf i
+      Format.pp_print_string ppf (Int64.to_string i)
   | Bool_lit true ->
       Format.fprintf ppf "true"
   | Bool_lit false ->

@@ -308,7 +308,7 @@ end = struct
 
     | Int_lit s ->
         (* TODO: postpone elaboration *)
-        begin match int_of_string_opt s with
+        begin match Int64.of_string_opt s with
         | Some i -> Expr_tm (Int_lit i, Int_type)
         | None -> error tm.loc "failed to parse integer literal"
         end
