@@ -211,23 +211,23 @@ end = struct
     | Op2 (op, tm1, tm2) ->
         let prim : Core.prim =
           match op with
-          | `Eq -> Int_eq
-          | `Ne -> Int_ne
-          | `Le -> Int_le
-          | `Lt -> Int_lt
-          | `Ge -> Int_ge
-          | `Gt -> Int_gt
+          | `Eq -> Int64_eq
+          | `Ne -> Int64_ne
+          | `Le -> Int64_le
+          | `Lt -> Int64_lt
+          | `Ge -> Int64_ge
+          | `Gt -> Int64_gt
           | _ -> error tm.loc "unexpected binary operator in format refinement"
         in
         let fmt1 = check_format ctx tm1 in
         let vty = eval_ty ctx (Format_repr fmt1) in
-        unify_vtys ctx tm1.loc vty Int_type;
+        unify_vtys ctx tm1.loc vty Int64_type;
         (* FIXME: fresh variables *)
         Bind ("x", fmt1,
           let expr2 = check_expr (extend_local ctx "x" vty) tm2 vty in
           Bool_elim (Prim_app (prim, [Local_var 0; expr2]),
-            Pure (Int_type, Local_var 0),
-            Fail Int_type))
+            Pure (Int64_type, Local_var 0),
+            Fail Int64_type))
 
     (* Conversion *)
     | _ ->
@@ -264,9 +264,9 @@ end = struct
                 | "List", [ty] ->
                     let ty = check_type ctx ty in
                     Type_tm (List_type ty)
-                | "Int", [] -> Type_tm Int_type
+                | "Int64", [] -> Type_tm Int64_type
                 | "repeat-len", [len; fmt] ->
-                    let len = check_expr ctx len Int_type in
+                    let len = check_expr ctx len Int64_type in
                     let fmt = check_format ctx fmt in
                     Format_tm (Repeat_len (len, fmt))
                 | "pure", [ty; expr] ->
@@ -277,7 +277,7 @@ end = struct
                 | "fail", [ty] ->
                     let ty = check_type ctx ty in
                     Format_tm (Fail ty)
-                | ("Type" | "Format" | "List" | "Int" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
+                | ("Type" | "Format" | "List" | "Int64" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
                     error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
                 | _, _ -> error tm.loc (Format.asprintf "unbound name `%s`" name)
                 end
@@ -309,7 +309,7 @@ end = struct
     | Int_lit s ->
         (* TODO: postpone elaboration *)
         begin match Int64.of_string_opt s with
-        | Some i -> Expr_tm (Int_lit i, Int_type)
+        | Some i -> Expr_tm (Int64_lit i, Int64_type)
         | None -> error tm.loc "failed to parse integer literal"
         end
 
@@ -347,34 +347,34 @@ end = struct
     | Op1 (op, tm) ->
         let op : Core.prim =
           match op with
-          | `Neg -> Int_neg
-          | `Logical_not -> Int_logical_not
+          | `Neg -> Int64_neg
+          | `Logical_not -> Int64_logical_not
         in
-        let expr = check_expr ctx tm Int_type in
-        Expr_tm (Prim_app (op, [expr]), Int_type)
+        let expr = check_expr ctx tm Int64_type in
+        Expr_tm (Prim_app (op, [expr]), Int64_type)
 
     | Op2 (op, tm1, tm2) ->
         let (op : Core.prim), (vty : Core.Semantics.vty) =
           match op with
-          | `Eq -> Int_eq, Bool_type
-          | `Ne -> Int_ne, Bool_type
-          | `Le -> Int_le, Bool_type
-          | `Lt -> Int_lt, Bool_type
-          | `Gt -> Int_gt, Bool_type
-          | `Ge -> Int_ge, Bool_type
-          | `Add -> Int_add, Int_type
-          | `Sub -> Int_sub, Int_type
-          | `Mul -> Int_mul, Int_type
-          | `Div -> Int_div, Int_type
-          | `Logical_and -> Int_logical_and, Int_type
-          | `Logical_or -> Int_logical_or, Int_type
-          | `Logical_xor -> Int_logical_xor, Int_type
-          | `Logical_shl -> Int_logical_shl, Int_type
-          | `Arith_shr -> Int_arith_shr, Int_type
-          | `Logical_shr -> Int_logical_shr, Int_type
+          | `Eq -> Int64_eq, Bool_type
+          | `Ne -> Int64_ne, Bool_type
+          | `Le -> Int64_le, Bool_type
+          | `Lt -> Int64_lt, Bool_type
+          | `Gt -> Int64_gt, Bool_type
+          | `Ge -> Int64_ge, Bool_type
+          | `Add -> Int64_add, Int64_type
+          | `Sub -> Int64_sub, Int64_type
+          | `Mul -> Int64_mul, Int64_type
+          | `Div -> Int64_div, Int64_type
+          | `Logical_and -> Int64_logical_and, Int64_type
+          | `Logical_or -> Int64_logical_or, Int64_type
+          | `Logical_xor -> Int64_logical_xor, Int64_type
+          | `Logical_shl -> Int64_logical_shl, Int64_type
+          | `Arith_shr -> Int64_arith_shr, Int64_type
+          | `Logical_shr -> Int64_logical_shr, Int64_type
         in
-        let expr1 = check_expr ctx tm1 Int_type in
-        let expr2 = check_expr ctx tm2 Int_type in
+        let expr1 = check_expr ctx tm1 Int64_type in
+        let expr2 = check_expr ctx tm2 Int64_type in
         Expr_tm (Prim_app (op, [expr1; expr2]), vty)
 
   and infer_ann (ctx : context) (tm : tm) (ann : tm option) : elab_tm =

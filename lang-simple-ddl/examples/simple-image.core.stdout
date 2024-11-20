@@ -1,14 +1,14 @@
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
+  #pure #Int (#int64-logical-or b0 (#int64-logical-shl b1 8));
 
 format u8 := byte;
 
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int-logical-or (#int-logical-shl b0 8) b1);
+  #pure #Int (#int64-logical-or (#int64-logical-shl b0 8) b1);
 
 type Pixel {
   blue : #Int;
@@ -39,6 +39,6 @@ type Image {
 
 format image :=
   let info <- info;
-  let num-pixels <- #pure #Int (#int-mul info.width info.height);
+  let num-pixels <- #pure #Int (#int64-mul info.width info.height);
   let data <- #repeat-len num-pixels pixel;
   #pure Image (Image { data := data; info := info });

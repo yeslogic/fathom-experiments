@@ -6,12 +6,12 @@ format u8 :=
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  pure Int (b0 | (b1 << 8));
+  pure Int64 (b0 | (b1 << 8));
 
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  pure Int ((b0 << 8) | b1);
+  pure Int64 ((b0 << 8) | b1);
 
 format info {
   width <- u16be;

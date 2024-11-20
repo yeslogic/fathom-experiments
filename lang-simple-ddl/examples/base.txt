@@ -6,20 +6,20 @@ format u8 :=
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  pure Int (b0 | (b1 << 8));
+  pure Int64 (b0 | (b1 << 8));
 
 format u24le :=
   let b0 <- byte;
   let b1 <- byte;
   let b2 <- byte;
-  pure Int (b0 | (b1 << 8) | (b2 << 16));
+  pure Int64 (b0 | (b1 << 8) | (b2 << 16));
 
 format u32le :=
   let b0 <- byte;
   let b1 <- byte;
   let b2 <- byte;
   let b3 <- byte;
-  pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
+  pure Int64 (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
 
 format u64le :=
   let b0 <- byte;
@@ -30,25 +30,25 @@ format u64le :=
   let b5 <- byte;
   let b6 <- byte;
   let b7 <- byte;
-  pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56));
+  pure Int64 (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56));
 
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  pure Int ((b0 << 8) | b1);
+  pure Int64 ((b0 << 8) | b1);
 
 format u24be :=
   let b0 <- byte;
   let b1 <- byte;
   let b2 <- byte;
-  pure Int ((b0 << 16) | (b1 << 16) | b2);
+  pure Int64 ((b0 << 16) | (b1 << 16) | b2);
 
 format u32be :=
   let b0 <- byte;
   let b1 <- byte;
   let b2 <- byte;
   let b3 <- byte;
-  pure Int ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+  pure Int64 ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
 
 format u64be :=
   let b0 <- byte;
@@ -59,4 +59,4 @@ format u64be :=
   let b5 <- byte;
   let b6 <- byte;
   let b7 <- byte;
-  pure Int ((b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | b7);
+  pure Int64 ((b0 << 56) | (b1 << 48) | (b2 << 40) | (b3 << 32) | (b4 << 24) | (b5 << 16) | (b6 << 8) | b7);

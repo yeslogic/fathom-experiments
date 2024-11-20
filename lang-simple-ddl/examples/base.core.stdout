@@ -9,19 +9,19 @@ format u64le :=
   let b7 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or
-          (#int-logical-or
-             (#int-logical-or
-                (#int-logical-or
-                   (#int-logical-or
-                      (#int-logical-or b0 (#int-logical-shl b1 8))
-                      (#int-logical-shl b2 16))
-                   (#int-logical-shl b3 24))
-                (#int-logical-shl b4 32))
-             (#int-logical-shl b5 40))
-          (#int-logical-shl b6 48))
-       (#int-logical-shl b7 56));
+    (#int64-logical-or
+       (#int64-logical-or
+          (#int64-logical-or
+             (#int64-logical-or
+                (#int64-logical-or
+                   (#int64-logical-or
+                      (#int64-logical-or b0 (#int64-logical-shl b1 8))
+                      (#int64-logical-shl b2 16))
+                   (#int64-logical-shl b3 24))
+                (#int64-logical-shl b4 32))
+             (#int64-logical-shl b5 40))
+          (#int64-logical-shl b6 48))
+       (#int64-logical-shl b7 56));
 
 format u64be :=
   let b0 <- byte;
@@ -34,26 +34,26 @@ format u64be :=
   let b7 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or
-          (#int-logical-or
-             (#int-logical-or
-                (#int-logical-or
-                   (#int-logical-or
-                      (#int-logical-or
-                         (#int-logical-shl b0 56)
-                         (#int-logical-shl b1 48))
-                      (#int-logical-shl b2 40))
-                   (#int-logical-shl b3 32))
-                (#int-logical-shl b4 24))
-             (#int-logical-shl b5 16))
-          (#int-logical-shl b6 8))
+    (#int64-logical-or
+       (#int64-logical-or
+          (#int64-logical-or
+             (#int64-logical-or
+                (#int64-logical-or
+                   (#int64-logical-or
+                      (#int64-logical-or
+                         (#int64-logical-shl b0 56)
+                         (#int64-logical-shl b1 48))
+                      (#int64-logical-shl b2 40))
+                   (#int64-logical-shl b3 32))
+                (#int64-logical-shl b4 24))
+             (#int64-logical-shl b5 16))
+          (#int64-logical-shl b6 8))
        b7);
 
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
+  #pure #Int (#int64-logical-or b0 (#int64-logical-shl b1 8));
 
 format u32le :=
   let b0 <- byte;
@@ -62,11 +62,11 @@ format u32le :=
   let b3 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or
-          (#int-logical-or b0 (#int-logical-shl b1 8))
-          (#int-logical-shl b2 16))
-       (#int-logical-shl b3 24));
+    (#int64-logical-or
+       (#int64-logical-or
+          (#int64-logical-or b0 (#int64-logical-shl b1 8))
+          (#int64-logical-shl b2 16))
+       (#int64-logical-shl b3 24));
 
 format u24be :=
   let b0 <- byte;
@@ -74,14 +74,16 @@ format u24be :=
   let b2 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or (#int-logical-shl b0 16) (#int-logical-shl b1 16))
+    (#int64-logical-or
+       (#int64-logical-or
+          (#int64-logical-shl b0 16)
+          (#int64-logical-shl b1 16))
        b2);
 
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int-logical-or (#int-logical-shl b0 8) b1);
+  #pure #Int (#int64-logical-or (#int64-logical-shl b0 8) b1);
 
 format u8 := byte;
 
@@ -92,10 +94,12 @@ format u32be :=
   let b3 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or
-          (#int-logical-or (#int-logical-shl b0 24) (#int-logical-shl b1 16))
-          (#int-logical-shl b2 8))
+    (#int64-logical-or
+       (#int64-logical-or
+          (#int64-logical-or
+             (#int64-logical-shl b0 24)
+             (#int64-logical-shl b1 16))
+          (#int64-logical-shl b2 8))
        b3);
 
 format u24le :=
@@ -104,6 +108,6 @@ format u24le :=
   let b2 <- byte;
   #pure
     #Int
-    (#int-logical-or
-       (#int-logical-or b0 (#int-logical-shl b1 8))
-       (#int-logical-shl b2 16));
+    (#int64-logical-or
+       (#int64-logical-or b0 (#int64-logical-shl b1 8))
+       (#int64-logical-shl b2 16));

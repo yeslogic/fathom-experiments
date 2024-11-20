@@ -1,6 +1,6 @@
 type Point {
-  x : Int;
-  y : Int;
+  x : Int64;
+  y : Int64;
 }
 
 def test-point-1 : Point := {
@@ -12,10 +12,10 @@ def test-point-2 :=
   { x := 1; y := 2 } : Point;
 
 type A-long-record {
-  foo : Int;
-  bar : Int;
-  baz : Int;
-  bananas : Int;
+  foo : Int64;
+  bar : Int64;
+  baz : Int64;
+  bananas : Int64;
 }
 
 def test-long-record : A-long-record := {
