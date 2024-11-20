@@ -1,0 +1,69 @@
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
+
+format u8 := byte;
+
+format u32le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  #pure
+    #Int
+    (#int-logical-or
+       (#int-logical-or
+          (#int-logical-or b0 (#int-logical-shl b1 8))
+          (#int-logical-shl b2 16))
+       (#int-logical-shl b3 24));
+
+format f32le := u32le;
+
+type Vec3d {
+  x : #Int;
+  y : #Int;
+  z : #Int;
+}
+
+format vec3d :=
+  let x <- f32le;
+  let y <- f32le;
+  let z <- f32le;
+  #pure Vec3d (Vec3d { x := x; y := y; z := z });
+
+type Triangle {
+  attribute-byte-count : #Int;
+  normal : Vec3d;
+  vertices : #List Vec3d;
+}
+
+format triangle :=
+  let normal <- vec3d;
+  let vertices <- #repeat-len 3 vec3d;
+  let attribute-byte-count <- u16le;
+  #pure
+    Triangle
+    (Triangle {
+       attribute-byte-count := attribute-byte-count;
+       normal := normal;
+       vertices := vertices
+     });
+
+type Main {
+  header : #List #Int;
+  triangle-count : #Int;
+  triangles : #List Triangle;
+}
+
+format main :=
+  let header <- #repeat-len 80 u8;
+  let triangle-count <- u32le;
+  let triangles <- #repeat-len triangle-count triangle;
+  #pure
+    Main
+    (Main {
+       header := header;
+       triangle-count := triangle-count;
+       triangles := triangles
+     });

@@ -1,0 +1,38 @@
+format u24be :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  #pure
+    #Int
+    (#int-logical-or
+       (#int-logical-or (#int-logical-shl b0 16) (#int-logical-shl b1 16))
+       b2);
+
+format u8 := byte;
+
+format u32be :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  #pure
+    #Int
+    (#int-logical-or
+       (#int-logical-or
+          (#int-logical-or (#int-logical-shl b0 24) (#int-logical-shl b1 16))
+          (#int-logical-shl b2 8))
+       b3);
+
+type Main {
+  counter : #Int;
+  random : #List #Int;
+  timestamp : #Int;
+}
+
+format main :=
+  let timestamp <- u32be;
+  let random <- #repeat-len 5 u8;
+  let counter <- u24be;
+  #pure
+    Main
+    (Main { counter := counter; random := random; timestamp := timestamp });

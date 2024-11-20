@@ -1,0 +1,50 @@
+--| Binary STL File
+--|
+--| # References
+--|
+--| - [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL)
+
+-- TODO:
+--
+-- STL variants:
+--
+-- * VisCAM
+-- * SolidView
+-- * Materialise Magics
+
+format u8 :=
+  byte;
+
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  pure Int (b0 | (b1 << 8));
+
+format u32le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
+
+format f32le :=
+  -- FIXME: convert from u32
+  u32le;
+
+format vec3d {
+  x <- f32le;
+  y <- f32le;
+  z <- f32le;
+}
+
+format triangle {
+  normal <- vec3d;
+  vertices <- repeat-len 3 vec3d;
+  attribute-byte-count <- u16le;
+}
+
+format main {
+  header <- repeat-len 80 u8;
+  triangle-count <- u32le;
+  triangles <- repeat-len triangle-count triangle;
+}

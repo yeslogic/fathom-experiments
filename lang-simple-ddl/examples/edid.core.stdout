@@ -1,0 +1,185 @@
+format u64le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  let b4 <- byte;
+  let b5 <- byte;
+  let b6 <- byte;
+  let b7 <- byte;
+  #pure
+    #Int
+    (#int-logical-or
+       (#int-logical-or
+          (#int-logical-or
+             (#int-logical-or
+                (#int-logical-or
+                   (#int-logical-or
+                      (#int-logical-or b0 (#int-logical-shl b1 8))
+                      (#int-logical-shl b2 16))
+                   (#int-logical-shl b3 24))
+                (#int-logical-shl b4 32))
+             (#int-logical-shl b5 40))
+          (#int-logical-shl b6 48))
+       (#int-logical-shl b7 56));
+
+format u8 := byte;
+
+format u32le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  #pure
+    #Int
+    (#int-logical-or
+       (#int-logical-or
+          (#int-logical-or b0 (#int-logical-shl b1 8))
+          (#int-logical-shl b2 16))
+       (#int-logical-shl b3 24));
+
+type Standard-timing-information {
+  
+}
+
+format standard-timing-information :=
+  #pure Standard-timing-information (Standard-timing-information {});
+
+type Unit {
+  
+}
+
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
+
+type Established-timing {
+  mode-bitmap : #List #Int;
+}
+
+format established-timing :=
+  let mode-bitmap <- #repeat-len 3 u8;
+  #pure
+    Established-timing
+    (Established-timing { mode-bitmap := mode-bitmap });
+
+type Display-parameters {
+  gamma-mod : #Int;
+  screen-size-h : #Int;
+  screen-size-v : #Int;
+  supported-features : #Int;
+  video-input-parameters : #Int;
+}
+
+format display-parameters :=
+  let video-input-parameters <- u8;
+  let screen-size-h <- u8;
+  let screen-size-v <- u8;
+  let gamma-mod <- u8;
+  let supported-features <- u8;
+  #pure
+    Display-parameters
+    (Display-parameters {
+       gamma-mod := gamma-mod;
+       screen-size-h := screen-size-h;
+       screen-size-v := screen-size-v;
+       supported-features := supported-features;
+       video-input-parameters := video-input-parameters
+     });
+
+type Chromacity-coordinates {
+  blue-white-lsb : #Int;
+  blue-x-msb : #Int;
+  blue-y-msb : #Int;
+  green-x-msb : #Int;
+  green-y-msb : #Int;
+  red-green-lsb : #Int;
+  red-x-msb : #Int;
+  red-y-msb : #Int;
+  white-x-msb : #Int;
+  white-y-msb : #Int;
+}
+
+format chromacity-coordinates :=
+  let red-green-lsb <- u8;
+  let blue-white-lsb <- u8;
+  let red-x-msb <- u8;
+  let red-y-msb <- u8;
+  let green-x-msb <- u8;
+  let green-y-msb <- u8;
+  let blue-x-msb <- u8;
+  let blue-y-msb <- u8;
+  let white-x-msb <- u8;
+  let white-y-msb <- u8;
+  #pure
+    Chromacity-coordinates
+    (Chromacity-coordinates {
+       blue-white-lsb := blue-white-lsb;
+       blue-x-msb := blue-x-msb;
+       blue-y-msb := blue-y-msb;
+       green-x-msb := green-x-msb;
+       green-y-msb := green-y-msb;
+       red-green-lsb := red-green-lsb;
+       red-x-msb := red-x-msb;
+       red-y-msb := red-y-msb;
+       white-x-msb := white-x-msb;
+       white-y-msb := white-y-msb
+     });
+
+type Header {
+  edid-version-major : #Int;
+  edid-version-minor : #Int;
+  magic : Unit;
+  manufacturer-id : #Int;
+  manufacturer-week : #Int;
+  manufacturer-year-mod : #Int;
+  product-code : #Int;
+  serial : #Int;
+}
+
+format header :=
+  let magic <-
+    let magic <- u64le;
+    if #int-eq magic 72057594037927680 then
+      (#pure Unit (Unit {})) else #fail Unit;
+    let manufacturer-id <- u16le; let product-code <- u16le;
+    let serial <- u32le; let manufacturer-week <- u8;
+    let manufacturer-year-mod <- u8; let edid-version-major <- u8;
+    let edid-version-minor <- u8;
+    #pure
+      Header
+      (Header {
+         edid-version-major := edid-version-major;
+         edid-version-minor := edid-version-minor;
+         magic := magic;
+         manufacturer-id := manufacturer-id;
+         manufacturer-week := manufacturer-week;
+         manufacturer-year-mod := manufacturer-year-mod;
+         product-code := product-code;
+         serial := serial
+       });
+
+type Main {
+  chromacity-coordinates : Chromacity-coordinates;
+  display-parameters : Display-parameters;
+  established-timing : Established-timing;
+  header : Header;
+  standard-timing-information : Standard-timing-information;
+}
+
+format main :=
+  let header <- header;
+  let display-parameters <- display-parameters;
+  let chromacity-coordinates <- chromacity-coordinates;
+  let established-timing <- established-timing;
+  let standard-timing-information <- standard-timing-information;
+  #pure
+    Main
+    (Main {
+       chromacity-coordinates := chromacity-coordinates;
+       display-parameters := display-parameters;
+       established-timing := established-timing;
+       header := header;
+       standard-timing-information := standard-timing-information
+     });

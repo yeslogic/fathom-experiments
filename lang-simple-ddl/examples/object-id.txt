@@ -1,0 +1,32 @@
+--| # BSON ObjectId
+--|
+--| ## References
+--|
+--| - [Mongo Reference](https://docs.mongodb.com/manual/reference/bson-types/#objectid)
+
+format u8 :=
+  byte;
+
+format u24be :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  pure Int ((b0 << 16) | (b1 << 16) | b2);
+
+format u32be :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  pure Int ((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+
+format main {
+  --| 4-byte timestamp value representing the creation time of the ObjectId,
+  --| measured in seconds since the Unix epoch.
+  timestamp <- u32be;
+  --| Random value generated once per process. This random value is unique to
+  --| the machine and process.
+  random <- repeat-len 5 u8;
+  --| Incrementing counter, initialized to a random value.
+  counter <- u24be;
+}

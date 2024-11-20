@@ -1,0 +1,87 @@
+--| # Extended Display Identification Data
+--|
+--| ## References
+--|
+--| * https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
+
+type Unit {}
+
+format u8 :=
+  byte;
+
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  pure Int (b0 | (b1 << 8));
+
+format u32le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24));
+
+format u64le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  let b2 <- byte;
+  let b3 <- byte;
+  let b4 <- byte;
+  let b5 <- byte;
+  let b6 <- byte;
+  let b7 <- byte;
+  -- FIXME: Will overflow
+  pure Int (b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) | (b6 << 48) | (b7 << 56));
+
+-- TODO: Versions 1.0-1.4
+
+format header {
+  magic <-
+    -- TODO: where fields/ literal formats
+    let magic <- u64le;
+    if magic = 0x00ffffffffffff00 then (pure Unit {}) else (fail Unit);
+  manufacturer-id <- u16le;                -- TODO: bit patterns
+  product-code <- u16le;
+  serial <- u32le;
+  manufacturer-week <- u8;
+  manufacturer-year-mod <- u8;             -- TODO: `mfg-year-mod + 1990`
+  edid-version-major <- u8;
+  edid-version-minor <- u8;
+}
+
+format display-parameters {
+  video-input-parameters <- u8;            -- TODO: bit patterns
+  screen-size-h <- u8;
+  screen-size-v <- u8;
+  gamma-mod <- u8;                         -- TODO: `(int-to-f32 gamma-mod + 100.0) / 100.0`
+  supported-features <- u8;                -- TODO: bit patterns
+}
+
+format chromacity-coordinates {
+  red-green-lsb <- u8;                     -- TODO: bit patterns
+  blue-white-lsb <- u8;                    -- TODO: bit patterns
+  red-x-msb <- u8;
+  red-y-msb <- u8;
+  green-x-msb <- u8;
+  green-y-msb <- u8;
+  blue-x-msb <- u8;
+  blue-y-msb <- u8;
+  white-x-msb <- u8;
+  white-y-msb <- u8;
+}
+
+format established-timing {
+  mode-bitmap <- repeat-len 3 u8;             -- TODO: bit patterns
+}
+
+format standard-timing-information {
+  -- TODO: Standard timing information
+}
+
+format main {
+  header <- header;
+  display-parameters <- display-parameters;
+  chromacity-coordinates <- chromacity-coordinates;
+  established-timing <- established-timing;
+  standard-timing-information <- standard-timing-information;
+}

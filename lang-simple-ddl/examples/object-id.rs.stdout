@@ -1,0 +1,44 @@
+fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let byte = input.get(*pos).ok_or(())?;
+    *pos +=1;
+    Ok(i64::from(*byte))
+}
+
+fn read_repeat_len<T>(
+    len: i64,
+    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
+) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
+    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
+}
+
+fn read_u24be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    Ok((b0 << 16) | (b1 << 16) | b2)
+}
+
+fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    read_byte(input, pos)
+}
+
+fn read_u32be(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    let b3 = read_byte(input, pos)?;
+    Ok((b0 << 24) | (b1 << 16) | (b2 << 8) | b3)
+}
+
+struct Main {
+    counter: i64,
+    random: Vec<i64>,
+    timestamp: i64,
+}
+
+fn read_main(input: &[u8], pos: &mut usize) -> Result<Main, ()> {
+    let timestamp = read_u32be(input, pos)?;
+    let random = read_repeat_len(5, read_u8)(input, pos)?;
+    let counter = read_u24be(input, pos)?;
+    Ok(Main { counter, random, timestamp })
+}

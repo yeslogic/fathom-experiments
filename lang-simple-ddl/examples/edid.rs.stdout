@@ -1,0 +1,189 @@
+fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let byte = input.get(*pos).ok_or(())?;
+    *pos +=1;
+    Ok(i64::from(*byte))
+}
+
+fn read_repeat_len<T>(
+    len: i64,
+    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
+) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
+    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
+}
+
+fn read_u64le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    let b3 = read_byte(input, pos)?;
+    let b4 = read_byte(input, pos)?;
+    let b5 = read_byte(input, pos)?;
+    let b6 = read_byte(input, pos)?;
+    let b7 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24) | (b4 << 32) | (b5 << 40) |
+       (b6 << 48) | (b7 << 56))
+}
+
+fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    read_byte(input, pos)
+}
+
+fn read_u32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    let b3 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24))
+}
+
+struct StandardTimingInformation {
+    
+}
+
+fn read_standard_timing_information(input: &[u8],
+pos: &mut usize) -> Result<StandardTimingInformation, ()> {
+    Ok(StandardTimingInformation { })
+}
+
+struct Unit {
+    
+}
+
+fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8))
+}
+
+struct EstablishedTiming {
+    mode_bitmap: Vec<i64>,
+}
+
+fn read_established_timing(input: &[u8],
+pos: &mut usize) -> Result<EstablishedTiming, ()> {
+    let mode_bitmap = read_repeat_len(3, read_u8)(input, pos)?;
+    Ok(EstablishedTiming { mode_bitmap })
+}
+
+struct DisplayParameters {
+    gamma_mod: i64,
+    screen_size_h: i64,
+    screen_size_v: i64,
+    supported_features: i64,
+    video_input_parameters: i64,
+}
+
+fn read_display_parameters(input: &[u8],
+pos: &mut usize) -> Result<DisplayParameters, ()> {
+    let video_input_parameters = read_u8(input, pos)?;
+    let screen_size_h = read_u8(input, pos)?;
+    let screen_size_v = read_u8(input, pos)?;
+    let gamma_mod = read_u8(input, pos)?;
+    let supported_features = read_u8(input, pos)?;
+    Ok(DisplayParameters {
+           gamma_mod,
+           screen_size_h,
+           screen_size_v,
+           supported_features,
+           video_input_parameters
+       })
+}
+
+struct ChromacityCoordinates {
+    blue_white_lsb: i64,
+    blue_x_msb: i64,
+    blue_y_msb: i64,
+    green_x_msb: i64,
+    green_y_msb: i64,
+    red_green_lsb: i64,
+    red_x_msb: i64,
+    red_y_msb: i64,
+    white_x_msb: i64,
+    white_y_msb: i64,
+}
+
+fn read_chromacity_coordinates(input: &[u8],
+pos: &mut usize) -> Result<ChromacityCoordinates, ()> {
+    let red_green_lsb = read_u8(input, pos)?;
+    let blue_white_lsb = read_u8(input, pos)?;
+    let red_x_msb = read_u8(input, pos)?;
+    let red_y_msb = read_u8(input, pos)?;
+    let green_x_msb = read_u8(input, pos)?;
+    let green_y_msb = read_u8(input, pos)?;
+    let blue_x_msb = read_u8(input, pos)?;
+    let blue_y_msb = read_u8(input, pos)?;
+    let white_x_msb = read_u8(input, pos)?;
+    let white_y_msb = read_u8(input, pos)?;
+    Ok(ChromacityCoordinates {
+           blue_white_lsb,
+           blue_x_msb,
+           blue_y_msb,
+           green_x_msb,
+           green_y_msb,
+           red_green_lsb,
+           red_x_msb,
+           red_y_msb,
+           white_x_msb,
+           white_y_msb
+       })
+}
+
+struct Header {
+    edid_version_major: i64,
+    edid_version_minor: i64,
+    magic: Unit,
+    manufacturer_id: i64,
+    manufacturer_week: i64,
+    manufacturer_year_mod: i64,
+    product_code: i64,
+    serial: i64,
+}
+
+fn read_header(input: &[u8], pos: &mut usize) -> Result<Header, ()> {
+    let magic =
+        {
+            let magic = read_u64le(input, pos)?;
+            if magic == 72057594037927680 { Ok(Unit { }) } else { Err(()) }
+        }?;
+    let manufacturer_id = read_u16le(input, pos)?;
+    let product_code = read_u16le(input, pos)?;
+    let serial = read_u32le(input, pos)?;
+    let manufacturer_week = read_u8(input, pos)?;
+    let manufacturer_year_mod = read_u8(input, pos)?;
+    let edid_version_major = read_u8(input, pos)?;
+    let edid_version_minor = read_u8(input, pos)?;
+    Ok(Header {
+           edid_version_major,
+           edid_version_minor,
+           magic,
+           manufacturer_id,
+           manufacturer_week,
+           manufacturer_year_mod,
+           product_code,
+           serial
+       })
+}
+
+struct Main {
+    chromacity_coordinates: ChromacityCoordinates,
+    display_parameters: DisplayParameters,
+    established_timing: EstablishedTiming,
+    header: Header,
+    standard_timing_information: StandardTimingInformation,
+}
+
+fn read_main(input: &[u8], pos: &mut usize) -> Result<Main, ()> {
+    let header = read_header(input, pos)?;
+    let display_parameters = read_display_parameters(input, pos)?;
+    let chromacity_coordinates = read_chromacity_coordinates(input, pos)?;
+    let established_timing = read_established_timing(input, pos)?;
+    let standard_timing_information =
+        read_standard_timing_information(input, pos)?;
+    Ok(Main {
+           chromacity_coordinates,
+           display_parameters,
+           established_timing,
+           header,
+           standard_timing_information
+       })
+}

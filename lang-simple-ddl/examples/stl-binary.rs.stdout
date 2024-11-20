@@ -1,0 +1,74 @@
+fn read_byte(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let byte = input.get(*pos).ok_or(())?;
+    *pos +=1;
+    Ok(i64::from(*byte))
+}
+
+fn read_repeat_len<T>(
+    len: i64,
+    read_elem: impl Fn(&[u8], &mut usize) -> Result<T, ()>,
+) -> impl Fn(&[u8], &mut usize) -> Result<Vec<T>, ()> {
+    move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
+}
+
+fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8))
+}
+
+fn read_u8(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    read_byte(input, pos)
+}
+
+fn read_u32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    let b2 = read_byte(input, pos)?;
+    let b3 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24))
+}
+
+fn read_f32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    read_u32le(input, pos)
+}
+
+struct Vec3d {
+    x: i64,
+    y: i64,
+    z: i64,
+}
+
+fn read_vec3d(input: &[u8], pos: &mut usize) -> Result<Vec3d, ()> {
+    let x = read_f32le(input, pos)?;
+    let y = read_f32le(input, pos)?;
+    let z = read_f32le(input, pos)?;
+    Ok(Vec3d { x, y, z })
+}
+
+struct Triangle {
+    attribute_byte_count: i64,
+    normal: Vec3d,
+    vertices: Vec<Vec3d>,
+}
+
+fn read_triangle(input: &[u8], pos: &mut usize) -> Result<Triangle, ()> {
+    let normal = read_vec3d(input, pos)?;
+    let vertices = read_repeat_len(3, read_vec3d)(input, pos)?;
+    let attribute_byte_count = read_u16le(input, pos)?;
+    Ok(Triangle { attribute_byte_count, normal, vertices })
+}
+
+struct Main {
+    header: Vec<i64>,
+    triangle_count: i64,
+    triangles: Vec<Triangle>,
+}
+
+fn read_main(input: &[u8], pos: &mut usize) -> Result<Main, ()> {
+    let header = read_repeat_len(80, read_u8)(input, pos)?;
+    let triangle_count = read_u32le(input, pos)?;
+    let triangles =
+        read_repeat_len(triangle_count, read_triangle)(input, pos)?;
+    Ok(Main { header, triangle_count, triangles })
+}
