@@ -42,22 +42,22 @@ type tm =
   tm_node located
 
 and tm_node =
-  | Name of string * tm list
-  | Ann of tm * tm
-  | Let of binder * tm option * tm * tm
-  | Bind of binder * tm * tm
-  | Record_lit of (string located * tm) list
-  | Int_lit of string
-  | Proj of tm * string located
-  | If_then_else of tm * tm * tm
-  | Op1 of op1 * tm
-  | Op2 of op2 * tm * tm
+  | Name of string * tm list                  (* x *)
+  | Ann of tm * tm                            (* tm : tm *)
+  | Let of binder * tm option * tm * tm       (* let x : tm := tm; tm *)
+  | Bind of binder * tm * tm                  (* let x <- tm; tm *)
+  | Record_lit of (string located * tm) list  (* { x := tm; ... } *)
+  | Int_lit of string                         (* ... | -1 | 0 | 1 | ... *)
+  | Proj of tm * string located               (* tm.l *)
+  | If_then_else of tm * tm * tm              (* if tm then tm else tm *)
+  | Op1 of op1 * tm                           (* op tm *)
+  | Op2 of op2 * tm * tm                      (* tm op tm *)
 
 type format_field =
-  | Let of binder * tm option * tm          (* let x : tm := tm *)
-  | Bind of binder * tm                     (* let x <- tm *)
-  | Let_field of binder * tm option * tm     (* x : tm := tm *)
-  | Bind_field of binder * tm                (* x <- tm *)
+  | Let of binder * tm option * tm            (* let x : tm := tm *)
+  | Bind of binder * tm                       (* let x <- tm *)
+  | Let_field of binder * tm option * tm      (* x : tm := tm *)
+  | Bind_field of binder * tm                 (* x <- tm *)
   (* TODO: add `where ...` *)
 
 type item =
