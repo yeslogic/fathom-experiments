@@ -17,3 +17,18 @@
     menhirLib
     sedlex
     simple-ddl))
+
+(rule
+  (with-stdout-to
+    examples.ml
+    (progn
+      (echo "let initial = \"simple-image\"\n")
+      (echo "\n")
+      ; TODO: autogenerate example list
+      (echo "let all = [\n")
+      (echo "  (\"base\", {|") (cat ../../examples/base.txt) (echo "|});\n")
+      (echo "  (\"edid\", {|") (cat ../../examples/edid.txt) (echo "|});\n")
+      (echo "  (\"object-id\", {|") (cat ../../examples/object-id.txt) (echo "|});\n")
+      (echo "  (\"simple-image\", {|") (cat ../../examples/simple-image.txt) (echo "|});\n")
+      (echo "  (\"stl-binary\", {|") (cat ../../examples/stl-binary.txt) (echo "|});\n")
+      (echo "]\n"))))

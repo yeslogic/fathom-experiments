@@ -26,35 +26,6 @@ let elab_program (filename : string) (input : string) =
   | Parser.Error -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error")
   | Surface.Elab.Error (loc, message) -> Error (format_error "error" loc message)
 
-let initial_example = "simple-image"
-
-let examples = [
-  (
-    "simple-image",
-    String.concat "\n" [
-      "format u16le :=";
-      "  let b0 <- byte;";
-      "  let b1 <- byte;";
-      "  pure Int (b0 | (b1 << 8));";
-      "";
-      "format image {";
-      "  width <- u16le;";
-      "  height <- u16le;";
-      "  data <- repeat-len (width * height) byte;";
-      "}"
-    ]
-  );
-  (
-    "record-type",
-    String.concat "\n" [
-      "type Point {";
-      "  x : Int;";
-      "  y : Int;";
-      "}";
-    ]
-  );
-]
-
 open Brr
 
 let el_value (el : El.t) : string =
@@ -117,8 +88,8 @@ let example_select_el ~(input_el : El.t) : El.t =
   let open El in
 
   let select_el =
-    select (examples |> List.map (fun (n, _) ->
-      option ~at:At.[if' (n = initial_example) selected] [txt' n]))
+    select (Examples.all |> List.map (fun (n, _) ->
+      option ~at:At.[if' (n = Examples.initial) selected] [txt' n]))
   in
 
   let _ : Ev.listener =
@@ -128,7 +99,7 @@ let example_select_el ~(input_el : El.t) : El.t =
       print_endline ("select example: " ^ example_name);
 
       El.set_children input_el El.[
-        txt' (List.assoc example_name examples);
+        txt' (List.assoc example_name Examples.all);
       ];
   in
 
@@ -145,7 +116,7 @@ let input_el () : El.t =
       cols 80;
       spellcheck (Jstr.v "false");
     ]
-    [ txt' (List.assoc initial_example examples) ]
+    [ txt' (List.assoc Examples.initial Examples.all) ]
 
 
 let output_el () : El.t =
