@@ -15,8 +15,10 @@ struct StandardTimingInformation {
     
 }
 
-fn read_standard_timing_information(input: &[u8],
-pos: &mut usize) -> Result<StandardTimingInformation, ()> {
+fn read_standard_timing_information(
+    input: &[u8],
+    pos: &mut usize
+) -> Result<StandardTimingInformation, ()> {
     Ok(StandardTimingInformation { })
 }
 
@@ -64,8 +66,10 @@ struct ChromacityCoordinates {
     white_y_msb: i64,
 }
 
-fn read_chromacity_coordinates(input: &[u8],
-pos: &mut usize) -> Result<ChromacityCoordinates, ()> {
+fn read_chromacity_coordinates(
+    input: &[u8],
+    pos: &mut usize
+) -> Result<ChromacityCoordinates, ()> {
     let red_green_lsb = read_u8(input, pos)?;
     let blue_white_lsb = read_u8(input, pos)?;
     let red_x_msb = read_u8(input, pos)?;
@@ -98,8 +102,10 @@ struct DisplayParameters {
     video_input_parameters: i64,
 }
 
-fn read_display_parameters(input: &[u8],
-pos: &mut usize) -> Result<DisplayParameters, ()> {
+fn read_display_parameters(
+    input: &[u8],
+    pos: &mut usize
+) -> Result<DisplayParameters, ()> {
     let video_input_parameters = read_u8(input, pos)?;
     let screen_size_h = read_u8(input, pos)?;
     let screen_size_v = read_u8(input, pos)?;
@@ -118,8 +124,10 @@ struct EstablishedTiming {
     mode_bitmap: Vec<i64>,
 }
 
-fn read_established_timing(input: &[u8],
-pos: &mut usize) -> Result<EstablishedTiming, ()> {
+fn read_established_timing(
+    input: &[u8],
+    pos: &mut usize
+) -> Result<EstablishedTiming, ()> {
     let mode_bitmap = read_repeat_len(3, read_u8)(input, pos)?;
     Ok(EstablishedTiming { mode_bitmap })
 }

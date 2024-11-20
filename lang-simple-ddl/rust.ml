@@ -201,11 +201,12 @@ let pp_item (ppf : Format.formatter) (item : item) =
         pp_ty ty
         pp_expr expr
   | Fn (name, params, ret_ty, body) ->
-      let pp_sep ppf () = Format.fprintf ppf ",@ " in
+      let pp_sep ppf () = Format.fprintf ppf ",@;<1 4>" in
       let pp_param ppf (name, ty) =
         Format.fprintf ppf "@[%s:@ %a@]" name pp_ty ty
       in
-      Format.fprintf ppf "@[<v>@[fn %s(%a) -> %a {@]%a@ }@]@."
+      Format.fprintf ppf "@[<v>@[<hv>@[fn %s(@]@;<0 4>%a@,@[) -> %a {@]@]%a@ }@]@."
+        (* TODO: trailing comma:                        ^^ *)
         name
         (Format.pp_print_list pp_param ~pp_sep) params
         pp_ty ret_ty
