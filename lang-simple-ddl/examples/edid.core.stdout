@@ -1,3 +1,15 @@
+type Standard-timing-information {
+  
+}
+
+format standard-timing-information :=
+  #pure Standard-timing-information (Standard-timing-information {});
+
+format u16le :=
+  let b0 <- byte;
+  let b1 <- byte;
+  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
+
 format u64le :=
   let b0 <- byte;
   let b1 <- byte;
@@ -38,56 +50,6 @@ format u32le :=
           (#int-logical-shl b2 16))
        (#int-logical-shl b3 24));
 
-type Standard-timing-information {
-  
-}
-
-format standard-timing-information :=
-  #pure Standard-timing-information (Standard-timing-information {});
-
-type Unit {
-  
-}
-
-format u16le :=
-  let b0 <- byte;
-  let b1 <- byte;
-  #pure #Int (#int-logical-or b0 (#int-logical-shl b1 8));
-
-type Established-timing {
-  mode-bitmap : #List #Int;
-}
-
-format established-timing :=
-  let mode-bitmap <- #repeat-len 3 u8;
-  #pure
-    Established-timing
-    (Established-timing { mode-bitmap := mode-bitmap });
-
-type Display-parameters {
-  gamma-mod : #Int;
-  screen-size-h : #Int;
-  screen-size-v : #Int;
-  supported-features : #Int;
-  video-input-parameters : #Int;
-}
-
-format display-parameters :=
-  let video-input-parameters <- u8;
-  let screen-size-h <- u8;
-  let screen-size-v <- u8;
-  let gamma-mod <- u8;
-  let supported-features <- u8;
-  #pure
-    Display-parameters
-    (Display-parameters {
-       gamma-mod := gamma-mod;
-       screen-size-h := screen-size-h;
-       screen-size-v := screen-size-v;
-       supported-features := supported-features;
-       video-input-parameters := video-input-parameters
-     });
-
 type Chromacity-coordinates {
   blue-white-lsb : #Int;
   blue-x-msb : #Int;
@@ -127,10 +89,44 @@ format chromacity-coordinates :=
        white-y-msb := white-y-msb
      });
 
+type Display-parameters {
+  gamma-mod : #Int;
+  screen-size-h : #Int;
+  screen-size-v : #Int;
+  supported-features : #Int;
+  video-input-parameters : #Int;
+}
+
+format display-parameters :=
+  let video-input-parameters <- u8;
+  let screen-size-h <- u8;
+  let screen-size-v <- u8;
+  let gamma-mod <- u8;
+  let supported-features <- u8;
+  #pure
+    Display-parameters
+    (Display-parameters {
+       gamma-mod := gamma-mod;
+       screen-size-h := screen-size-h;
+       screen-size-v := screen-size-v;
+       supported-features := supported-features;
+       video-input-parameters := video-input-parameters
+     });
+
+type Established-timing {
+  mode-bitmap : #List #Int;
+}
+
+format established-timing :=
+  let mode-bitmap <- #repeat-len 3 u8;
+  #pure
+    Established-timing
+    (Established-timing { mode-bitmap := mode-bitmap });
+
 type Header {
   edid-version-major : #Int;
   edid-version-minor : #Int;
-  magic : Unit;
+  magic : #Int;
   manufacturer-id : #Int;
   manufacturer-week : #Int;
   manufacturer-year-mod : #Int;
@@ -140,25 +136,27 @@ type Header {
 
 format header :=
   let magic <-
-    let magic <- u64le;
-    if #int-eq magic 72057594037927680 then
-      (#pure Unit (Unit {})) else #fail Unit;
-    let manufacturer-id <- u16le; let product-code <- u16le;
-    let serial <- u32le; let manufacturer-week <- u8;
-    let manufacturer-year-mod <- u8; let edid-version-major <- u8;
-    let edid-version-minor <- u8;
-    #pure
-      Header
-      (Header {
-         edid-version-major := edid-version-major;
-         edid-version-minor := edid-version-minor;
-         magic := magic;
-         manufacturer-id := manufacturer-id;
-         manufacturer-week := manufacturer-week;
-         manufacturer-year-mod := manufacturer-year-mod;
-         product-code := product-code;
-         serial := serial
-       });
+    let x <- u64le;
+    if #int-eq x 72057594037927680 then (#pure #Int x) else #fail #Int;
+  let manufacturer-id <- u16le;
+  let product-code <- u16le;
+  let serial <- u32le;
+  let manufacturer-week <- u8;
+  let manufacturer-year-mod <- u8;
+  let edid-version-major <- u8;
+  let edid-version-minor <- u8;
+  #pure
+    Header
+    (Header {
+       edid-version-major := edid-version-major;
+       edid-version-minor := edid-version-minor;
+       magic := magic;
+       manufacturer-id := manufacturer-id;
+       manufacturer-week := manufacturer-week;
+       manufacturer-year-mod := manufacturer-year-mod;
+       product-code := product-code;
+       serial := serial
+     });
 
 type Main {
   chromacity-coordinates : Chromacity-coordinates;

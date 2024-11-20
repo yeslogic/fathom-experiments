@@ -11,6 +11,21 @@ fn read_repeat_len<T>(
     move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
 }
 
+struct StandardTimingInformation {
+    
+}
+
+fn read_standard_timing_information(input: &[u8],
+pos: &mut usize) -> Result<StandardTimingInformation, ()> {
+    Ok(StandardTimingInformation { })
+}
+
+fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let b0 = read_byte(input, pos)?;
+    let b1 = read_byte(input, pos)?;
+    Ok(b0 | (b1 << 8))
+}
+
 fn read_u64le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b0 = read_byte(input, pos)?;
     let b1 = read_byte(input, pos)?;
@@ -34,59 +49,6 @@ fn read_u32le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
     let b2 = read_byte(input, pos)?;
     let b3 = read_byte(input, pos)?;
     Ok(b0 | (b1 << 8) | (b2 << 16) | (b3 << 24))
-}
-
-struct StandardTimingInformation {
-    
-}
-
-fn read_standard_timing_information(input: &[u8],
-pos: &mut usize) -> Result<StandardTimingInformation, ()> {
-    Ok(StandardTimingInformation { })
-}
-
-struct Unit {
-    
-}
-
-fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
-    let b0 = read_byte(input, pos)?;
-    let b1 = read_byte(input, pos)?;
-    Ok(b0 | (b1 << 8))
-}
-
-struct EstablishedTiming {
-    mode_bitmap: Vec<i64>,
-}
-
-fn read_established_timing(input: &[u8],
-pos: &mut usize) -> Result<EstablishedTiming, ()> {
-    let mode_bitmap = read_repeat_len(3, read_u8)(input, pos)?;
-    Ok(EstablishedTiming { mode_bitmap })
-}
-
-struct DisplayParameters {
-    gamma_mod: i64,
-    screen_size_h: i64,
-    screen_size_v: i64,
-    supported_features: i64,
-    video_input_parameters: i64,
-}
-
-fn read_display_parameters(input: &[u8],
-pos: &mut usize) -> Result<DisplayParameters, ()> {
-    let video_input_parameters = read_u8(input, pos)?;
-    let screen_size_h = read_u8(input, pos)?;
-    let screen_size_v = read_u8(input, pos)?;
-    let gamma_mod = read_u8(input, pos)?;
-    let supported_features = read_u8(input, pos)?;
-    Ok(DisplayParameters {
-           gamma_mod,
-           screen_size_h,
-           screen_size_v,
-           supported_features,
-           video_input_parameters
-       })
 }
 
 struct ChromacityCoordinates {
@@ -128,10 +90,44 @@ pos: &mut usize) -> Result<ChromacityCoordinates, ()> {
        })
 }
 
+struct DisplayParameters {
+    gamma_mod: i64,
+    screen_size_h: i64,
+    screen_size_v: i64,
+    supported_features: i64,
+    video_input_parameters: i64,
+}
+
+fn read_display_parameters(input: &[u8],
+pos: &mut usize) -> Result<DisplayParameters, ()> {
+    let video_input_parameters = read_u8(input, pos)?;
+    let screen_size_h = read_u8(input, pos)?;
+    let screen_size_v = read_u8(input, pos)?;
+    let gamma_mod = read_u8(input, pos)?;
+    let supported_features = read_u8(input, pos)?;
+    Ok(DisplayParameters {
+           gamma_mod,
+           screen_size_h,
+           screen_size_v,
+           supported_features,
+           video_input_parameters
+       })
+}
+
+struct EstablishedTiming {
+    mode_bitmap: Vec<i64>,
+}
+
+fn read_established_timing(input: &[u8],
+pos: &mut usize) -> Result<EstablishedTiming, ()> {
+    let mode_bitmap = read_repeat_len(3, read_u8)(input, pos)?;
+    Ok(EstablishedTiming { mode_bitmap })
+}
+
 struct Header {
     edid_version_major: i64,
     edid_version_minor: i64,
-    magic: Unit,
+    magic: i64,
     manufacturer_id: i64,
     manufacturer_week: i64,
     manufacturer_year_mod: i64,
@@ -142,8 +138,8 @@ struct Header {
 fn read_header(input: &[u8], pos: &mut usize) -> Result<Header, ()> {
     let magic =
         {
-            let magic = read_u64le(input, pos)?;
-            if magic == 72057594037927680 { Ok(Unit { }) } else { Err(()) }
+            let x = read_u64le(input, pos)?;
+            if x == 72057594037927680 { Ok(x) } else { Err(()) }
         }?;
     let manufacturer_id = read_u16le(input, pos)?;
     let product_code = read_u16le(input, pos)?;

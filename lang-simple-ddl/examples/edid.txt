@@ -4,8 +4,6 @@
 --|
 --| - https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
 
-type Unit {}
-
 format u8 :=
   byte;
 
@@ -36,10 +34,7 @@ format u64le :=
 -- TODO: Versions 1.0-1.4
 
 format header {
-  magic <-
-    -- TODO: where fields/ literal formats
-    let magic <- u64le;
-    if magic = 0x00ffffffffffff00 then (pure Unit {}) else (fail Unit);
+  magic <- u64le = 0x00ffffffffffff00;
   manufacturer-id <- u16le;                -- TODO: bit patterns
   product-code <- u16le;
   serial <- u32le;

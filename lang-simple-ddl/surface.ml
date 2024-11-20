@@ -208,8 +208,29 @@ end = struct
         unify_vtys ctx tm.loc vty1 vty2;
         Bool_elim (head, fmt1, fmt2)
 
+    | Op2 (op, tm1, tm2) ->
+        let prim : Core.prim =
+          match op with
+          | `Eq -> Int_eq
+          | `Ne -> Int_ne
+          | `Le -> Int_le
+          | `Lt -> Int_lt
+          | `Ge -> Int_ge
+          | `Gt -> Int_gt
+          | _ -> error tm.loc "unexpected binary operator in format refinement"
+        in
+        let fmt1 = check_format ctx tm1 in
+        let vty = eval_ty ctx (Format_repr fmt1) in
+        unify_vtys ctx tm1.loc vty Int_type;
+        (* FIXME: fresh variables *)
+        Bind ("x", fmt1,
+          let expr2 = check_expr (extend_local ctx "x" vty) tm2 vty in
+          Bool_elim (Prim_app (prim, [Local_var 0; expr2]),
+            Pure (Int_type, Local_var 0),
+            Fail Int_type))
+
     (* Conversion *)
-    |_ ->
+    | _ ->
       match infer ctx tm with
       | Format_tm fmt -> fmt
       | Kind_tm _ -> error tm.loc "expected format, found kind"
