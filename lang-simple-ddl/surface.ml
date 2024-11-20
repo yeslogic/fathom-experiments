@@ -308,7 +308,10 @@ end = struct
 
     | Int_lit s ->
         (* TODO: postpone elaboration *)
-        Expr_tm (Int_lit (int_of_string s), Int_type)
+        begin match int_of_string_opt s with
+        | Some i -> Expr_tm (Int_lit i, Int_type)
+        | None -> error tm.loc "failed to parse integer literal"
+        end
 
     | Proj (head, label) ->
         begin match infer ctx head with
