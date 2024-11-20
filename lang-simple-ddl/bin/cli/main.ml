@@ -19,22 +19,33 @@ let elab_program (filename : string) (input : in_channel) =
     |> Sedlexing.with_tokenizer Lexer.token
     |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
     |> Surface.Elab.check_program
+    |> Result.ok
   with
-  | Lexer.Unexpected_char -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
-  | Lexer.Unclosed_block_comment -> print_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
-  | Parser.Error -> print_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
-  | Surface.Elab.Error (loc, message) -> print_error "error" loc message; exit 1
+  | Lexer.Unexpected_char -> Error (Sedlexing.lexing_positions lexbuf, "unexpected character")
+  | Lexer.Unclosed_block_comment -> Error (Sedlexing.lexing_positions lexbuf, "unclosed block comment")
+  | Parser.Error -> Error (Sedlexing.lexing_positions lexbuf, "syntax error")
+  | Surface.Elab.Error (loc, message) -> Error (loc, message)
 
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
-  elab_program "<input>" stdin
-  |> Format.printf "@[%a@]" Core.pp_program
+  match elab_program "<input>" stdin with
+  | Ok program ->
+      program
+      |> Format.printf "@[%a@]" Core.pp_program
+  | Error (loc, message) ->
+      print_error "error" loc message;
+      exit 1
 
 let compile_cmd () : unit =
-  elab_program "<input>" stdin
-  |> Core.Compile.compile_program
-  |> Format.printf "@[%a@]" Rust.pp_program
+  match elab_program "<input>" stdin with
+  | Ok program ->
+      program
+      |> Core.Compile.compile_program
+      |> Format.printf "@[%a@]" Rust.pp_program
+  | Error (span, message) ->
+      print_error "error" span message;
+      exit 1
 
 (** {1 CLI options} *)
 

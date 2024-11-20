@@ -21,10 +21,10 @@ let elab_program (filename : string) (input : string) =
     |> Surface.Elab.check_program
     |> Result.ok
   with
-  | Lexer.Unexpected_char -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "unexpected character")
-  | Lexer.Unclosed_block_comment -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "unclosed block comment")
-  | Parser.Error -> Error (format_error "error" (Sedlexing.lexing_positions lexbuf) "syntax error")
-  | Surface.Elab.Error (loc, message) -> Error (format_error "error" loc message)
+  | Lexer.Unexpected_char -> Error (Sedlexing.lexing_positions lexbuf, "unexpected character")
+  | Lexer.Unclosed_block_comment -> Error (Sedlexing.lexing_positions lexbuf, "unclosed block comment")
+  | Parser.Error -> Error (Sedlexing.lexing_positions lexbuf, "syntax error")
+  | Surface.Elab.Error (loc, message) -> Error (loc, message)
 
 open Brr
 
@@ -46,7 +46,7 @@ let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
       let output_text =
         match el_value input_el |> elab_program "<input>" with
         | Ok program -> Format.asprintf "%a\n" Core.pp_program program
-        | Error error -> error
+        | Error (loc, message) -> format_error "error" loc message
       in
 
       El.set_children output_el El.[
@@ -73,7 +73,7 @@ let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
         | Ok program ->
             Core.Compile.compile_program program
             |> Format.asprintf "%a\n" Rust.pp_program
-        | Error error -> error
+        | Error (loc, message) -> format_error "error" loc message
       in
 
       El.set_children output_el El.[
