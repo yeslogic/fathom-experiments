@@ -1,4 +1,4 @@
--- Base formats
+--| A simple image data format
 
 format u8 :=
   byte;
@@ -12,8 +12,6 @@ format u16be :=
   let b0 <- byte;
   let b1 <- byte;
   pure Int ((b0 << 8) | b1);
-
--- Image format
 
 format info {
   width <- u16be;

@@ -4,14 +4,6 @@
 --|
 --| - [Wikipedia](https://en.wikipedia.org/wiki/STL_(file_format)#Binary_STL)
 
--- TODO:
---
--- STL variants:
---
--- * VisCAM
--- * SolidView
--- * Materialise Magics
-
 format u8 :=
   byte;
 
@@ -48,3 +40,11 @@ format main {
   triangle-count <- u32le;
   triangles <- repeat-len triangle-count triangle;
 }
+
+-- TODO:
+--
+-- STL variants:
+--
+-- * VisCAM
+-- * SolidView
+-- * Materialise Magics

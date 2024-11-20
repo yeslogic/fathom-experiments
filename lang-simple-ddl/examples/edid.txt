@@ -1,8 +1,8 @@
---| # Extended Display Identification Data
+--| Extended Display Identification Data
 --|
---| ## References
+--| # References
 --|
---| * https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
+--| - https://en.wikipedia.org/wiki/Extended_Display_Identification_Data
 
 type Unit {}
 

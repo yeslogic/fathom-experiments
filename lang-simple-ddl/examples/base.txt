@@ -1,4 +1,4 @@
--- Some base format definitions
+--| Some base format definitions
 
 format u8 :=
   byte;
