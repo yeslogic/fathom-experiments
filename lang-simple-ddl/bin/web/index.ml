@@ -125,13 +125,11 @@ let output_el () : El.t =
   pre ~at:At.[id (Jstr.v "output")] []
 
 
-let main_el () =
-  let open El in
-
+let () =
   let input_el = input_el () in
   let output_el = output_el () in
 
-  El.v (Jstr.v "main") [
+  El.set_children (Document.body G.document) El.[
     h1 [txt' "Simple DDL"];
 
     nav [
@@ -143,12 +141,3 @@ let main_el () =
     input_el;
     output_el;
   ]
-
-
-let () = begin
-
-  El.set_children (Document.body G.document) [
-    main_el ();
-  ];
-
-end
