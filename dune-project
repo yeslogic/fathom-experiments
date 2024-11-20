@@ -19,6 +19,12 @@
 (package
   (name case-conv))
 
+(package
+  (name sized-numbers)
+  (depends
+    (alcotest (and (>= "1.8") :with-test))
+    (fmt (and (>= "0.8.7") :with-test))))
+
 
 ; Language experiments
 

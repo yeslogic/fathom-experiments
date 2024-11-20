@@ -1,0 +1,7 @@
+(tests
+  (names Sized_numbers_tests)
+  (package sized-numbers)
+  (libraries
+    alcotest
+    fmt
+    sized-numbers))
