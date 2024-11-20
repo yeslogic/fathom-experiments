@@ -18,17 +18,29 @@
     sedlex
     simple-ddl))
 
+; TODO: autogenerate examples rule
 (rule
   (with-stdout-to
     examples.ml
     (progn
-      (echo "let initial = \"simple-image\"\n")
-      (echo "\n")
-      ; TODO: autogenerate example list
-      (echo "let all = [\n")
-      (echo "  (\"base\", {|") (cat ../../examples/base.txt) (echo "|});\n")
-      (echo "  (\"edid\", {|") (cat ../../examples/edid.txt) (echo "|});\n")
-      (echo "  (\"object-id\", {|") (cat ../../examples/object-id.txt) (echo "|});\n")
-      (echo "  (\"simple-image\", {|") (cat ../../examples/simple-image.txt) (echo "|});\n")
-      (echo "  (\"stl-binary\", {|") (cat ../../examples/stl-binary.txt) (echo "|});\n")
-      (echo "]\n"))))
+      (echo "\
+let initial = \"simple-image\"
+
+let base = {|") (cat ../../examples/base.txt) (echo "|}
+
+let edid = {|") (cat ../../examples/edid.txt) (echo "|}
+
+let object_id = {|") (cat ../../examples/object-id.txt) (echo "|}
+
+let simple_image = {|") (cat ../../examples/simple-image.txt) (echo "|}
+
+let stl_binary = {|") (cat ../../examples/stl-binary.txt) (echo "|}
+
+let all = [
+  (\"base\", base);
+  (\"edid\", edid);
+  (\"object-id\", object_id);
+  (\"simple-image\", simple_image);
+  (\"stl-binary\", stl_binary);
+]
+"))))
