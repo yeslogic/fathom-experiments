@@ -8,7 +8,7 @@ format u64le :=
   let b6 <- byte;
   let b7 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or
@@ -33,7 +33,7 @@ format u64be :=
   let b6 <- byte;
   let b7 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or
@@ -53,7 +53,7 @@ format u64be :=
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int64-logical-or b0 (#int64-logical-shl b1 8));
+  #pure #Int64 (#int64-logical-or b0 (#int64-logical-shl b1 8));
 
 format u32le :=
   let b0 <- byte;
@@ -61,7 +61,7 @@ format u32le :=
   let b2 <- byte;
   let b3 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or b0 (#int64-logical-shl b1 8))
@@ -73,7 +73,7 @@ format u24be :=
   let b1 <- byte;
   let b2 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-shl b0 16)
@@ -83,7 +83,7 @@ format u24be :=
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int64-logical-or (#int64-logical-shl b0 8) b1);
+  #pure #Int64 (#int64-logical-or (#int64-logical-shl b0 8) b1);
 
 format u8 := byte;
 
@@ -93,7 +93,7 @@ format u32be :=
   let b2 <- byte;
   let b3 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or
@@ -107,7 +107,7 @@ format u24le :=
   let b1 <- byte;
   let b2 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or b0 (#int64-logical-shl b1 8))
        (#int64-logical-shl b2 16));

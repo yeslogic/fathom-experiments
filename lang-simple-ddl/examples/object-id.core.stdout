@@ -3,7 +3,7 @@ format u24be :=
   let b1 <- byte;
   let b2 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-shl b0 16)
@@ -18,7 +18,7 @@ format u32be :=
   let b2 <- byte;
   let b3 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or
@@ -28,9 +28,9 @@ format u32be :=
        b3);
 
 type Main {
-  counter : #Int;
-  random : #List #Int;
-  timestamp : #Int;
+  counter : #Int64;
+  random : #List #Int64;
+  timestamp : #Int64;
 }
 
 format main :=

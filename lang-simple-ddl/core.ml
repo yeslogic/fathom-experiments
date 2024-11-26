@@ -96,7 +96,7 @@ let rec pp_ty ppf (ty : ty) =
 and pp_atomic_ty ppf ty =
   match ty with
   | Item_var name -> Format.pp_print_string ppf name
-  | Int64_type -> Format.pp_print_string ppf "#Int"
+  | Int64_type -> Format.pp_print_string ppf "#Int64"
   | Bool_type -> Format.pp_print_string ppf "#Bool"
   | Format_repr fmt -> Format.fprintf ppf "%a.Repr" (pp_atomic_format []) fmt
   | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty

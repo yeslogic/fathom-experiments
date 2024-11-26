@@ -1,7 +1,7 @@
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int (#int64-logical-or b0 (#int64-logical-shl b1 8));
+  #pure #Int64 (#int64-logical-or b0 (#int64-logical-shl b1 8));
 
 format u8 := byte;
 
@@ -11,7 +11,7 @@ format u32le :=
   let b2 <- byte;
   let b3 <- byte;
   #pure
-    #Int
+    #Int64
     (#int64-logical-or
        (#int64-logical-or
           (#int64-logical-or b0 (#int64-logical-shl b1 8))
@@ -21,9 +21,9 @@ format u32le :=
 format f32le := u32le;
 
 type Vec3d {
-  x : #Int;
-  y : #Int;
-  z : #Int;
+  x : #Int64;
+  y : #Int64;
+  z : #Int64;
 }
 
 format vec3d :=
@@ -33,7 +33,7 @@ format vec3d :=
   #pure Vec3d (Vec3d { x := x; y := y; z := z });
 
 type Triangle {
-  attribute-byte-count : #Int;
+  attribute-byte-count : #Int64;
   normal : Vec3d;
   vertices : #List Vec3d;
 }
@@ -51,8 +51,8 @@ format triangle :=
      });
 
 type Main {
-  header : #List #Int;
-  triangle-count : #Int;
+  header : #List #Int64;
+  triangle-count : #Int64;
   triangles : #List Triangle;
 }
 

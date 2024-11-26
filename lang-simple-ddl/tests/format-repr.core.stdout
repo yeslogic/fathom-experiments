@@ -1,7 +1,7 @@
 type Point {
-  x : #Int;
-  y : #Int;
-  z : #Int;
+  x : #Int64;
+  y : #Int64;
+  z : #Int64;
 }
 
 format point :=
@@ -10,6 +10,6 @@ format point :=
   let z <- byte;
   #pure Point (Point { x := x; y := y; z := z });
 
-format repeat-pure := #repeat-len 3 (#pure #Int 42);
+format repeat-pure := #repeat-len 3 (#pure #Int64 42);
 
 def my-point : Point := Point { x := 1; y := 2; z := 3 };

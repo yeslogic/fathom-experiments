@@ -1,13 +1,13 @@
 type A-long-record {
-  bananas : #Int;
-  bar : #Int;
-  baz : #Int;
-  foo : #Int;
+  bananas : #Int64;
+  bar : #Int64;
+  baz : #Int64;
+  foo : #Int64;
 }
 
 type Point {
-  x : #Int;
-  y : #Int;
+  x : #Int64;
+  y : #Int64;
 }
 
 def test-long-record : A-long-record :=
