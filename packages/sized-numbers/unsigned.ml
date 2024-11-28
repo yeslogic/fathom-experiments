@@ -60,136 +60,6 @@ module Extras = struct
 
 end
 
-module String_conv = struct
-
-  module type S = sig
-
-    type t
-
-    val of_string : string -> t
-    val of_string_opt : string -> t option
-    val to_string : t -> string
-
-    val pp : Format.formatter -> t -> unit
-
-  end
-
-  module Make (B : Basics.S) (X : sig
-
-    val to_int : B.t -> int
-    val of_int : int -> B.t
-    val type_name : string
-
-  end) : S with type t = B.t = struct
-
-    type t = B.t
-
-    open B
-    open X
-
-    (* NOTE: We could avoid redefining these if the standard library provided
-      support for the following definitions:
-
-      - [Int32.unsigned_min_int]
-      - [Int32.unsigned_max_int]
-      - [Int32.unsigned_of_string]
-      - [Int32.unsigned_to_string]
-      - [Int64.unsigned_min_int]
-      - [Int64.unsigned_max_int]
-      - [Int64.unsigned_of_string]
-      - [Int64.unsigned_to_string]
-    *)
-
-    let parse_digit (ch : char) : int =
-      match ch with
-      | '0' .. '9' -> Char.(code ch - code '0')
-      | 'A' .. 'F' -> Char.(code ch - code 'A' + 10)
-      | 'a' .. 'f' -> Char.(code ch - code 'a' + 10)
-      | _ -> -1
-
-    let print_digit (x : int) : char =
-      let offset = if x < 10 then '0' else 'a' in
-      Char.chr (Char.code offset + x)
-
-    let err_msg = type_name ^ ".of_string"
-
-    let of_string (s : string) : t =
-      let pos = ref 0 in
-
-      (* Skip sign and parse base *)
-      if !pos >= String.length s then failwith err_msg;
-      if s.[!pos] = '+' then
-        incr pos;
-      let base =
-        if !pos + 1 < String.length s && s.[!pos] = '0' then
-          match s.[!pos + 1] with
-          | 'x' | 'X' -> pos := !pos + 2; 16
-          | 'o' | 'O' -> pos := !pos + 2; 8
-          | 'b' | 'B' -> pos := !pos + 2; 2
-          | 'u' | 'U' -> pos := !pos + 2; 10
-          | _ -> 10
-        else
-          10
-      in
-
-      let max_prefix = div max_int (of_int base) in
-
-      (* Parse the first digit *)
-      if !pos >= String.length s then failwith err_msg;
-      let d = parse_digit s.[!pos] in
-      if d < 0 || d >= base then failwith err_msg;
-      let res = ref (of_int d) in
-
-      (* Parse the rest of the digits *)
-      let rec loop () =
-        incr pos;
-        if !pos >= String.length s then () else
-          let c = s.[!pos] in
-          if c = '_' then loop () else
-            let d = parse_digit c in
-            if d < 0 || d >= base then failwith err_msg;
-            if compare !res max_prefix > 0 then failwith err_msg;
-            res := add (mul (of_int base) !res) (of_int d);
-            if compare !res (of_int d) < 0 then failwith err_msg;
-            loop ()
-      in
-      loop ();
-
-      !res
-
-    let of_string_opt s =
-      try Some (of_string s) with
-      | Failure _ -> None
-
-    let count_digits (base : int) : t -> int =
-      let base = of_int base in
-      let rec count_nonzero x count =
-        if compare x (of_int 0) <= 0 then count else
-          count_nonzero (div x base) (count + 1)
-      in
-      fun x ->
-        if compare x (of_int 0) = 0 then 1 else count_nonzero x 0
-
-    let to_string x =
-      let base = of_int 10 in
-      let num_digits = count_digits 10 x in
-      let buf = Bytes.make num_digits ' ' in
-      let rec loop x i =
-        let rest = div x base in
-        let digit = rem x base in
-        Bytes.set buf i (print_digit (to_int digit));
-        if i <= 0 then () else
-          loop rest (i - 1)
-      in
-      loop x (num_digits - 1);
-      String.of_bytes buf
-
-    let pp ppf x = Format.pp_print_string ppf (to_string x)
-
-  end
-
-end
-
 module Ops = struct
 
   module type S = sig
@@ -231,6 +101,141 @@ module Ops = struct
     let ( > ) x y = B.compare x y > 0
     let ( <= ) x y = B.compare x y <= 0
     let ( >= ) x y = B.compare x y >= 0
+
+  end
+
+end
+
+module String_conv = struct
+
+  module type S = sig
+
+    type t
+
+    val of_string : string -> t
+    val of_string_opt : string -> t option
+    val to_string : t -> string
+
+    val pp : Format.formatter -> t -> unit
+
+  end
+
+  module Make (B : Basics.S) (X : sig
+
+    val to_int : B.t -> int
+    val of_int : int -> B.t
+    val type_name : string
+
+  end) : S with type t = B.t = struct
+
+    type t = B.t
+
+    open B
+    open X
+
+    module O = Ops.Make (B)
+
+    (* NOTE: We could avoid redefining these if the standard library provided
+      support for the following definitions:
+
+      - [Int32.unsigned_min_int]
+      - [Int32.unsigned_max_int]
+      - [Int32.unsigned_of_string]
+      - [Int32.unsigned_of_string_opt]
+      - [Int32.unsigned_to_string]
+      - [Int64.unsigned_min_int]
+      - [Int64.unsigned_max_int]
+      - [Int64.unsigned_of_string]
+      - [Int64.unsigned_of_string_opt]
+      - [Int64.unsigned_to_string]
+    *)
+
+    let err_msg = type_name ^ ".of_string"
+
+    let parse_sign_and_base (pos : int ref) (s : string) : int =
+      if !pos >= String.length s then failwith err_msg;
+      if s.[!pos] = '+' then
+        incr pos;
+      if !pos + 1 < String.length s && s.[!pos] = '0' then
+        match s.[!pos + 1] with
+        | 'x' | 'X' -> pos := !pos + 2; 16
+        | 'o' | 'O' -> pos := !pos + 2; 8
+        | 'b' | 'B' -> pos := !pos + 2; 2
+        | 'u' | 'U' -> pos := !pos + 2; 10
+        | _ -> 10
+      else
+        10
+
+    let parse_digit (ch : char) : int =
+      match ch with
+      | '0' .. '9' -> Char.(code ch - code '0')
+      | 'A' .. 'F' -> Char.(code ch - code 'A' + 10)
+      | 'a' .. 'f' -> Char.(code ch - code 'a' + 10)
+      | _ -> -1
+
+    let print_digit (x : int) : char =
+      let offset = if x < 10 then '0' else 'a' in
+      Char.chr (Char.code offset + x)
+
+    let parse_digits (pos : int ref) (s : string) (base : int) : t =
+      let max_prefix = div max_int (of_int base) in
+
+      (* Parse the first digit *)
+      if !pos >= String.length s then failwith err_msg;
+      let d = parse_digit s.[!pos] in
+      if d < 0 || d >= base then failwith err_msg;
+      let res = ref (of_int d) in
+
+      (* Parse the rest of the digits *)
+      let rec loop () =
+        incr pos;
+        if !pos >= String.length s then () else
+          let c = s.[!pos] in
+          if c = '_' then loop () else
+            let d = parse_digit c in
+            if d < 0 || d >= base then failwith err_msg;
+            if O.(!res > max_prefix) then failwith err_msg;
+            res := O.(of_int base * !res + of_int d);
+            if O.(!res < of_int d) then failwith err_msg;
+            loop ()
+      in
+      loop ();
+
+      !res
+
+    let of_string (s : string) : t =
+      let pos = ref 0 in
+      let base = parse_sign_and_base pos s in
+      parse_digits pos s base
+
+    let of_string_opt s =
+      try Some (of_string s) with
+      | Failure _ -> None
+
+    let count_digits (base : int) : t -> int =
+      let base = of_int base in
+      let rec count_nonzero x count =
+        if compare x (of_int 0) <= 0 then count else
+          count_nonzero (div x base) (count + 1)
+      in
+      fun x ->
+        if compare x (of_int 0) = 0 then 1 else count_nonzero x 0
+
+    let to_string x =
+      let base = of_int 10 in
+      let num_digits = count_digits 10 x in
+      let buf = Bytes.make num_digits ' ' in
+      let rec loop x i =
+        let rest = div x base in
+        let digit = rem x base in
+        Bytes.set buf i (print_digit (to_int digit));
+        if i <= 0 then () else
+          loop rest (i - 1)
+      in
+      loop x (num_digits - 1);
+      String.of_bytes buf
+
+    let pp ppf x = Format.pp_print_string ppf (to_string x)
 
   end
 
