@@ -367,6 +367,10 @@ module UInt16 = struct
 
   let to_int x = x
   let of_uint8 x = x
+
+  let to_int8_opt =
+    fun x -> if O.(x <= UInt8.max_int) then Some x else None
+
   let to_uint32 x = Int32.of_int x
   let to_uint64 x = Int64.of_int x
 
@@ -423,6 +427,15 @@ module UInt32 = struct
 
   let of_uint8 x = Int32.of_int x
   let of_uint16 x = Int32.of_int x
+
+  let to_int8_opt =
+    let max_int = of_uint8 UInt8.max_int in
+    fun x -> if O.(x <= max_int) then Some (Int32.to_int x) else None
+
+  let to_int16_opt =
+    let max_int = of_uint16 UInt16.max_int in
+    fun x -> if O.(x <= max_int) then Some (Int32.to_int x) else None
+
   let to_int_opt = Int32.unsigned_to_int
   let to_uint64 x = Int64.of_int32 x
 
