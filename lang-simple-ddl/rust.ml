@@ -1,3 +1,5 @@
+open Sized_numbers
+
 type ty =
   | Placeholder
   | Path of string list * ty list
@@ -14,6 +16,13 @@ type expr =
   | Postfix_op of expr * string
   | Infix_op of expr * string * expr
   | Vec_lit of expr list
+  | U8Lit of uint8
+  | U16Lit of uint16
+  | U32Lit of uint32
+  | U64Lit of uint64
+  | I8Lit of int8
+  | I16Lit of int16
+  | I32Lit of int32
   | I64Lit of int64
   | Bool_lit of bool
   | Unit_lit
@@ -131,8 +140,14 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
       Format.fprintf ppf "vec![%a]"
         (Format.pp_print_list pp_expr ~pp_sep) exprs
-  | I64Lit i ->
-      Format.pp_print_string ppf (Int64.to_string i)
+  | U8Lit i -> UInt8.pp ppf i
+  | U16Lit i -> UInt16.pp ppf i
+  | U32Lit i -> UInt32.pp ppf i
+  | U64Lit i -> UInt64.pp ppf i
+  | I8Lit i -> Int8.pp ppf i
+  | I16Lit i -> Int16.pp ppf i
+  | I32Lit i -> Int32.pp ppf i
+  | I64Lit i -> Int64.pp ppf i
   | Bool_lit true ->
       Format.fprintf ppf "true"
   | Bool_lit false ->

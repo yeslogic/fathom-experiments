@@ -12,6 +12,7 @@ depends: [
   "case-conv"
   "menhir" {>= "20240715" & build}
   "sedlex" {>= "3.2"}
+  "sized-numbers"
   "tsort" {>= "2.1"}
   "odoc" {with-doc}
 ]

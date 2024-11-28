@@ -6,6 +6,7 @@
   (libraries
     case-conv
     sedlex
+    sized-numbers
     tsort))
 
 (menhir

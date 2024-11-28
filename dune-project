@@ -71,4 +71,5 @@
     case-conv
     (menhir (and (>= "20240715") :build))
     (sedlex (>= "3.2"))
+    sized-numbers
     (tsort (>= "2.1"))))
