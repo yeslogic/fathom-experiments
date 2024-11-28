@@ -16,10 +16,44 @@ let () =
   (* let int8 = sized_int (module Int8) in *)
   (* let int16 = sized_int (module Int16) in *)
 
-  let limits_tests (module I : Unsigned.S) = [
+  let limit_tests (module I : Unsigned.S) = [
     test_case "wrap max_int successor" `Quick (fun () -> check (sized_int (module I)) "same uint8" I.min_int I.(succ max_int));
     test_case "wrap min_int predecessor" `Quick (fun () -> check (sized_int (module I)) "same uint8" I.max_int I.(pred min_int));
   ] in
+
+  let comparison_tests (module I : Unsigned.S) =
+    let open I in
+    (* TODO: Property based testing *)
+    let n = O.(max_int / (one + one)) in
+    [
+      test_case "compare n n" `Quick (fun () -> check int "same int" 0 (compare n n));
+      test_case "equal n n" `Quick (fun () -> check bool "same bool" true (equal n n));
+      test_case "n = n" `Quick (fun () -> check bool "same bool" true O.(n = n));
+      test_case "n <> n" `Quick (fun () -> check bool "same bool" false O.(n <> n));
+      test_case "n < n" `Quick (fun () -> check bool "same bool" false O.(n < n));
+      test_case "n > n" `Quick (fun () -> check bool "same bool" false O.(n > n));
+      test_case "n <= n" `Quick (fun () -> check bool "same bool" true O.(n <= n));
+      test_case "n >= n" `Quick (fun () -> check bool "same bool" true O.(n >= n));
+
+      test_case "compare n (n + 1)" `Quick (fun () -> check int "same int" (-1) (compare n (succ n)));
+      test_case "equal n (n + 1)" `Quick (fun () -> check bool "same bool" false (equal n (succ n)));
+      test_case "n = n + 1" `Quick (fun () -> check bool "same bool" false O.(n = succ n));
+      test_case "n <> n + 1" `Quick (fun () -> check bool "same bool" true O.(n <> succ n));
+      test_case "n < n + 1" `Quick (fun () -> check bool "same bool" true O.(n < succ n));
+      test_case "n > n + 1" `Quick (fun () -> check bool "same bool" false O.(n > succ n));
+      test_case "n <= n + 1" `Quick (fun () -> check bool "same bool" true O.(n <= succ n));
+      test_case "n >= n + 1" `Quick (fun () -> check bool "same bool" false O.(n >= succ n));
+
+      test_case "compare n (n - 1)" `Quick (fun () -> check int "same int" (+1) (compare n (pred n)));
+      test_case "equal n (n - 1)" `Quick (fun () -> check bool "same bool" false (equal n (pred n)));
+      test_case "n = n - 1" `Quick (fun () -> check bool "same bool" false O.(n = pred n));
+      test_case "n <> n - 1" `Quick (fun () -> check bool "same bool" true O.(n <> pred n));
+      test_case "n < n - 1" `Quick (fun () -> check bool "same bool" false O.(n < pred n));
+      test_case "n > n - 1" `Quick (fun () -> check bool "same bool" true O.(n > pred n));
+      test_case "n <= n - 1" `Quick (fun () -> check bool "same bool" false O.(n <= pred n));
+      test_case "n >= n - 1" `Quick (fun () -> check bool "same bool" true O.(n >= pred n));
+    ]
+  in
 
   run "Sized_numbers" [
     "UInt32.to_string", [
@@ -68,12 +102,22 @@ let () =
       test_case "separator after sign" `Quick (fun () -> check_raises "failure" (Failure "UInt64.of_string") (fun () -> ignore UInt64.(of_string "+_0")));
       test_case "separator after base" `Quick (fun () -> check_raises "failure" (Failure "UInt64.of_string") (fun () -> ignore UInt64.(of_string "0x_0")));
     ];
-    "UInt8 limits", limits_tests (module UInt8);
-    "UInt16 limits", limits_tests (module UInt16);
-    "UInt32 limits", limits_tests (module UInt32);
-    "UInt64 limits", limits_tests (module UInt64);
-    "Int8 limits", limits_tests (module Int8);
-    "Int16 limits", limits_tests (module Int16);
-    "Int32 limits", limits_tests (module Int32);
-    "Int64 limits", limits_tests (module Int64);
+
+    "UInt8 limits", limit_tests (module UInt8);
+    "UInt16 limits", limit_tests (module UInt16);
+    "UInt32 limits", limit_tests (module UInt32);
+    "UInt64 limits", limit_tests (module UInt64);
+    "Int8 limits", limit_tests (module Int8);
+    "Int16 limits", limit_tests (module Int16);
+    "Int32 limits", limit_tests (module Int32);
+    "Int64 limits", limit_tests (module Int64);
+
+    "UInt8 comparisons", comparison_tests (module UInt8);
+    "UInt16 comparisons", comparison_tests (module UInt16);
+    "UInt32 comparisons", comparison_tests (module UInt32);
+    "UInt64 comparisons", comparison_tests (module UInt64);
+    "Int8 comparisons", comparison_tests (module Int8);
+    "Int16 comparisons", comparison_tests (module Int16);
+    "Int32 comparisons", comparison_tests (module Int32);
+    "Int64 comparisons", comparison_tests (module Int64);
   ]

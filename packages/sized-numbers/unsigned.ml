@@ -226,11 +226,11 @@ module Ops = struct
     let ( / ) = B.div
 
     let ( = ) = B.equal
-    let ( <> ) x y = compare x y <> 0
-    let ( < ) x y = compare x y < 0
-    let ( > ) x y = compare x y > 0
-    let ( <= ) x y = compare x y <= 0
-    let ( >= ) x y = compare x y >= 0
+    let ( <> ) x y = B.compare x y <> 0
+    let ( < ) x y = B.compare x y < 0
+    let ( > ) x y = B.compare x y > 0
+    let ( <= ) x y = B.compare x y <= 0
+    let ( >= ) x y = B.compare x y >= 0
 
   end
 
