@@ -117,7 +117,7 @@ module Source_input = struct
 
     El.textarea
       ~at:At.[
-        wrap (Jstr.v "off");
+        v Name.wrap (Jstr.v "off"); (* FIXME: https://github.com/dbuenzli/brr/pull/66 *)
         spellcheck (Jstr.v "false");
       ]
       [ El.txt' (get_source ()) ]
