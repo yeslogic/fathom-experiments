@@ -50,13 +50,13 @@ module Elab_button = struct
     let on_click _ =
       print_endline "elaborate";
 
-      let output =
-        match elab_program "<input>" source with
-        | Ok program -> Format.asprintf "%a\n" Core.pp_program program
-        | Error (loc, message) -> format_error "error" loc message
-      in
-
-      set_output output;
+      match elab_program "<input>" source with
+      | Ok program ->
+          Format.asprintf "%a\n" Core.pp_program program
+          |> set_output
+      | Error (loc, message) ->
+          format_error "error" loc message
+          |> set_output
     in
 
     let elem = El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"] in
@@ -71,15 +71,14 @@ module Compile_button = struct
     let on_click _ =
       print_endline "compile";
 
-      let output =
-        match elab_program "<input>" source with
-        | Ok program ->
-            Core.Compile.compile_program program
-            |> Format.asprintf "%a\n" Rust.pp_program
-        | Error (loc, message) -> format_error "error" loc message
-      in
-
-      set_output output;
+      match elab_program "<input>" source with
+      | Ok program ->
+          Core.Compile.compile_program program
+          |> Format.asprintf "%a\n" Rust.pp_program
+          |> set_output
+      | Error (loc, message) ->
+          format_error "error" loc message
+          |> set_output
     in
 
     let elem = El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"] in
