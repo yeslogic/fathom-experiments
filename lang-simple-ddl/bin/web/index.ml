@@ -46,11 +46,11 @@ end
 
 module Elab_button = struct
 
-  let create ~source ~set_output =
+  let create ~get_source ~set_output =
     let on_click _ =
       print_endline "elaborate";
 
-      match elab_program "<input>" source with
+      match elab_program "<input>" (get_source ()) with
       | Ok program ->
           Format.asprintf "%a\n" Core.pp_program program
           |> set_output
@@ -67,11 +67,11 @@ end
 
 module Compile_button = struct
 
-  let create ~source ~set_output =
+  let create ~get_source ~set_output =
     let on_click _ =
       print_endline "compile";
 
-      match elab_program "<input>" source with
+      match elab_program "<input>" (get_source ()) with
       | Ok program ->
           Core.Compile.compile_program program
           |> Format.asprintf "%a\n" Rust.pp_program
@@ -107,11 +107,10 @@ end
 
 module Source_editor = struct
 
-  let create ~source ~set_source =
+  let create ~get_source ~set_source =
     let on_input event =
       let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
       print_endline ("update input");
-      (* FIXME: Full re-render results in focus being lost from textarea *)
       set_source text;
     in
 
@@ -122,8 +121,9 @@ module Source_editor = struct
           rows 20;
           cols 80;
           spellcheck (Jstr.v "false");
+          autofocus;
         ]
-        [ El.txt' source ]
+        [ El.txt' (get_source ()) ]
     in
     ignore (El.as_target elem |> Ev.(listen input) on_input);
     elem
@@ -133,24 +133,25 @@ end
 module App = struct
 
   type state = {
-    source : string;
+    mutable source : string;
     output : string;
   }
 
   let create : state Component.t =
     fun ~state ~set_state ->
-      let source = state.source in
+      let get_source () = state.source in
       let set_output s = set_state { state with output = s } in
       let set_source s = set_state { state with source = s } in
+      let mutate_source s = state.source <- s in
 
       El.div [
         El.h1 [ El.txt' "Simple DDL" ];
         El.nav [
-          Elab_button.create ~source ~set_output;
-          Compile_button.create ~source ~set_output;
+          Elab_button.create ~get_source ~set_output;
+          Compile_button.create ~get_source ~set_output;
           Example_select.create ~set_source;
         ];
-        Source_editor.create ~source ~set_source;
+        Source_editor.create ~get_source ~set_source:mutate_source;
         El.pre [ El.txt' state.output ];
       ]
 
