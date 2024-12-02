@@ -4,6 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" defer="defer" src="index.bc.js"></script>
+    <style>
+      :root {
+        --gap: 0.75rem;
+        --border: 1px solid;
+        --monospace-font: 13px monospace;
+      }
+
+      body, html, pre {
+        margin: 0;
+      }
+
+      .main {
+        height: 100vh;
+        display: grid;
+        grid-template:
+          "toolbar toolbar" auto
+          "editor output" 1fr
+          / 1fr 1fr;
+      }
+
+      .toolbar {
+        grid-area: toolbar;
+        border-bottom: var(--border);
+        padding: var(--gap);
+      }
+
+      .editor {
+        grid-area: editor;
+        border-right: var(--border);
+        width: 100%;
+        height: 100%;
+      }
+
+      .editor textarea {
+        display: block;
+        font: var(--monospace-font);
+        width: calc(100% - 2 * var(--gap));
+        height: calc(100% - 2 * var(--gap));
+        padding: var(--gap);
+        resize: none;
+        border: 0;
+      }
+
+      .output {
+        grid-area: output;
+        position: relative; /* for `overflow: scroll` */
+        width: 100%;
+        height: 100%;
+      }
+
+      .output pre {
+        position: absolute; /* for `overflow: scroll` */
+        font: var(--monospace-font);
+        width: calc(100% - 2 * var(--gap));
+        height: calc(100% - 2 * var(--gap));
+        overflow: scroll;
+        padding: var(--gap);
+      }
+    </style>
     <title>Simple DDL</title>
   </head>
   <body id="app">

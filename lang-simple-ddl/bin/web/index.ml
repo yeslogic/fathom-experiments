@@ -106,7 +106,7 @@ module Example_select = struct
 
 end
 
-module Source_editor = struct
+module Source_input = struct
 
   let create ~get_source ~set_source =
     let on_input event =
@@ -119,6 +119,7 @@ module Source_editor = struct
       ~at:At.[
         rows 20;
         cols 80;
+        wrap (Jstr.v "off");
         spellcheck (Jstr.v "false");
       ]
       [ El.txt' (get_source ()) ]
@@ -139,26 +140,29 @@ module App = struct
       let set_output s = set_state { state with output = s } in
       let set_source s = set_state { state with source = s } in
 
-      El.div [
-        El.h1 [ El.txt' "Simple DDL" ];
-        El.nav [
+      El.div ~at:At.[ class' (Jstr.v "main") ] [
+        El.nav ~at:At.[ class' (Jstr.v "toolbar") ] [
+          Example_select.create ~set_source;
           Elab_button.create ~get_source ~set_output;
           Compile_button.create ~get_source ~set_output;
-          Example_select.create ~set_source;
         ];
-        Source_editor.create ~get_source
-          ~set_source:(fun s ->
-            (* NOTE: Mutating the state in-place avoids triggering a re-render
-              of the textarea, which would cause it to lose focus during text
-              editing. This feels a bit hacky, but it works for now!
+        El.div ~at:At.[ class' (Jstr.v "editor") ] [
+          Source_input.create ~get_source
+            ~set_source:(fun s ->
+              (* NOTE: Mutating the state in-place avoids triggering a re-render
+                of the textarea, which would cause it to lose focus during text
+                editing. This feels a bit hacky, but it works for now!
 
-              Because we're using a mutable field we need to be careful to pass
-              the current state of the source code with [get_source], as opposed
-              to naively copying it from the current state, which might be out
-              of date by the time we want to make use of it. *)
-            state.source <- s);
-        El.pre [ El.txt' state.output ];
-      ]
+                Because we're using a mutable field we need to be careful to pass
+                the current state of the source code with [get_source], as opposed
+                to naively copying it from the current state, which might be out
+                of date by the time we want to make use of it. *)
+              state.source <- s);
+        ];
+        El.div ~at:At.[ class' (Jstr.v "output") ] [
+          El.pre [ El.txt' state.output ];
+        ];
+    ]
 
 end
 
