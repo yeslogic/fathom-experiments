@@ -29,6 +29,8 @@ let elab_program (filename : string) (input : string) =
 
 open Brr
 
+(* TODO: create a wrapper for the [El] module that allows for event handlers to
+   be passed as attributes. *)
 let with_listener event f elem =
   let _ : Ev.listener = El.as_target elem |> Ev.listen event f in
   elem
