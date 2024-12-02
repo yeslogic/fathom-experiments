@@ -26,118 +26,145 @@ let elab_program (filename : string) (input : string) =
   | Parser.Error -> Error (Sedlexing.lexing_positions lexbuf, "syntax error")
   | Surface.Elab.Error (loc, message) -> Error (loc, message)
 
+
 open Brr
 
-let el_value (el : El.t) : string =
-  El.(prop Prop.value) el |> Jstr.to_string
+(* TODO: create a wrapper for the [El] module that allows for event handlers to
+   be passed as attributes. *)
+let with_listener event f elem =
+  let _ : Ev.listener = El.as_target elem |> Ev.listen event f in
+  elem
 
+module Component = struct
+  (** Approach inspired by {{:https://github.com/abuseofnotation/vanilla-fp} vanilla-fp}. *)
 
-let elab_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
-  let open El in
+  type 'st t = state:'st -> set_state:('st -> unit) -> El.t
 
-  let button_el =
-    button ~at:At.[id (Jstr.v "elab")] [txt' "Elaborate"];
-  in
+  let rec render : type st. El.t -> st t -> st -> unit =
+    fun elem component state ->
+      El.set_children elem [
+        component ~state ~set_state:(fun state ->
+          print_endline "rendering component";
+          render elem component state);
+      ]
 
-  let _ : Ev.listener =
-    El.as_target button_el |> Ev.(listen click) @@ fun _ ->
+end
+
+module Elab_button = struct
+
+  let create ~get_source ~set_output =
+    let on_click _ =
       print_endline "elaborate";
 
-      let output_text =
-        match el_value input_el |> elab_program "<input>" with
-        | Ok program -> Format.asprintf "%a\n" Core.pp_program program
-        | Error (loc, message) -> format_error "error" loc message
-      in
+      match elab_program "<input>" (get_source ()) with
+      | Ok program ->
+          Format.asprintf "%a\n" Core.pp_program program
+          |> set_output
+      | Error (loc, message) ->
+          format_error "error" loc message
+          |> set_output
+    in
 
-      El.set_children output_el El.[
-        txt' output_text;
-      ];
-  in
+    El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"]
+    |> with_listener Ev.click on_click
 
-  button_el
+end
 
+module Compile_button = struct
 
-let compile_button_el ~(input_el : El.t) ~(output_el : El.t) : El.t =
-  let open El in
-
-  let button_el =
-    button ~at:At.[id (Jstr.v "compile")] [txt' "Compile"]
-  in
-
-  let _ : Ev.listener =
-    El.as_target button_el |> Ev.(listen click) @@ fun _ ->
+  let create ~get_source ~set_output =
+    let on_click _ =
       print_endline "compile";
 
-      let output_text =
-        match el_value input_el |> elab_program "<input>" with
-        | Ok program ->
-            Core.Compile.compile_program program
-            |> Format.asprintf "%a\n" Rust.pp_program
-        | Error (loc, message) -> format_error "error" loc message
-      in
+      match elab_program "<input>" (get_source ()) with
+      | Ok program ->
+          Core.Compile.compile_program program
+          |> Format.asprintf "%a\n" Rust.pp_program
+          |> set_output
+      | Error (loc, message) ->
+          format_error "error" loc message
+          |> set_output
+    in
 
-      El.set_children output_el El.[
-        txt' output_text;
-      ];
-  in
+    El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"]
+    |> with_listener Ev.click on_click
 
-  button_el
+end
 
+module Example_select = struct
 
-let example_select_el ~(input_el : El.t) : El.t =
-  let open El in
+  let create ~set_source =
+    let on_input event =
+      let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
+      print_endline ("select example: " ^ name);
+      set_source (List.assoc name Examples.all);
+    in
 
-  let select_el =
-    select (Examples.all |> List.map (fun (n, _) ->
-      option ~at:At.[if' (n = Examples.initial) selected] [txt' n]))
-  in
+    El.select (Examples.all |> List.map (fun (n, _) ->
+      El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
+    |> with_listener Ev.input on_input
 
-  let _ : Ev.listener =
-    El.as_target select_el |> Ev.(listen change) @@ fun _ ->
-      let example_name = el_value select_el in
+end
 
-      print_endline ("select example: " ^ example_name);
+module Source_editor = struct
 
-      El.set_children input_el El.[
-        txt' (List.assoc example_name Examples.all);
-      ];
-  in
+  let create ~get_source ~set_source =
+    let on_input event =
+      let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
+      print_endline ("update input");
+      set_source text;
+    in
 
-  select_el
+    El.textarea
+      ~at:At.[
+        id (Jstr.v "input");
+        rows 20;
+        cols 80;
+        spellcheck (Jstr.v "false");
+        autofocus;
+      ]
+      [ El.txt' (get_source ()) ]
+    |> with_listener Ev.input on_input
 
+end
 
-let input_el () : El.t =
-  let open El in
+module App = struct
 
-  textarea
-    ~at:At.[
-      id (Jstr.v "input");
-      rows 20;
-      cols 80;
-      spellcheck (Jstr.v "false");
-    ]
-    [ txt' (List.assoc Examples.initial Examples.all) ]
+  type state = {
+    mutable source : string;
+    output : string;
+  }
 
+  let create : state Component.t =
+    fun ~state ~set_state ->
+      let get_source () = state.source in
+      let set_output s = set_state { state with output = s } in
+      let set_source s = set_state { state with source = s } in
 
-let output_el () : El.t =
-  let open El in
+      El.div [
+        El.h1 [ El.txt' "Simple DDL" ];
+        El.nav [
+          Elab_button.create ~get_source ~set_output;
+          Compile_button.create ~get_source ~set_output;
+          Example_select.create ~set_source;
+        ];
+        Source_editor.create ~get_source
+          (* NOTE: Avoid focus loss by mutating the state in place when editing
+             the text area, which avoids triggering a re-render. This feels a
+             bit hacky, but it works for now!
 
-  pre ~at:At.[id (Jstr.v "output")] []
+             As a result we need to be careful to pass the current state of the
+             source code with [get_source], as opposed to naively copying it
+             from the current state, which would get out of date. *)
+          ~set_source:(fun s -> state.source <- s);
+        El.pre [ El.txt' state.output ];
+      ]
 
+end
 
 let () =
-  let input_el = input_el () in
-  let output_el = output_el () in
-
-  El.set_children (Document.body G.document) El.[
-    h1 [txt' "Simple DDL"];
-
-    nav [
-      elab_button_el ~input_el ~output_el;
-      compile_button_el ~input_el ~output_el;
-      example_select_el ~input_el;
-    ];
-
-    input_el;
-    output_el;
-  ]
+  let elem = Document.find_el_by_id G.document (Jstr.v "app") |> Option.get in
+  Component.render elem App.create {
+    source = List.assoc Examples.initial Examples.all;
+    output = "";
+  }
