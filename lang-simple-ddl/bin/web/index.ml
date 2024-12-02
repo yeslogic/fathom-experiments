@@ -29,6 +29,10 @@ let elab_program (filename : string) (input : string) =
 
 open Brr
 
+let with_listener event f elem =
+  let _ : Ev.listener = El.as_target elem |> Ev.listen event f in
+  elem
+
 module Component = struct
   (** Approach inspired by {{:https://github.com/abuseofnotation/vanilla-fp} vanilla-fp}. *)
 
@@ -59,9 +63,8 @@ module Elab_button = struct
           |> set_output
     in
 
-    let elem = El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"] in
-    ignore (El.as_target elem |> Ev.(listen click) on_click);
-    elem
+    El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"]
+    |> with_listener Ev.click on_click
 
 end
 
@@ -81,9 +84,8 @@ module Compile_button = struct
           |> set_output
     in
 
-    let elem = El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"] in
-    ignore (El.as_target elem |> Ev.(listen click) on_click);
-    elem
+    El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"]
+    |> with_listener Ev.click on_click
 
 end
 
@@ -96,12 +98,9 @@ module Example_select = struct
       set_source (List.assoc name Examples.all);
     in
 
-    let elem =
-      El.select (Examples.all |> List.map (fun (n, _) ->
-        El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
-    in
-    ignore (El.as_target elem |> Ev.(listen input) on_input);
-    elem
+    El.select (Examples.all |> List.map (fun (n, _) ->
+      El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
+    |> with_listener Ev.input on_input
 
 end
 
@@ -114,19 +113,16 @@ module Source_editor = struct
       set_source text;
     in
 
-    let elem =
-      El.textarea
-        ~at:At.[
-          id (Jstr.v "input");
-          rows 20;
-          cols 80;
-          spellcheck (Jstr.v "false");
-          autofocus;
-        ]
-        [ El.txt' (get_source ()) ]
-    in
-    ignore (El.as_target elem |> Ev.(listen input) on_input);
-    elem
+    El.textarea
+      ~at:At.[
+        id (Jstr.v "input");
+        rows 20;
+        cols 80;
+        spellcheck (Jstr.v "false");
+        autofocus;
+      ]
+      [ El.txt' (get_source ()) ]
+    |> with_listener Ev.input on_input
 
 end
 
