@@ -1,11 +1,21 @@
+/* CSS Reset based on https://www.joshwcomeau.com/css/custom-css-reset/ */
+
+/* 1. Use a more-intuitive box-sizing model */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 2. Remove default margin */
+* {
+  margin: 0;
+}
+
+/* Main styling */
+
 :root {
   --gap: 0.75rem;
   --border: 1px solid;
   --monospace-font: 13px monospace;
-}
-
-body, html, pre {
-  margin: 0;
 }
 
 .main {
@@ -32,12 +42,12 @@ body, html, pre {
 
 .editor textarea {
   display: block;
+  border: none;
   font: var(--monospace-font);
-  width: calc(100% - 2 * var(--gap));
-  height: calc(100% - 2 * var(--gap));
+  width: 100%;
+  height: 100%;
   padding: var(--gap);
   resize: none;
-  border: 0;
 }
 
 .output {
@@ -50,8 +60,8 @@ body, html, pre {
 .output pre {
   position: absolute; /* for `overflow: scroll` */
   font: var(--monospace-font);
-  width: calc(100% - 2 * var(--gap));
-  height: calc(100% - 2 * var(--gap));
-  overflow: scroll;
+  width: 100%;
+  height: 100%;
   padding: var(--gap);
+  overflow: scroll;
 }
