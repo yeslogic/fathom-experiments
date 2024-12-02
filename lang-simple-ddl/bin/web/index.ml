@@ -117,8 +117,6 @@ module Source_input = struct
 
     El.textarea
       ~at:At.[
-        rows 20;
-        cols 80;
         wrap (Jstr.v "off");
         spellcheck (Jstr.v "false");
       ]
