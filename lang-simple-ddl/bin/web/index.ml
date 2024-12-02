@@ -44,101 +44,122 @@ module Component = struct
 
 end
 
-let elab_button ~source ~set_output () =
-  let on_click _ =
-    print_endline "elaborate";
+module Elab_button = struct
 
-    let output =
-      match elab_program "<input>" source with
-      | Ok program -> Format.asprintf "%a\n" Core.pp_program program
-      | Error (loc, message) -> format_error "error" loc message
+  let create ~source ~set_output =
+    let on_click _ =
+      print_endline "elaborate";
+
+      let output =
+        match elab_program "<input>" source with
+        | Ok program -> Format.asprintf "%a\n" Core.pp_program program
+        | Error (loc, message) -> format_error "error" loc message
+      in
+
+      set_output output;
     in
 
-    set_output output;
-  in
+    let elem = El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"] in
+    ignore (El.as_target elem |> Ev.(listen click) on_click);
+    elem
 
-  let elem = El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"] in
-  ignore (El.as_target elem |> Ev.(listen click) on_click);
-  elem
+end
 
-let compile_button ~source ~set_output () =
-  let on_click _ =
-    print_endline "compile";
+module Compile_button = struct
 
-    let output =
-      match elab_program "<input>" source with
-      | Ok program ->
-          Core.Compile.compile_program program
-          |> Format.asprintf "%a\n" Rust.pp_program
-      | Error (loc, message) -> format_error "error" loc message
+  let create ~source ~set_output =
+    let on_click _ =
+      print_endline "compile";
+
+      let output =
+        match elab_program "<input>" source with
+        | Ok program ->
+            Core.Compile.compile_program program
+            |> Format.asprintf "%a\n" Rust.pp_program
+        | Error (loc, message) -> format_error "error" loc message
+      in
+
+      set_output output;
     in
 
-    set_output output;
-  in
+    let elem = El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"] in
+    ignore (El.as_target elem |> Ev.(listen click) on_click);
+    elem
 
-  let elem = El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"] in
-  ignore (El.as_target elem |> Ev.(listen click) on_click);
-  elem
+end
 
-let example_select ~set_source () =
-  let on_input event =
-    let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
-    print_endline ("select example: " ^ name);
-    set_source (List.assoc name Examples.all);
-  in
+module Example_select = struct
 
-  let elem =
-    El.select (Examples.all |> List.map (fun (n, _) ->
-      El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
-  in
-  ignore (El.as_target elem |> Ev.(listen input) on_input);
-  elem
+  let create ~set_source =
+    let on_input event =
+      let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
+      print_endline ("select example: " ^ name);
+      set_source (List.assoc name Examples.all);
+    in
 
-let source_editor ~source ~set_source () =
-  let on_input event =
-    let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
-    print_endline ("update input");
-    (* FIXME: Full re-render results in focus being lost from textarea *)
-    set_source text;
-  in
+    let elem =
+      El.select (Examples.all |> List.map (fun (n, _) ->
+        El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
+    in
+    ignore (El.as_target elem |> Ev.(listen input) on_input);
+    elem
 
-  let elem =
-    El.textarea
-      ~at:At.[
-        id (Jstr.v "input");
-        rows 20;
-        cols 80;
-        spellcheck (Jstr.v "false");
+end
+
+module Source_editor = struct
+
+  let create ~source ~set_source =
+    let on_input event =
+      let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
+      print_endline ("update input");
+      (* FIXME: Full re-render results in focus being lost from textarea *)
+      set_source text;
+    in
+
+    let elem =
+      El.textarea
+        ~at:At.[
+          id (Jstr.v "input");
+          rows 20;
+          cols 80;
+          spellcheck (Jstr.v "false");
+        ]
+        [ El.txt' source ]
+    in
+    ignore (El.as_target elem |> Ev.(listen input) on_input);
+    elem
+
+end
+
+module App = struct
+
+  type state = {
+    source : string;
+    output : string;
+  }
+
+  let create : state Component.t =
+    fun ~state ~set_state ->
+      let source = state.source in
+      let set_output s = set_state { state with output = s } in
+      let set_source s = set_state { state with source = s } in
+
+      El.div [
+        El.h1 [ El.txt' "Simple DDL" ];
+        El.nav [
+          Elab_button.create ~source ~set_output;
+          Compile_button.create ~source ~set_output;
+          Example_select.create ~set_source;
+        ];
+        Source_editor.create ~source ~set_source;
+        El.pre [ El.txt' state.output ];
       ]
-      [ El.txt' source ]
-  in
-  ignore (El.as_target elem |> Ev.(listen input) on_input);
-  elem
 
-type app_state = {
-  source : string;
-  output : string;
-}
-
-let app ~state ~set_state =
-  let source = state.source in
-  let set_output s = set_state { state with output = s } in
-  let set_source s = set_state { state with source = s } in
-
-  El.div [
-    El.h1 [ El.txt' "Simple DDL" ];
-    El.nav [
-      elab_button ~source ~set_output ();
-      compile_button ~source ~set_output ();
-      example_select ~set_source ();
-    ];
-    source_editor ~source ~set_source ();
-    El.pre [ El.txt' state.output ];
-  ]
+end
 
 let () =
   let elem = Document.find_el_by_id G.document (Jstr.v "app") |> Option.get in
-  Component.render elem app {
+  Component.render elem App.create {
     source = List.assoc Examples.initial Examples.all;
     output = "";
   }
