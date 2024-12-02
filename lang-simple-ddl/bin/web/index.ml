@@ -147,14 +147,16 @@ module App = struct
           Example_select.create ~set_source;
         ];
         Source_editor.create ~get_source
-          (* NOTE: Avoid focus loss by mutating the state in place when editing
-             the text area, which avoids triggering a re-render. This feels a
-             bit hacky, but it works for now!
+          ~set_source:(fun s ->
+            (* NOTE: Mutating the state in-place avoids triggering a re-render
+              of the textarea, which would cause it to lose focus during text
+              editing. This feels a bit hacky, but it works for now!
 
-             As a result we need to be careful to pass the current state of the
-             source code with [get_source], as opposed to naively copying it
-             from the current state, which would get out of date. *)
-          ~set_source:(fun s -> state.source <- s);
+              Because we're using a mutable field we need to be careful to pass
+              the current state of the source code with [get_source], as opposed
+              to naively copying it from the current state, which might be out
+              of date by the time we want to make use of it. *)
+            state.source <- s);
         El.pre [ El.txt' state.output ];
       ]
 
