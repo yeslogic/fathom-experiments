@@ -140,13 +140,13 @@ module App = struct
       let set_output s = set_state { state with output = s } in
       let set_source s = set_state { state with source = s } in
 
-      El.div ~at:At.[ class' (Jstr.v "main") ] [
-        El.nav ~at:At.[ class' (Jstr.v "toolbar") ] [
+      El.div ~at:At.[ id (Jstr.v "main") ] [
+        El.nav ~at:At.[ id (Jstr.v "toolbar") ] [
           Example_select.create ~set_source;
           Elab_button.create ~get_source ~set_output;
           Compile_button.create ~get_source ~set_output;
         ];
-        El.div ~at:At.[ class' (Jstr.v "editor") ] [
+        El.div ~at:At.[ id (Jstr.v "editor") ] [
           Source_input.create ~get_source
             ~set_source:(fun s ->
               (* NOTE: Mutating the state in-place avoids triggering a re-render
@@ -159,7 +159,7 @@ module App = struct
                 of date by the time we want to make use of it. *)
               state.source <- s);
         ];
-        El.div ~at:At.[ class' (Jstr.v "output") ] [
+        El.div ~at:At.[ id (Jstr.v "output") ] [
           El.pre [ El.txt' state.output ];
         ];
     ]
