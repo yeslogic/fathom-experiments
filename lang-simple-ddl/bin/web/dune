@@ -7,7 +7,8 @@
   (package simple-ddl)
   (deps
     index.html
-    index.bc.js))
+    index.bc.js
+    style.css))
 
 (executable
   (name index)
