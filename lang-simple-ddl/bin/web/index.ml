@@ -142,7 +142,6 @@ module App = struct
       let get_source () = state.source in
       let set_output s = set_state { state with output = s } in
       let set_source s = set_state { state with source = s } in
-      let mutate_source s = state.source <- s in
 
       El.div [
         El.h1 [ El.txt' "Simple DDL" ];
@@ -151,7 +150,10 @@ module App = struct
           Compile_button.create ~get_source ~set_output;
           Example_select.create ~set_source;
         ];
-        Source_editor.create ~get_source ~set_source:mutate_source;
+        Source_editor.create ~get_source
+          (* NOTE: Avoid focus loss by mutating the state in place when editing
+             the text area. This feels a bit hacky, but it works for now! *)
+          ~set_source:(fun s -> state.source <- s);
         El.pre [ El.txt' state.output ];
       ]
 
