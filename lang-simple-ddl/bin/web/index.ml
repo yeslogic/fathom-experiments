@@ -93,15 +93,15 @@ end
 
 module Example_select = struct
 
-  let create ~set_source =
+  let create ~selected_example ~set_selected_example =
     let on_input event =
       let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
       print_endline ("select example: " ^ name);
-      set_source (List.assoc name Examples.all);
+      set_selected_example name;
     in
 
     El.select (Examples.all |> List.map (fun (n, _) ->
-      El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
+      El.option ~at:At.[if' (n = selected_example) selected] [El.txt' n]))
     |> with_listener Ev.input on_input
 
 end
@@ -129,6 +129,7 @@ module App = struct
 
   type state = {
     mutable source : string;
+    selected_example : string;
     output : string;
   }
 
@@ -136,11 +137,17 @@ module App = struct
     fun ~state ~set_state ->
       let get_source () = state.source in
       let set_output s = set_state { state with output = s } in
-      let set_source s = set_state { state with source = s } in
+      let selected_example = state.selected_example in
+      let set_selected_example name =
+        set_state { state with
+          source = List.assoc name Examples.all;
+          selected_example = name;
+        }
+      in
 
       El.div ~at:At.[ id (Jstr.v "main") ] [
         El.nav ~at:At.[ id (Jstr.v "toolbar") ] [
-          Example_select.create ~set_source;
+          Example_select.create ~selected_example ~set_selected_example;
           Elab_button.create ~get_source ~set_output;
           Compile_button.create ~get_source ~set_output;
         ];
@@ -168,5 +175,6 @@ let () =
   let elem = Document.find_el_by_id G.document (Jstr.v "app") |> Option.get in
   Component.render elem App.create {
     source = List.assoc Examples.initial Examples.all;
+    selected_example = Examples.initial;
     output = "";
   }
