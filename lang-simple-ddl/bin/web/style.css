@@ -13,7 +13,7 @@
 /* Main styling */
 
 :root {
-  --gap: 0.75rem;
+  --gap: 1rem;
   --border: 1px solid;
   --monospace-font: 13px monospace;
 }
@@ -31,6 +31,10 @@
   grid-area: toolbar;
   border-bottom: var(--border);
   padding: var(--gap);
+}
+
+#toolbar > :not(:last-child) {
+  margin-right: calc(var(--gap) / 4);
 }
 
 #editor {
