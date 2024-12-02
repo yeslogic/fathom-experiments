@@ -62,12 +62,14 @@ let () =
       test_case "min_int" `Quick (fun () -> check string "same string" "0" UInt32.(to_string min_int));
       test_case "max_int" `Quick (fun () -> check string "same string" "4294967295" UInt32.(to_string max_int));
     ];
+
     "UInt64.to_string", [
       test_case "zero" `Quick (fun () -> check string "same string" "0" UInt64.(to_string zero));
       test_case "one" `Quick (fun () -> check string "same string" "1" UInt64.(to_string one));
       test_case "min_int" `Quick (fun () -> check string "same string" "0" UInt64.(to_string min_int));
       test_case "max_int" `Quick (fun () -> check string "same string" "18446744073709551615" UInt64.(to_string max_int));
     ];
+
     "UInt32.of_string", [
       test_case "zero" `Quick (fun () -> check uint32 "same uint32" UInt32.zero UInt32.(of_string "0"));
       test_case "one" `Quick (fun () -> check uint32 "same uint32" UInt32.one UInt32.(of_string "1"));
@@ -85,6 +87,7 @@ let () =
       test_case "separator after sign" `Quick (fun () -> check_raises "failure" (Failure "UInt32.of_string") (fun () -> ignore UInt32.(of_string "+_0")));
       test_case "separator after base" `Quick (fun () -> check_raises "failure" (Failure "UInt32.of_string") (fun () -> ignore UInt32.(of_string "0x_0")));
     ];
+
     "UInt64.of_string", [
       test_case "zero" `Quick (fun () -> check uint64 "same uint64" UInt64.zero UInt64.(of_string "0"));
       test_case "one" `Quick (fun () -> check uint64 "same uint64" UInt64.one UInt64.(of_string "1"));
