@@ -42,7 +42,7 @@ module Component = struct
     fun elem component state ->
       El.set_children elem [
         component ~state ~set_state:(fun state ->
-          print_endline "setting state";
+          print_endline "rendering component";
           render elem component state);
       ]
 
@@ -148,7 +148,12 @@ module App = struct
         ];
         Source_editor.create ~get_source
           (* NOTE: Avoid focus loss by mutating the state in place when editing
-             the text area. This feels a bit hacky, but it works for now! *)
+             the text area, which avoids triggering a re-render. This feels a
+             bit hacky, but it works for now!
+
+             As a result we need to be careful to pass the current state of the
+             source code with [get_source], as opposed to naively copying it
+             from the current state, which would get out of date. *)
           ~set_source:(fun s -> state.source <- s);
         El.pre [ El.txt' state.output ];
       ]
