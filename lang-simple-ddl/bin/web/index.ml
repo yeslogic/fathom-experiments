@@ -117,11 +117,9 @@ module Source_editor = struct
 
     El.textarea
       ~at:At.[
-        id (Jstr.v "input");
         rows 20;
         cols 80;
         spellcheck (Jstr.v "false");
-        autofocus;
       ]
       [ El.txt' (get_source ()) ]
     |> with_listener Ev.input on_input
