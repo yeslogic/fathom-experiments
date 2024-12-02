@@ -81,25 +81,25 @@ let compile_button ~source ~set_output () =
   elem
 
 let example_select ~set_source () =
+  let on_input event =
+    let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
+    print_endline ("select example: " ^ name);
+    set_source (List.assoc name Examples.all);
+  in
+
   let elem =
     El.select (Examples.all |> List.map (fun (n, _) ->
       El.option ~at:At.[if' (n = Examples.initial) selected] [El.txt' n]))
   in
-
-  let _ : Ev.listener =
-    El.as_target elem |> Ev.(listen change) @@ fun _ ->
-      let name = El.(prop Prop.value) elem |> Jstr.to_string in
-      print_endline ("select example: " ^ name);
-      set_source (List.assoc name Examples.all);
-  in
-
+  ignore (El.as_target elem |> Ev.(listen input) on_input);
   elem
 
 let source_editor ~source ~set_source () =
   let on_input event =
+    let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
     print_endline ("update input");
     (* FIXME: Full re-render results in focus being lost from textarea *)
-    set_source (Ev.as_type event |> Ev.Input.data |> Jstr.to_string);
+    set_source text;
   in
 
   let elem =
@@ -112,7 +112,6 @@ let source_editor ~source ~set_source () =
       ]
       [ El.txt' source ]
   in
-
   ignore (El.as_target elem |> Ev.(listen input) on_input);
   elem
 
