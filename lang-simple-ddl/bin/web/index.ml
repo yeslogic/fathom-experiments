@@ -29,11 +29,51 @@ let elab_program (filename : string) (input : string) =
 
 open Brr
 
-(* TODO: create a wrapper for the [El] module that allows for event handlers to
-   be passed as attributes. *)
-let with_listener event f elem =
-  let _ : Ev.listener = El.as_target elem |> Ev.listen event f in
-  elem
+module Html = struct
+
+  module Attr = struct
+
+    type t = El.t -> unit
+
+    let set_true (name : string) : t =
+      El.set_at (Jstr.v name) (Some Jstr.empty)
+
+    let set_string (name : string) (value : string) : t =
+      El.set_at (Jstr.v name) (Some (Jstr.v value))
+
+    let set_if (b : bool) (attr : t) (elem : El.t) =
+      if b then attr elem
+
+    (** Attributes *)
+
+    let selected = set_true "selected"
+    let id = set_string "id"            (* string *)
+    let wrap = set_string "wrap"        (* "hard" | "soft" | "wrap" *)
+    let spellcheck = set_string "wrap"  (* "true" | "default" | "false" *)
+
+    (** Events *)
+
+    let on_click f elem = ignore (El.as_target elem |> Ev.listen Ev.click f : Ev.listener)
+    let on_input f elem = ignore (El.as_target elem |> Ev.listen Ev.input f : Ev.listener)
+
+  end
+
+  let text content = El.txt' content
+
+  let elem ?(d : El.document option) (name : string) (attrs : Attr.t list) (children : El.t list) : El.t =
+    let elem = El.v ?d (Jstr.v name) children in
+    attrs |> List.iter (fun attr -> attr elem);
+    elem
+
+  let button ?d = elem ?d "button"
+  let div ?d = elem ?d "div"
+  let nav ?d = elem ?d "nav"
+  let option ?d = elem ?d "option"
+  let pre ?d = elem ?d "pre"
+  let select ?d = elem ?d "select"
+  let textarea ?d = elem ?d "textarea"
+
+end
 
 module Component = struct
   (** Approach inspired by {{:https://github.com/abuseofnotation/vanilla-fp} vanilla-fp}. *)
@@ -53,7 +93,7 @@ end
 module Elab_button = struct
 
   let create ~get_source ~set_output =
-    let on_click _ =
+    let handle_click _ =
       print_endline "elaborate";
 
       match elab_program "<input>" (get_source ()) with
@@ -65,15 +105,22 @@ module Elab_button = struct
           |> set_output
     in
 
-    El.button ~at:At.[id (Jstr.v "elab")] [El.txt' "Elaborate"]
-    |> with_listener Ev.click on_click
+    let open Html in
+    let open Html.Attr in
+
+    button [
+      id "elab";
+      on_click handle_click;
+    ] [
+      text "Elaborate";
+    ]
 
 end
 
 module Compile_button = struct
 
   let create ~get_source ~set_output =
-    let on_click _ =
+    let handle_click _ =
       print_endline "compile";
 
       match elab_program "<input>" (get_source ()) with
@@ -86,42 +133,56 @@ module Compile_button = struct
           |> set_output
     in
 
-    El.button ~at:At.[id (Jstr.v "compile")] [El.txt' "Compile"]
-    |> with_listener Ev.click on_click
+    let open Html in
+    let open Html.Attr in
+
+    button [
+      id "compile";
+      on_click handle_click;
+    ] [
+      text "Compile";
+    ]
 
 end
 
 module Example_select = struct
 
   let create ~selected_example ~set_selected_example =
-    let on_input event =
+    let handle_input event =
       let name = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
       print_endline ("select example: " ^ name);
       set_selected_example name;
     in
 
-    El.select (Examples.all |> List.map (fun (n, _) ->
-      El.option ~at:At.[if' (n = selected_example) selected] [El.txt' n]))
-    |> with_listener Ev.input on_input
+    let open Html in
+    let open Html.Attr in
+
+    select [
+      on_input handle_input
+    ] (Examples.all |> List.map (fun (n, _) ->
+      option [set_if (n = selected_example) selected] [text n]))
 
 end
 
 module Source_input = struct
 
   let create ~get_source ~set_source =
-    let on_input event =
+    let handle_input event =
       let text = Jv.get (Ev.target event |> Ev.target_to_jv) "value" |> Jv.to_string in
       print_endline ("update input");
       set_source text;
     in
 
-    El.textarea
-      ~at:At.[
-        v Name.wrap (Jstr.v "off"); (* FIXME: https://github.com/dbuenzli/brr/pull/66 *)
-        spellcheck (Jstr.v "false");
-      ]
-      [ El.txt' (get_source ()) ]
-    |> with_listener Ev.input on_input
+    let open Html in
+    let open Html.Attr in
+
+    textarea [
+      wrap "off";
+      spellcheck "false";
+      on_input handle_input;
+    ] [
+      text (get_source ())
+    ]
 
 end
 
@@ -145,13 +206,16 @@ module App = struct
         }
       in
 
-      El.div ~at:At.[ id (Jstr.v "main") ] [
-        El.nav ~at:At.[ id (Jstr.v "toolbar") ] [
+      let open Html in
+      let open Html.Attr in
+
+      div [ id "main" ] [
+        nav [ id "toolbar" ] [
           Example_select.create ~selected_example ~set_selected_example;
           Elab_button.create ~get_source ~set_output;
           Compile_button.create ~get_source ~set_output;
         ];
-        El.div ~at:At.[ id (Jstr.v "editor") ] [
+        div [ id "editor" ] [
           Source_input.create ~get_source
             ~set_source:(fun s ->
               (* NOTE: Mutating the state in-place avoids triggering a re-render
@@ -164,8 +228,8 @@ module App = struct
                 of date by the time we want to make use of it. *)
               state.source <- s);
         ];
-        El.div ~at:At.[ id (Jstr.v "output") ] [
-          El.pre [ El.txt' state.output ];
+        div [ id "output" ] [
+          pre [] [ text state.output ];
         ];
     ]
 
