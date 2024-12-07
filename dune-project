@@ -23,7 +23,7 @@
   (name sized-numbers)
   (depends
     (alcotest (and (>= "1.8") :with-test))
-    (fmt (and (>= "0.8.7") :with-test))))
+    (fmt (and (>= "0.9") :with-test))))
 
 
 ; Language experiments
@@ -39,7 +39,7 @@
     byte-set
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name ll1-dsl2)
@@ -47,7 +47,7 @@
     byte-set
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
-    (sedlex (>= "3.2"))
+    (sedlex (>= "3.3"))
     (tsort (>= "2.1"))))
 
 (package
@@ -64,12 +64,12 @@
 
     ; Web interface
     (brr (>= "0.0.7"))
-    (js_of_ocaml-compiler (>= "5.8.2"))
-    (js_of_ocaml (>= "5.8.2"))
+    (js_of_ocaml-compiler (>= "5.9.1"))
+    (js_of_ocaml (>= "5.9.1"))
 
     ; Core library
     case-conv
     (menhir (and (>= "20240715") :build))
-    (sedlex (>= "3.2"))
+    (sedlex (>= "3.3"))
     sized-numbers
     (tsort (>= "2.1"))))
