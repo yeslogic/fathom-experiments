@@ -29,52 +29,6 @@ let elab_program (filename : string) (input : string) =
 
 open Brr
 
-module Html = struct
-
-  module Attr = struct
-
-    type t = El.t -> unit
-
-    let set_true (name : string) : t =
-      El.set_at (Jstr.v name) (Some Jstr.empty)
-
-    let set_string (name : string) (value : string) : t =
-      El.set_at (Jstr.v name) (Some (Jstr.v value))
-
-    let set_if (b : bool) (attr : t) (elem : El.t) =
-      if b then attr elem
-
-    (** Attributes *)
-
-    let selected = set_true "selected"
-    let id = set_string "id"            (* string *)
-    let wrap = set_string "wrap"        (* "hard" | "soft" | "wrap" *)
-    let spellcheck = set_string "wrap"  (* "true" | "default" | "false" *)
-
-    (** Events *)
-
-    let on_click f elem = ignore (El.as_target elem |> Ev.listen Ev.click f : Ev.listener)
-    let on_input f elem = ignore (El.as_target elem |> Ev.listen Ev.input f : Ev.listener)
-
-  end
-
-  let text content = El.txt' content
-
-  let elem ?(d : El.document option) (name : string) (attrs : Attr.t list) (children : El.t list) : El.t =
-    let elem = El.v ?d (Jstr.v name) children in
-    attrs |> List.iter (fun attr -> attr elem);
-    elem
-
-  let button ?d = elem ?d "button"
-  let div ?d = elem ?d "div"
-  let nav ?d = elem ?d "nav"
-  let option ?d = elem ?d "option"
-  let pre ?d = elem ?d "pre"
-  let select ?d = elem ?d "select"
-  let textarea ?d = elem ?d "textarea"
-
-end
-
 module Component = struct
   (** Approach inspired by {{:https://github.com/abuseofnotation/vanilla-fp} vanilla-fp}. *)
 
