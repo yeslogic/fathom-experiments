@@ -5,17 +5,13 @@ Currently features a playground with support for elaborating and compiling DDL c
 ## Running the frontend
 
 ```text
-dune build simple-ddl
-python -m http.server 8000 --bind localhost --directory _build/default/lang-simple-ddl/bin/web
+npm run simple-ddl/web dev
 ```
-
-Then navigate to <http://127.0.0.1:8000/>.
 
 ## Todo list
 
 - [x] Basic build setup
-- [ ] Hot reloading
-- [ ] Code packaging
+- [x] Hot reloading
 - [ ] Use [CodeMirror](https://codemirror.net/) for text editing
 
 ## Resources

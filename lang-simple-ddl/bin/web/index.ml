@@ -87,6 +87,9 @@ module Compile_button = struct
           |> set_output
     in
 
+    (* failwith "help"; *)
+    (* print_endline "hello!!"; *)
+
     let open Html in
     let open Html.Attr in
 

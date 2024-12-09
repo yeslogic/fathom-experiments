@@ -1,4 +1,4 @@
-(lang dune 3.14)
+(lang dune 3.17)
 
 (name fathom-experiments)
 

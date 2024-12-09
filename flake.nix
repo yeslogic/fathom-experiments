@@ -127,8 +127,8 @@
           default = pkgs.mkShell {
             inputsFrom = lib.attrValues packages;
             buildInputs = lib.attrValues devPackages.${system} ++ [
-              # Packages from NixPkgs can be added here
               pkgs.nixpkgs-fmt
+              pkgs.nodejs_23
             ];
           };
         });

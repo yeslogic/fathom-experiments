@@ -2,14 +2,6 @@
   (name simple-ddl)
   (package simple-ddl))
 
-(alias
-  (name all)
-  (package simple-ddl)
-  (deps
-    index.html
-    index.bc.js
-    style.css))
-
 (executable
   (name index)
   (modes js)

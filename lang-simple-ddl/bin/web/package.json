@@ -1,0 +1,14 @@
+{
+  "name": "simple-ddl-playground",
+  "description": "Currently features a playground with support for elaborating and compiling DDL code.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3",
+    "vite-plugin-dune": "file:../../../packages/vite-plugin-dune"
+  }
+}

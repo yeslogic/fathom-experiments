@@ -3,7 +3,7 @@ opam-version: "2.0"
 homepage: "https://github.com/yeslogic/fathom-experiments"
 bug-reports: "https://github.com/yeslogic/fathom-experiments/issues"
 depends: [
-  "dune" {>= "3.14"}
+  "dune" {>= "3.17"}
   "byte-set"
   "menhir" {>= "20240715" & build}
   "menhirLib" {>= "20240715"}

@@ -1,0 +1,11 @@
+{
+  "name": "fathom-experiments",
+  "description": "A repository of Fathom-related binary parsing experiments.",
+  "workspaces": [
+    "lang-simple-ddl/bin/web",
+    "packages/vite-plugin-dune"
+  ],
+  "scripts": {
+    "simple-ddl": "npm --workspace=lang-simple-ddl/bin/web run"
+  }
+}

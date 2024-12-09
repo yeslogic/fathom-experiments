@@ -2,3 +2,6 @@
   (dev
     ; Make warnings non-fatal during development
     (flags (:standard -warn-error -A))))
+
+(data_only_dirs
+  "node_modules")
