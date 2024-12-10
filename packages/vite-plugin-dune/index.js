@@ -34,7 +34,7 @@ export default function ocamlPlugin() {
 
     // https://rollupjs.org/plugin-development/#buildstart
     async buildStart() {
-      // Collect information
+      // Collect information about the dune workspace
       state.duneWorkspace = parseDuneWorkspace(execSync(`dune show workspace --no-print-directory`).toString());
 
       if (this.meta.watchMode) {
