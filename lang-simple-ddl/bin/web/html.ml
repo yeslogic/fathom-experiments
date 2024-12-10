@@ -20,13 +20,13 @@ module Attr = struct
 
   (** Global attributes *)
 
-  let id = set_string "id"            (* string *)
-  let spellcheck = set_string "wrap"  (* "true" | "default" | "false" *)
+  let id = set_string "id"                  (* string *)
+  let spellcheck = set_string "spellcheck"  (* "true" | "default" | "false" *)
 
   (** Element-specific attributes *)
 
   let selected = set_true "selected"
-  let wrap = set_string "wrap"        (* "hard" | "soft" | "wrap" *)
+  let wrap = set_string "wrap"              (* "hard" | "soft" | "wrap" *)
 
   (** Events *)
 
