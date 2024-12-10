@@ -314,25 +314,30 @@ module Semantics = struct
     | Bool_elim (_, fmt1, _) -> format_ty items fmt1
 
   let prim_app (prim : prim) : vexpr list -> vexpr =
+    let[@warning "-partial-match"] int64_int64_bool f [Int64_lit x; Int64_lit y] = Bool_lit (f x y) in
+    let[@warning "-partial-match"] int64_int64 f [Int64_lit x] = Int64_lit (f x) in
+    let[@warning "-partial-match"] int64_int64_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x y) in
+    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Int64.to_int y)) in
+
     match prim with
-    | Int64_eq -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.equal x y)
-    | Int64_ne -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (not (Int64.equal x y))
-    | Int64_le -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (x <= y)
-    | Int64_lt -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (x < y)
-    | Int64_gt -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (x < y)
-    | Int64_ge -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (x >= y)
-    | Int64_neg -> fun[@warning "-partial-match"] [Int64_lit x] -> Int64_lit (Int64.neg x)
-    | Int64_add -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.add x y)
-    | Int64_sub -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.sub x y)
-    | Int64_mul -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.mul x y)
-    | Int64_div -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.div x y)
-    | Int64_logical_not -> fun[@warning "-partial-match"] [Int64_lit x] -> Int64_lit (Int64.lognot x)
-    | Int64_logical_and -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logand x y)
-    | Int64_logical_or -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logor x y)
-    | Int64_logical_xor -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logxor x y)
-    | Int64_logical_shl -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit Int64.(shift_left x (to_int y))
-    | Int64_arith_shr -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit Int64.(shift_right x (to_int y))
-    | Int64_logical_shr -> fun[@warning "-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit Int64.(shift_right_logical x (to_int y))
+    | Int64_eq -> int64_int64_bool Int64.equal
+    | Int64_ne -> int64_int64_bool (fun x y -> not (Int64.equal x y))
+    | Int64_le -> int64_int64_bool ( <= )
+    | Int64_lt -> int64_int64_bool ( < )
+    | Int64_gt -> int64_int64_bool ( < )
+    | Int64_ge -> int64_int64_bool ( >= )
+    | Int64_neg -> int64_int64 Int64.neg
+    | Int64_add -> int64_int64_int64 Int64.add
+    | Int64_sub -> int64_int64_int64 Int64.sub
+    | Int64_mul -> int64_int64_int64 Int64.mul
+    | Int64_div -> int64_int64_int64 Int64.div
+    | Int64_logical_not -> int64_int64 Int64.lognot
+    | Int64_logical_and -> int64_int64_int64 Int64.logand
+    | Int64_logical_or -> int64_int64_int64 Int64.logor
+    | Int64_logical_xor -> int64_int64_int64 Int64.logxor
+    | Int64_logical_shl -> int64_int64'_int64 Int64.shift_left
+    | Int64_arith_shr -> int64_int64'_int64 Int64.shift_right
+    | Int64_logical_shr -> int64_int64'_int64 Int64.shift_right_logical
 
   let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
     match expr with
