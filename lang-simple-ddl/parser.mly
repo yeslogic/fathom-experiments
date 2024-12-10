@@ -93,20 +93,20 @@ let cmp_tm :=
   | or_tm
 
 let or_tm :=
-  | tm1 = located(or_tm); "|"; tm2 = located(xor_tm); { Surface.Op2 (`Logical_or, tm1, tm2) }
+  | tm1 = located(or_tm); "|"; tm2 = located(xor_tm); { Surface.Op2 (`Bit_or, tm1, tm2) }
   | xor_tm
 
 let xor_tm :=
-  | tm1 = located(xor_tm); "^"; tm2 = located(and_tm); { Surface.Op2 (`Logical_xor, tm1, tm2) }
+  | tm1 = located(xor_tm); "^"; tm2 = located(and_tm); { Surface.Op2 (`Bit_xor, tm1, tm2) }
   | and_tm
 
 let and_tm :=
-  | tm1 = located(and_tm); "&"; tm2 = located(shift_tm); { Surface.Op2 (`Logical_or, tm1, tm2) }
+  | tm1 = located(and_tm); "&"; tm2 = located(shift_tm); { Surface.Op2 (`Bit_or, tm1, tm2) }
   | shift_tm
 
 let shift_tm :=
-  | tm1 = located(shift_tm); "<<"; tm2 = located(add_tm); { Surface.Op2 (`Logical_shl, tm1, tm2) }
-  | tm1 = located(shift_tm); ">>"; tm2 = located(add_tm); { Surface.Op2 (`Arith_shr, tm1, tm2) }
+  | tm1 = located(shift_tm); "<<"; tm2 = located(add_tm); { Surface.Op2 (`Bit_shl, tm1, tm2) }
+  | tm1 = located(shift_tm); ">>"; tm2 = located(add_tm); { Surface.Op2 (`Bit_shr, tm1, tm2) }
   | add_tm
 
 let add_tm :=
@@ -125,7 +125,7 @@ let app_tm :=
   | "-"; tm = located(atomic_tm);
       { Surface.Op1(`Neg, tm) }
   | "!"; tm = located(atomic_tm);
-      { Surface.Op1(`Logical_not, tm) }
+      { Surface.Op1(`Bit_not, tm) }
   | proj_tm
 
 let proj_tm :=
