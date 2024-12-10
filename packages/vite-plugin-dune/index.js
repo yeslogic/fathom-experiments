@@ -1,6 +1,5 @@
 import fs from 'fs/promises';
 import path from 'path';
-import process from 'process';
 import { execSync, spawn, spawnSync } from 'child_process';
 
 function parseDuneWorkspace(workspace) {
@@ -53,11 +52,6 @@ export default function ocamlPlugin() {
             this.error(`child process exited with code ${code}`);
             this.error('\n' + error);
           }
-        });
-
-        process.on('exit', () => {
-          this.debug("killing dune process");
-          state.duneProcess.kill();
         });
       } else {
         // Build the project in release mode, which results in a smaller file size
