@@ -24,16 +24,16 @@ type binder =
 (** Unary operators *)
 type op1 = [
   | `Neg
-  | `Logical_not
+  | `Bit_not
 ]
 
 (** Binary operators *)
 type op2 = [
   | [ `Eq | `Ne | `Le | `Lt | `Ge | `Gt ]
-  | `Logical_or
-  | `Logical_xor
-  | `Logical_and
-  | [ `Logical_shl | `Arith_shr | `Logical_shr ]
+  | `Bit_or
+  | `Bit_xor
+  | `Bit_and
+  | [ `Bit_shl | `Bit_shr ]
   | [ `Add | `Sub ]
   | [ `Mul | `Div ]
 ]
@@ -211,12 +211,12 @@ end = struct
     | Op2 (op, tm1, tm2) ->
         let prim : Core.prim =
           match op with
-          | `Eq -> Int64_eq
-          | `Ne -> Int64_ne
-          | `Le -> Int64_le
-          | `Lt -> Int64_lt
-          | `Ge -> Int64_ge
-          | `Gt -> Int64_gt
+          | `Eq -> Int64 Eq
+          | `Ne -> Int64 Ne
+          | `Le -> Int64 Le
+          | `Lt -> Int64 Lt
+          | `Ge -> Int64 Ge
+          | `Gt -> Int64 Gt
           | _ -> error tm.loc "unexpected binary operator in format refinement"
         in
         let fmt1 = check_format ctx tm1 in
@@ -347,8 +347,8 @@ end = struct
     | Op1 (op, tm) ->
         let op : Core.prim =
           match op with
-          | `Neg -> Int64_neg
-          | `Logical_not -> Int64_logical_not
+          | `Neg -> Int64 Neg
+          | `Bit_not -> Int64 Bit_not
         in
         let expr = check_expr ctx tm Int64_type in
         Expr_tm (Prim_app (op, [expr]), Int64_type)
@@ -356,22 +356,21 @@ end = struct
     | Op2 (op, tm1, tm2) ->
         let (op : Core.prim), (vty : Core.Semantics.vty) =
           match op with
-          | `Eq -> Int64_eq, Bool_type
-          | `Ne -> Int64_ne, Bool_type
-          | `Le -> Int64_le, Bool_type
-          | `Lt -> Int64_lt, Bool_type
-          | `Gt -> Int64_gt, Bool_type
-          | `Ge -> Int64_ge, Bool_type
-          | `Add -> Int64_add, Int64_type
-          | `Sub -> Int64_sub, Int64_type
-          | `Mul -> Int64_mul, Int64_type
-          | `Div -> Int64_div, Int64_type
-          | `Logical_and -> Int64_logical_and, Int64_type
-          | `Logical_or -> Int64_logical_or, Int64_type
-          | `Logical_xor -> Int64_logical_xor, Int64_type
-          | `Logical_shl -> Int64_logical_shl, Int64_type
-          | `Arith_shr -> Int64_arith_shr, Int64_type
-          | `Logical_shr -> Int64_logical_shr, Int64_type
+          | `Eq -> Int64 Eq, Bool_type
+          | `Ne -> Int64 Ne, Bool_type
+          | `Le -> Int64 Le, Bool_type
+          | `Lt -> Int64 Lt, Bool_type
+          | `Gt -> Int64 Gt, Bool_type
+          | `Ge -> Int64 Ge, Bool_type
+          | `Add -> Int64 Add, Int64_type
+          | `Sub -> Int64 Sub, Int64_type
+          | `Mul -> Int64 Mul, Int64_type
+          | `Div -> Int64 Div, Int64_type
+          | `Bit_and -> Int64 Bit_and, Int64_type
+          | `Bit_or -> Int64 Bit_or, Int64_type
+          | `Bit_xor -> Int64 Bit_xor, Int64_type
+          | `Bit_shl -> Int64 Bit_shl, Int64_type
+          | `Bit_shr -> Int64 Bit_shr, Int64_type
         in
         let expr1 = check_expr ctx tm1 Int64_type in
         let expr2 = check_expr ctx tm2 Int64_type in

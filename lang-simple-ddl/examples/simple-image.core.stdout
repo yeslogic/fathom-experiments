@@ -1,14 +1,14 @@
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int64 (#int64-logical-or b0 (#int64-logical-shl b1 8));
+  #pure #Int64 (#int64-bit-or b0 (#int64-bit-shl b1 8));
 
 format u8 := byte;
 
 format u16be :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int64 (#int64-logical-or (#int64-logical-shl b0 8) b1);
+  #pure #Int64 (#int64-bit-or (#int64-bit-shl b0 8) b1);
 
 type Pixel {
   blue : #Int64;

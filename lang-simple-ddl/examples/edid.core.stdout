@@ -8,7 +8,7 @@ format standard-timing-information :=
 format u16le :=
   let b0 <- byte;
   let b1 <- byte;
-  #pure #Int64 (#int64-logical-or b0 (#int64-logical-shl b1 8));
+  #pure #Int64 (#int64-bit-or b0 (#int64-bit-shl b1 8));
 
 format u64le :=
   let b0 <- byte;
@@ -21,19 +21,19 @@ format u64le :=
   let b7 <- byte;
   #pure
     #Int64
-    (#int64-logical-or
-       (#int64-logical-or
-          (#int64-logical-or
-             (#int64-logical-or
-                (#int64-logical-or
-                   (#int64-logical-or
-                      (#int64-logical-or b0 (#int64-logical-shl b1 8))
-                      (#int64-logical-shl b2 16))
-                   (#int64-logical-shl b3 24))
-                (#int64-logical-shl b4 32))
-             (#int64-logical-shl b5 40))
-          (#int64-logical-shl b6 48))
-       (#int64-logical-shl b7 56));
+    (#int64-bit-or
+       (#int64-bit-or
+          (#int64-bit-or
+             (#int64-bit-or
+                (#int64-bit-or
+                   (#int64-bit-or
+                      (#int64-bit-or b0 (#int64-bit-shl b1 8))
+                      (#int64-bit-shl b2 16))
+                   (#int64-bit-shl b3 24))
+                (#int64-bit-shl b4 32))
+             (#int64-bit-shl b5 40))
+          (#int64-bit-shl b6 48))
+       (#int64-bit-shl b7 56));
 
 format u8 := byte;
 
@@ -44,11 +44,11 @@ format u32le :=
   let b3 <- byte;
   #pure
     #Int64
-    (#int64-logical-or
-       (#int64-logical-or
-          (#int64-logical-or b0 (#int64-logical-shl b1 8))
-          (#int64-logical-shl b2 16))
-       (#int64-logical-shl b3 24));
+    (#int64-bit-or
+       (#int64-bit-or
+          (#int64-bit-or b0 (#int64-bit-shl b1 8))
+          (#int64-bit-shl b2 16))
+       (#int64-bit-shl b3 24));
 
 type Chromacity-coordinates {
   blue-white-lsb : #Int64;

@@ -6,29 +6,39 @@ module Label_map = Map.Make (String)
 
 (** {1 Syntax} *)
 
+type int_prim =
+  | Eq
+  | Ne
+  | Le
+  | Lt
+  | Ge
+  | Gt
+  | Neg
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Bit_not
+  | Bit_and
+  | Bit_or
+  | Bit_xor
+  | Bit_shl
+  | Bit_shr
+
 type prim =
-  | Int64_eq
-  | Int64_ne
-  | Int64_le
-  | Int64_lt
-  | Int64_ge
-  | Int64_gt
-  | Int64_neg
-  | Int64_add
-  | Int64_sub
-  | Int64_mul
-  | Int64_div
-  | Int64_logical_not
-  | Int64_logical_and
-  | Int64_logical_or
-  | Int64_logical_xor
-  | Int64_logical_shl
-  | Int64_arith_shr
-  | Int64_logical_shr
+  | UInt64 of int_prim
+  | Int64 of int_prim
 
 type ty =
   | Item_var of string
   | List_type of ty
+  | UInt8_type
+  | UInt16_type
+  | UInt32_type
+  | UInt64_type
+  | Int8_type
+  | Int16_type
+  | Int32_type
   | Int64_type
   | Bool_type
   | Format_repr of format
@@ -40,7 +50,14 @@ and expr =
   | Record_lit of string * expr Label_map.t
   | Record_proj of expr * string
   | List_lit of expr list
-  | Int64_lit of int64
+  | UInt8_lit of Sized_numbers.uint8
+  | UInt16_lit of Sized_numbers.uint16
+  | UInt32_lit of Sized_numbers.uint32
+  | UInt64_lit of Sized_numbers.uint64
+  | Int8_lit of Sized_numbers.int8
+  | Int16_lit of Sized_numbers.int16
+  | Int32_lit of Sized_numbers.int32
+  | Int64_lit of Sized_numbers.int64
   | Bool_lit of bool
   | Bool_elim of expr * expr * expr
   | Prim_app of prim * expr list
@@ -67,26 +84,30 @@ type program =
 
 (** {2 Pretty printing} *)
 
+let pp_int_prim ppf (prim : int_prim) =
+  match prim with
+  | Eq -> Format.pp_print_string ppf "eq"
+  | Ne -> Format.pp_print_string ppf "ne"
+  | Le -> Format.pp_print_string ppf "le"
+  | Lt -> Format.pp_print_string ppf "lt"
+  | Ge -> Format.pp_print_string ppf "ge"
+  | Gt -> Format.pp_print_string ppf "gt"
+  | Neg -> Format.pp_print_string ppf "neg"
+  | Add -> Format.pp_print_string ppf "add"
+  | Sub -> Format.pp_print_string ppf "sub"
+  | Mul -> Format.pp_print_string ppf "mul"
+  | Div -> Format.pp_print_string ppf "div"
+  | Bit_not -> Format.pp_print_string ppf "bit-not"
+  | Bit_and -> Format.pp_print_string ppf "bit-and"
+  | Bit_or -> Format.pp_print_string ppf "bit-or"
+  | Bit_xor -> Format.pp_print_string ppf "bit-xor"
+  | Bit_shl -> Format.pp_print_string ppf "bit-shl"
+  | Bit_shr -> Format.pp_print_string ppf "bit-shr"
+
 let pp_prim ppf (prim : prim) =
   match prim with
-  | Int64_eq -> Format.pp_print_string ppf "int64-eq"
-  | Int64_ne -> Format.pp_print_string ppf "int64-ne"
-  | Int64_le -> Format.pp_print_string ppf "int64-le"
-  | Int64_lt -> Format.pp_print_string ppf "int64-lt"
-  | Int64_ge -> Format.pp_print_string ppf "int64-ge"
-  | Int64_gt -> Format.pp_print_string ppf "int64-gt"
-  | Int64_neg -> Format.pp_print_string ppf "int64-neg"
-  | Int64_add -> Format.pp_print_string ppf "int64-add"
-  | Int64_sub -> Format.pp_print_string ppf "int64-sub"
-  | Int64_mul -> Format.pp_print_string ppf "int64-mul"
-  | Int64_div -> Format.pp_print_string ppf "int64-div"
-  | Int64_logical_not -> Format.pp_print_string ppf "int64-logical-not"
-  | Int64_logical_and -> Format.pp_print_string ppf "int64-logical-and"
-  | Int64_logical_or -> Format.pp_print_string ppf "int64-logical-or"
-  | Int64_logical_xor -> Format.pp_print_string ppf "int64-logical-xor"
-  | Int64_logical_shl -> Format.pp_print_string ppf "int64-logical-shl"
-  | Int64_arith_shr -> Format.pp_print_string ppf "int64-arith-shr"
-  | Int64_logical_shr -> Format.pp_print_string ppf "int64-logical-shr"
+  | UInt64 prim -> Format.fprintf ppf "uint64-%a" pp_int_prim prim
+  | Int64 prim -> Format.fprintf ppf "int64-%a" pp_int_prim prim
 
 let rec pp_ty ppf (ty : ty) =
   match ty with
@@ -96,6 +117,13 @@ let rec pp_ty ppf (ty : ty) =
 and pp_atomic_ty ppf ty =
   match ty with
   | Item_var name -> Format.pp_print_string ppf name
+  | UInt8_type -> Format.pp_print_string ppf "#UInt8"
+  | UInt16_type -> Format.pp_print_string ppf "#UInt16"
+  | UInt32_type -> Format.pp_print_string ppf "#UInt32"
+  | UInt64_type -> Format.pp_print_string ppf "#UInt64"
+  | Int8_type -> Format.pp_print_string ppf "#Int8"
+  | Int16_type -> Format.pp_print_string ppf "#Int16"
+  | Int32_type -> Format.pp_print_string ppf "#Int32"
   | Int64_type -> Format.pp_print_string ppf "#Int64"
   | Bool_type -> Format.pp_print_string ppf "#Bool"
   | Format_repr fmt -> Format.fprintf ppf "%a.Repr" (pp_atomic_format []) fmt
@@ -160,7 +188,14 @@ and pp_atomic_expr names ppf expr =
       let pp_sep fmt () = Format.fprintf fmt ",@ " in
       Format.fprintf ppf "@[[%a]@]"
         (Format.pp_print_list ~pp_sep (pp_print_proj_expr names)) elems
-  | Int64_lit i -> Format.pp_print_string ppf (Int64.to_string i)
+  | UInt8_lit i -> Sized_numbers.UInt8.pp ppf i
+  | UInt16_lit i -> Sized_numbers.UInt16.pp ppf i
+  | UInt32_lit i -> Sized_numbers.UInt32.pp ppf i
+  | UInt64_lit i -> Sized_numbers.UInt64.pp ppf i
+  | Int8_lit i -> Sized_numbers.Int8.pp ppf i
+  | Int16_lit i -> Sized_numbers.Int16.pp ppf i
+  | Int32_lit i -> Sized_numbers.Int32.pp ppf i
+  | Int64_lit i -> Sized_numbers.Int64.pp ppf i
   | Bool_lit true -> Format.pp_print_string ppf "true"
   | Bool_lit false -> Format.pp_print_string ppf "false"
   | expr -> Format.fprintf ppf "@[(%a)@]" (pp_expr names) expr
@@ -250,6 +285,13 @@ module Semantics = struct
     | Format_repr of string * vty Lazy.t
     | Record_type of string * vty Label_map.t
     | List_type of vty
+    | UInt8_type
+    | UInt16_type
+    | UInt32_type
+    | UInt64_type
+    | Int8_type
+    | Int16_type
+    | Int32_type
     | Int64_type
     | Bool_type
 
@@ -259,7 +301,14 @@ module Semantics = struct
   *)
 
   type vexpr =
-    | Int64_lit of int64
+    | UInt8_lit of Sized_numbers.uint8
+    | UInt16_lit of Sized_numbers.uint16
+    | UInt32_lit of Sized_numbers.uint32
+    | UInt64_lit of Sized_numbers.uint64
+    | Int8_lit of Sized_numbers.int8
+    | Int16_lit of Sized_numbers.int16
+    | Int32_lit of Sized_numbers.int32
+    | Int64_lit of Sized_numbers.int64
     | Bool_lit of bool
     | List_lit of vexpr list
     | Record_lit of string * vexpr Label_map.t
@@ -289,6 +338,13 @@ module Semantics = struct
         in
         Item_var (name, Lazy.from_fun vty)
     | List_type elem_ty -> List_type (eval_ty items elem_ty)
+    | UInt8_type -> UInt8_type
+    | UInt16_type -> UInt16_type
+    | UInt32_type -> UInt32_type
+    | UInt64_type -> UInt64_type
+    | Int8_type -> Int8_type
+    | Int16_type -> Int16_type
+    | Int32_type -> Int32_type
     | Int64_type -> Int64_type
     | Bool_type -> Bool_type
     | Format_repr (Item_var name) ->
@@ -314,30 +370,52 @@ module Semantics = struct
     | Bool_elim (_, fmt1, _) -> format_ty items fmt1
 
   let prim_app (prim : prim) : vexpr list -> vexpr =
+    let[@warning "-partial-match"] uint64_uint64_bool f [UInt64_lit x; UInt64_lit y] = Bool_lit (f x y) in
+    let[@warning "-partial-match"] uint64_uint64 f [UInt64_lit x] = UInt64_lit (f x) in
+    let[@warning "-partial-match"] uint64_uint64_uint64 f [UInt64_lit x; UInt64_lit y] = UInt64_lit (f x y) in
+    let[@warning "-partial-match"] uint64_uint64'_uint64 f [UInt64_lit x; UInt64_lit y] = UInt64_lit (f x (Sized_numbers.UInt64.to_int_opt y |> Option.get)) in
+
     let[@warning "-partial-match"] int64_int64_bool f [Int64_lit x; Int64_lit y] = Bool_lit (f x y) in
     let[@warning "-partial-match"] int64_int64 f [Int64_lit x] = Int64_lit (f x) in
     let[@warning "-partial-match"] int64_int64_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x y) in
-    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Int64.to_int y)) in
+    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Sized_numbers.Int64.to_int y)) in
 
     match prim with
-    | Int64_eq -> int64_int64_bool Int64.equal
-    | Int64_ne -> int64_int64_bool (fun x y -> not (Int64.equal x y))
-    | Int64_le -> int64_int64_bool ( <= )
-    | Int64_lt -> int64_int64_bool ( < )
-    | Int64_gt -> int64_int64_bool ( < )
-    | Int64_ge -> int64_int64_bool ( >= )
-    | Int64_neg -> int64_int64 Int64.neg
-    | Int64_add -> int64_int64_int64 Int64.add
-    | Int64_sub -> int64_int64_int64 Int64.sub
-    | Int64_mul -> int64_int64_int64 Int64.mul
-    | Int64_div -> int64_int64_int64 Int64.div
-    | Int64_logical_not -> int64_int64 Int64.lognot
-    | Int64_logical_and -> int64_int64_int64 Int64.logand
-    | Int64_logical_or -> int64_int64_int64 Int64.logor
-    | Int64_logical_xor -> int64_int64_int64 Int64.logxor
-    | Int64_logical_shl -> int64_int64'_int64 Int64.shift_left
-    | Int64_arith_shr -> int64_int64'_int64 Int64.shift_right
-    | Int64_logical_shr -> int64_int64'_int64 Int64.shift_right_logical
+    | UInt64 Eq -> uint64_uint64_bool Sized_numbers.UInt64.equal
+    | UInt64 Ne -> uint64_uint64_bool Sized_numbers.UInt64.O.( <> )
+    | UInt64 Le -> uint64_uint64_bool Sized_numbers.UInt64.O.( <= )
+    | UInt64 Lt -> uint64_uint64_bool Sized_numbers.UInt64.O.( < )
+    | UInt64 Gt -> uint64_uint64_bool Sized_numbers.UInt64.O.( < )
+    | UInt64 Ge -> uint64_uint64_bool Sized_numbers.UInt64.O.( >= )
+    | UInt64 Neg -> uint64_uint64 Sized_numbers.UInt64.neg
+    | UInt64 Add -> uint64_uint64_uint64 Sized_numbers.UInt64.add
+    | UInt64 Sub -> uint64_uint64_uint64 Sized_numbers.UInt64.sub
+    | UInt64 Mul -> uint64_uint64_uint64 Sized_numbers.UInt64.mul
+    | UInt64 Div -> uint64_uint64_uint64 Sized_numbers.UInt64.div
+    | UInt64 Bit_not -> uint64_uint64 Sized_numbers.UInt64.lognot
+    | UInt64 Bit_and -> uint64_uint64_uint64 Sized_numbers.UInt64.logand
+    | UInt64 Bit_or -> uint64_uint64_uint64 Sized_numbers.UInt64.logor
+    | UInt64 Bit_xor -> uint64_uint64_uint64 Sized_numbers.UInt64.logxor
+    | UInt64 Bit_shl -> uint64_uint64'_uint64 Sized_numbers.UInt64.shift_left
+    | UInt64 Bit_shr -> uint64_uint64'_uint64 Sized_numbers.UInt64.shift_right
+
+    | Int64 Eq -> int64_int64_bool Sized_numbers.Int64.equal
+    | Int64 Ne -> int64_int64_bool Sized_numbers.Int64.O.( <> )
+    | Int64 Le -> int64_int64_bool Sized_numbers.Int64.O.( <= )
+    | Int64 Lt -> int64_int64_bool Sized_numbers.Int64.O.( < )
+    | Int64 Gt -> int64_int64_bool Sized_numbers.Int64.O.( < )
+    | Int64 Ge -> int64_int64_bool Sized_numbers.Int64.O.( >= )
+    | Int64 Neg -> int64_int64 Sized_numbers.Int64.neg
+    | Int64 Add -> int64_int64_int64 Sized_numbers.Int64.add
+    | Int64 Sub -> int64_int64_int64 Sized_numbers.Int64.sub
+    | Int64 Mul -> int64_int64_int64 Sized_numbers.Int64.mul
+    | Int64 Div -> int64_int64_int64 Sized_numbers.Int64.div
+    | Int64 Bit_not -> int64_int64 Sized_numbers.Int64.lognot
+    | Int64 Bit_and -> int64_int64_int64 Sized_numbers.Int64.logand
+    | Int64 Bit_or -> int64_int64_int64 Sized_numbers.Int64.logor
+    | Int64 Bit_xor -> int64_int64_int64 Sized_numbers.Int64.logxor
+    | Int64 Bit_shl -> int64_int64'_int64 Sized_numbers.Int64.shift_left
+    | Int64 Bit_shr -> int64_int64'_int64 Sized_numbers.Int64.shift_right
 
   let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
     match expr with
@@ -359,6 +437,13 @@ module Semantics = struct
         end
     | List_lit exprs ->
         List_lit (List.map (eval_expr items locals) exprs)
+    | UInt8_lit i -> UInt8_lit i
+    | UInt16_lit i -> UInt16_lit i
+    | UInt32_lit i -> UInt32_lit i
+    | UInt64_lit i -> UInt64_lit i
+    | Int8_lit i -> Int8_lit i
+    | Int16_lit i -> Int16_lit i
+    | Int32_lit i -> Int32_lit i
     | Int64_lit i -> Int64_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, expr1, expr2) ->
@@ -381,6 +466,13 @@ module Semantics = struct
     | Format_repr (name, _) -> Format_repr (Item_var name)
     | Record_type (name, _) -> Item_var name
     | List_type vty -> List_type (quote_vty ~unfold_items vty)
+    | UInt8_type -> UInt8_type
+    | UInt16_type -> UInt16_type
+    | UInt32_type -> UInt32_type
+    | UInt64_type -> UInt64_type
+    | Int8_type -> Int8_type
+    | Int16_type -> Int16_type
+    | Int32_type -> Int32_type
     | Int64_type -> Int64_type
     | Bool_type -> Bool_type
 
@@ -400,6 +492,13 @@ module Semantics = struct
 
     | Record_type (name1, _), Record_type (name2, _) when name1 = name2 -> ()
     | List_type elem_vty1, List_type elem_vty2 -> unify_vtys items elem_vty1 elem_vty2
+    | UInt8_type, UInt8_type -> ()
+    | UInt16_type, UInt16_type -> ()
+    | UInt32_type, UInt32_type -> ()
+    | UInt64_type, UInt64_type -> ()
+    | Int8_type, Int8_type -> ()
+    | Int16_type, Int16_type -> ()
+    | Int32_type, Int32_type -> ()
     | Int64_type, Int64_type -> ()
     | Bool_type, Bool_type -> ()
     | _ -> raise Failed_to_unify
@@ -469,14 +568,17 @@ module Compile = struct
 
   let rec compile_ty (ctx : context) (ty : ty) : Rust.ty =
     match ty with
-    | Item_var name ->
-        Path ([compile_item_var ctx name], [])
-    | List_type ty ->
-        Path (["Vec"], [compile_ty ctx ty])
-    | Int64_type ->
-        Path (["i64"], []) (* TODO: More integer types *)
-    | Bool_type ->
-        Path (["bool"], [])
+    | Item_var name -> Path ([compile_item_var ctx name], [])
+    | List_type ty -> Path (["Vec"], [compile_ty ctx ty])
+    | UInt8_type -> Path (["u8"], [])
+    | UInt16_type -> Path (["u16"], [])
+    | UInt32_type -> Path (["u32"], [])
+    | UInt64_type -> Path (["u64"], [])
+    | Int8_type -> Path (["i8"], [])
+    | Int16_type -> Path (["i16"], [])
+    | Int32_type -> Path (["i32"], [])
+    | Int64_type -> Path (["i64"], [])
+    | Bool_type -> Path (["bool"], [])
     | Format_repr fmt ->
         compile_ty ctx (Semantics.format_ty ctx.source_items fmt)
 
@@ -520,6 +622,13 @@ module Compile = struct
         )
     | List_lit exprs ->
         Vec_lit (List.map (compile_expr ctx) exprs)
+    | UInt8_lit i -> U8Lit i
+    | UInt16_lit i -> U16Lit i
+    | UInt32_lit i -> U32Lit i
+    | UInt64_lit i -> U64Lit i
+    | Int8_lit i -> I8Lit i
+    | Int16_lit i -> I16Lit i
+    | Int32_lit i -> I32Lit i
     | Int64_lit i -> I64Lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, expr1, expr2) ->
@@ -538,27 +647,29 @@ module Compile = struct
           | [x; y] -> Infix_op (compile_expr ctx x, op, compile_expr ctx y)
           | _ -> failwith "invalid prim"
         in
+        let int_prim_app (prim : int_prim) =
+          match prim with
+          | Eq -> infix "==" args
+          | Ne -> infix "!=" args
+          | Le -> infix "<=" args
+          | Lt -> infix "<" args
+          | Gt -> infix ">" args
+          | Ge -> infix ">=" args
+          | Neg -> prefix "-" args
+          | Add -> infix "+" args
+          | Sub -> infix "-" args
+          | Mul -> infix "*" args
+          | Div -> infix "/" args
+          | Bit_not -> prefix "!" args
+          | Bit_and -> infix "&" args
+          | Bit_or -> infix "|" args
+          | Bit_xor -> infix "^" args
+          | Bit_shl -> infix "<<" args
+          | Bit_shr -> infix ">>" args
+        in
         match prim with
-        (* See https://doc.rust-lang.org/reference/expressions/operator-expr.html
-           for the semantics of Rust’s binary operators *)
-        | Int64_eq -> infix "==" args
-        | Int64_ne -> infix "!=" args
-        | Int64_le -> infix "<=" args
-        | Int64_lt -> infix "<" args
-        | Int64_gt -> infix ">" args
-        | Int64_ge -> infix ">=" args
-        | Int64_neg -> prefix "-" args
-        | Int64_add -> infix "+" args
-        | Int64_sub -> infix "-" args
-        | Int64_mul -> infix "*" args
-        | Int64_div -> infix "/" args
-        | Int64_logical_not -> prefix "!" args
-        | Int64_logical_and -> infix "&" args
-        | Int64_logical_or -> infix "|" args
-        | Int64_logical_xor -> infix "^" args
-        | Int64_logical_shl -> infix "<<" args
-        | Int64_arith_shr -> infix ">>" args
-        | Int64_logical_shr -> Path ["todo!(\"logical shift right\")"] (* FIXME *)
+        | UInt64 prim -> int_prim_app prim
+        | Int64 prim -> int_prim_app prim
 
   let rec compile_format_stmts (ctx : context) (fmt : format) : Rust.stmts =
     match fmt with

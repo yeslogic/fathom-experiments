@@ -4,10 +4,8 @@ format u24be :=
   let b2 <- byte;
   #pure
     #Int64
-    (#int64-logical-or
-       (#int64-logical-or
-          (#int64-logical-shl b0 16)
-          (#int64-logical-shl b1 16))
+    (#int64-bit-or
+       (#int64-bit-or (#int64-bit-shl b0 16) (#int64-bit-shl b1 16))
        b2);
 
 format u8 := byte;
@@ -19,12 +17,10 @@ format u32be :=
   let b3 <- byte;
   #pure
     #Int64
-    (#int64-logical-or
-       (#int64-logical-or
-          (#int64-logical-or
-             (#int64-logical-shl b0 24)
-             (#int64-logical-shl b1 16))
-          (#int64-logical-shl b2 8))
+    (#int64-bit-or
+       (#int64-bit-or
+          (#int64-bit-or (#int64-bit-shl b0 24) (#int64-bit-shl b1 16))
+          (#int64-bit-shl b2 8))
        b3);
 
 type Main {
