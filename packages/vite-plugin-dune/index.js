@@ -37,8 +37,7 @@ export default function dunePlugin() {
       // Collect information about the dune workspace
       const result = spawnSync('dune', ['show', 'workspace', '--no-print-directory']);
       if (result.status !== 0 && result.stderr) {
-        this.error(`dune exited with code ${code}`);
-        this.error('\n' + result.stderr.toString());
+        this.error(`dune exited with code ${result.status}\n${result.stderr.toString()}`);
       }
       state.duneWorkspace = parseDuneWorkspace(result.stdout.toString());
 
@@ -46,24 +45,22 @@ export default function dunePlugin() {
         // Start watching the OCaml files for changes
         state.duneProcess = spawn('dune', ['build', '--watch', `--root=${state.duneWorkspace.rootDir}`]);
 
-        let error = '';
+        let stderr = '';
 
         state.duneProcess.stderr.on('data', data => {
-          error += data.toString();
+          stderr += data.toString();
         });
 
-        state.duneProcess.on('close', code => {
-          if (code !== 0 && error !== '') {
-            this.error(`dune exited with code ${code}`);
-            this.error('\n' + error);
+        state.duneProcess.on('close', status => {
+          if (status !== 0 && error !== '') {
+            this.error(`dune exited with code ${status}\n${stderr}`);
           }
         });
       } else {
         // Build the project in release mode, which results in a smaller file size
         const result = spawnSync('dune', ['build', '--profile=release', `--root=${state.duneWorkspace.rootDir}`]);
         if (result.status !== 0 && result.stderr) {
-          this.error(`dune exited with code ${code}`);
-          this.error('\n' + result.stderr.toString());
+          this.error(`dune exited with code ${result.status}\n${result.stderr.toString()}`);
         }
       }
     },
