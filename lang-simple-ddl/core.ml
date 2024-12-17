@@ -247,6 +247,7 @@ module Semantics = struct
 
   type vty =
     | Item_var of string * vty Lazy.t
+    | Format_repr of string * vty Lazy.t
     | Record_type of string * vty Label_map.t
     | List_type of vty
     | Int64_type
@@ -270,6 +271,7 @@ module Semantics = struct
   let rec force_vty (vty : vty) : vty =
     match vty with
     | Item_var (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
+    | Format_repr (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
     | vty -> vty
 
 
@@ -289,6 +291,11 @@ module Semantics = struct
     | List_type elem_ty -> List_type (eval_ty items elem_ty)
     | Int64_type -> Int64_type
     | Bool_type -> Bool_type
+    | Format_repr (Item_var name) ->
+        let vty () : vty =
+          eval_ty items (format_ty items (Item_var name))
+        in
+        Format_repr (name, Lazy.from_fun vty)
     | Format_repr fmt ->
         eval_ty items (format_ty items fmt)
 
@@ -364,7 +371,9 @@ module Semantics = struct
   let rec quote_vty ?(unfold_items=false) (vty : vty) : ty =
     match vty with
     | Item_var (_, vty) when unfold_items -> quote_vty ~unfold_items (Lazy.force vty)
+    | Format_repr (_, vty) when unfold_items -> quote_vty ~unfold_items (Lazy.force vty)
     | Item_var (name, _) -> Item_var name
+    | Format_repr (name, _) -> Format_repr (Item_var name)
     | Record_type (name, _) -> Item_var name
     | List_type vty -> List_type (quote_vty ~unfold_items vty)
     | Int64_type -> Int64_type
@@ -376,10 +385,14 @@ module Semantics = struct
   exception Failed_to_unify
 
   let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
-    match vty1, vty2 with
+    match force_vty vty1, force_vty vty2 with
     | Item_var (name1, _), Item_var (name2, _) when name1 = name2 -> ()
-    | Item_var (_, vty1), vty2 -> unify_vtys items (Lazy.force vty1) vty2
-    | vty1, Item_var (_, vty2) -> unify_vtys items vty1 (Lazy.force vty2)
+    | Format_repr (name1, _), Format_repr (name2, _) when name1 = name2 -> ()
+
+    | Item_var (_, vty1), vty2 | vty2, Item_var (_, vty1)
+    | Format_repr (_, vty1), vty2 | vty2, Format_repr (_, vty1) ->
+        unify_vtys items (Lazy.force vty1) vty2
+
     | Record_type (name1, _), Record_type (name2, _) when name1 = name2 -> ()
     | List_type elem_vty1, List_type elem_vty2 -> unify_vtys items elem_vty1 elem_vty2
     | Int64_type, Int64_type -> ()

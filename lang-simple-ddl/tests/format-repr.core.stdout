@@ -12,4 +12,4 @@ format point :=
 
 format repeat-pure := #repeat-len 3 (#pure #Int64 42);
 
-def my-point : Point := Point { x := 1; y := 2; z := 3 };
+def my-point : point.Repr := Point { x := 1; y := 2; z := 3 };
