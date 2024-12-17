@@ -4,6 +4,7 @@ let run (type a) (x : a t) : a t =
   x
 
 
+let ( let+ ) x f = Result.map f x
 let ( let* ) = Result.bind
 
 
@@ -13,14 +14,14 @@ let pure (type a) (x : a) : a t =
 
 let map (type a b) (f : a -> b) (x : a t) : b t =
   fun ~input ~pos ->
-    let* (pos, x) = x ~input ~pos in
-    Ok (pos, f x)
+    x ~input ~pos
+    |> Result.map (fun (pos, x) -> (pos, f x))
 
 let both (type a b) (x : a t) (y : b t) : (a * b) t =
   fun ~input ~pos ->
     let* (pos, x) = x ~input ~pos in
-    let* (pos, y) = y ~input ~pos in
-    Ok (pos, (x, y))
+    let+ (pos, y) = y ~input ~pos in
+    (pos, (x, y))
 
 let bind (type a b) (x : a t) (f : a -> b t) : b t =
   fun ~input ~pos ->
@@ -46,7 +47,7 @@ let repeat_len (type a) (len : int64) (elem : a t) : a list t =
         Ok (pos, [])
       else
         let* (pos, x) = elem ~input ~pos in
-        let* (pos, xs) = repeat_len (Int64.pred len) ~input ~pos in
-        Ok (pos, x :: xs)
+        let+ (pos, xs) = repeat_len (Int64.pred len) ~input ~pos in
+        (pos, x :: xs)
   in
   repeat_len len
