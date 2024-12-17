@@ -23,6 +23,15 @@ let both (type a b) (x : a t) (y : b t) : (a * b) t =
     let+ (pos, y) = y ~input ~pos in
     (pos, (x, y))
 
+(** Branch combinator from “Staged selective parser combinators”
+    https://doi.org/10.1145/3409002 *)
+let branch (type a1 a2 b) (x : (a1, a2) Either.t t) (f1 : (a1 -> b) t) (f2 : (a2 -> b) t) : b t =
+  fun ~input ~pos ->
+    let* (pos, x) = x ~input ~pos in
+    match x with
+    | Left x1 -> let+ (pos, f1) = f1 ~input ~pos in (pos, f1 x1)
+    | Right x2 -> let+ (pos, f2) = f2 ~input ~pos in (pos, f2 x2)
+
 let bind (type a b) (x : a t) (f : a -> b t) : b t =
   fun ~input ~pos ->
     let* (pos, x) = x ~input ~pos in
