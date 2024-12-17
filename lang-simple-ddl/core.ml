@@ -402,58 +402,34 @@ module Semantics = struct
 
   (** {2 Decode semantics} *)
 
-  type 'a decoder = input:bytes -> pos:int -> int * 'a
-
-  exception Decode_failure of int
-
-  let decode_format (items : program) (fmt : format) : vexpr decoder =
-    let rec decode_format (locals : env) (fmt : format) : vexpr decoder =
-      fun ~input ~pos ->
-        match fmt with
-        | Item_var name ->
-            begin match List.assoc name items with
-            | Format_def fmt -> decode_format [] fmt ~input ~pos
-            | _ -> invalid_arg "not a format item"
-            end
-        | Byte ->
-            decode_byte ~input ~pos
-        | Repeat_len (len, elem_fmt) ->
-            begin match eval_expr items locals len with
-            | Int64_lit len ->
-                let pos, vexprs = decode_elems locals len elem_fmt ~input ~pos in
-                pos, List_lit vexprs
-            | _ -> failwith "integer expected"
-            end
-        | Bind (_, def_fmt, body_fmt) ->
-            let pos, def = decode_format locals def_fmt ~input ~pos in
-            decode_format (def :: locals) body_fmt ~input ~pos
-        | Pure (_, expr) -> pos, eval_expr items locals expr
-        | Fail _ -> raise (Decode_failure pos)
-        | Bool_elim (head, fmt1, fmt2) ->
-            begin match eval_expr items locals head with
-            | Bool_lit true -> decode_format locals fmt1 ~input ~pos
-            | Bool_lit false -> decode_format locals fmt2 ~input ~pos
-            | _ -> failwith "boolean expected"
-            end
-
-    and decode_byte : vexpr decoder =
-      fun ~input ~pos ->
-        if pos < Bytes.length input then
-          pos + 1, Int64_lit (Int64.of_int (int_of_char (Bytes.unsafe_get input pos)))
-        else
-          raise (Decode_failure pos)
-
-    and decode_elems (locals : env) (len : int64) (elem_fmt : format) : vexpr list decoder =
-      fun ~input ~pos ->
-        if Int64.zero = len then
-          pos, []
-        else
-          let pos, vexpr = decode_format locals elem_fmt ~input ~pos in
-          let pos, vexprs = decode_elems locals (Int64.pred len) elem_fmt ~input ~pos in
-          pos, vexpr :: vexprs
-    in
-
-    decode_format [] fmt
+  let rec decode_format (items : program) (locals : env) (fmt : format) : vexpr Decoder.t =
+    match fmt with
+    | Item_var name ->
+        begin match List.assoc name items with
+        | Format_def fmt -> decode_format items [] fmt
+        | _ -> invalid_arg "not a format item"
+        end
+    | Byte ->
+        Decoder.byte
+        |> Decoder.map (fun x -> Int64_lit (Int64.of_int (int_of_char x)))
+    | Repeat_len (len, elem_fmt) ->
+        begin match eval_expr items locals len with
+        | Int64_lit len ->
+            Decoder.repeat_len len (decode_format items locals elem_fmt)
+            |> Decoder.map (fun xs -> List_lit xs)
+        | _ -> failwith "integer expected"
+        end
+    | Bind (_, def_fmt, body_fmt) ->
+        Decoder.bind (decode_format items locals def_fmt)
+          (fun def -> decode_format items (def :: locals) body_fmt)
+    | Pure (_, expr) -> Decoder.pure (eval_expr items locals expr)
+    | Fail _ -> Decoder.fail
+    | Bool_elim (head, fmt1, fmt2) ->
+        begin match eval_expr items locals head with
+        | Bool_lit true -> decode_format items locals fmt1
+        | Bool_lit false -> decode_format items locals fmt2
+        | _ -> failwith "boolean expected"
+        end
 
 end
 
