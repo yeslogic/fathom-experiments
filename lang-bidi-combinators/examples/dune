@@ -1,0 +1,4 @@
+(library
+  (name examples)
+  (libraries
+    bidi-combinators))

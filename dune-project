@@ -29,6 +29,11 @@
 ; Language experiments
 
 (package
+  (name bidi-combinators)
+  (depends
+    sized-numbers))
+
+(package
   (name ll1-combinators)
   (depends
     byte-set))

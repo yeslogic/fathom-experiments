@@ -62,6 +62,12 @@ module type S = sig
     val ( <= ) : t -> t -> bool
     val ( >= ) : t -> t -> bool
 
+    val ( land ) : t -> t -> t
+    val ( lor ) : t -> t -> t
+    val ( lxor ) : t -> t -> t
+    val ( lsl ) : t -> int -> t
+    val ( lsr ) : t -> int -> t
+
   end
 
 end

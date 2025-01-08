@@ -81,6 +81,12 @@ module Int8 = struct
     let ( <= ) x y = compare x y <= 0
     let ( >= ) x y = compare x y >= 0
 
+    let ( land ) = logand
+    let ( lor ) = logor
+    let ( lxor ) = logxor
+    let ( lsl ) = shift_left
+    let ( lsr ) = shift_right_logical
+
   end
 
   let to_int x = x
@@ -155,6 +161,12 @@ module Int16 = struct
     let ( <= ) x y = compare x y <= 0
     let ( >= ) x y = compare x y >= 0
 
+    let ( land ) = logand
+    let ( lor ) = logor
+    let ( lxor ) = logxor
+    let ( lsl ) = shift_left
+    let ( lsr ) = shift_right_logical
+
   end
 
   let of_int8 x = x
@@ -187,6 +199,12 @@ module Int32 = struct
     let ( > ) x y = compare x y > 0
     let ( <= ) x y = compare x y <= 0
     let ( >= ) x y = compare x y >= 0
+
+    let ( land ) = logand
+    let ( lor ) = logor
+    let ( lxor ) = logxor
+    let ( lsl ) = shift_left
+    let ( lsr ) = shift_right_logical
 
   end
 
@@ -229,6 +247,12 @@ module Int64 = struct
     let ( > ) x y = compare x y > 0
     let ( <= ) x y = compare x y <= 0
     let ( >= ) x y = compare x y >= 0
+
+    let ( land ) = logand
+    let ( lor ) = logor
+    let ( lxor ) = logxor
+    let ( lsl ) = shift_left
+    let ( lsr ) = shift_right_logical
 
   end
 

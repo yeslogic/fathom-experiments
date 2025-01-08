@@ -81,6 +81,12 @@ module Ops = struct
     val ( <= ) : t -> t -> bool
     val ( >= ) : t -> t -> bool
 
+    val ( land ) : t -> t -> t
+    val ( lor ) : t -> t -> t
+    val ( lxor ) : t -> t -> t
+    val ( lsl ) : t -> int -> t
+    val ( lsr ) : t -> int -> t
+
   end
 
   module Make (B : Basics.S) : S with type t = B.t = struct
@@ -101,6 +107,12 @@ module Ops = struct
     let ( > ) x y = B.compare x y > 0
     let ( <= ) x y = B.compare x y <= 0
     let ( >= ) x y = B.compare x y >= 0
+
+    let ( land ) = B.logand
+    let ( lor ) = B.logor
+    let ( lxor ) = B.logxor
+    let ( lsl ) = B.shift_left
+    let ( lsr ) = B.shift_right
 
   end
 

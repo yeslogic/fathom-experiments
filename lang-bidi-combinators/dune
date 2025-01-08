@@ -1,0 +1,5 @@
+(library
+  (name bidi_combinators)
+  (public_name bidi-combinators)
+  (libraries
+    sized-numbers))
