@@ -60,6 +60,18 @@ open Sized_numbers
 
 (* TODO: Unsigned formats *)
 
+
+(* Integer conversion formats *)
+
+let int_to_i32 (f : (int, int) t) : (int32, int32) t =
+  Syntax.(Int32.of_int <$> Int32.to_int @= f)
+
+let int_to_i64 (f : (int, int) t) : (int64, int64) t =
+  Syntax.(Int64.of_int <$> Int64.to_int @= f)
+
+
+(* Integer formats *)
+
 let int8 : (int, int) t = (* FIXME: int8 *)
   let decode buf pos = if pos < Bytes.length buf then Some (Bytes.get_int8 buf pos, pos + 1) else None
   and encode buf c = Buffer.add_int8 buf c; Some c in
@@ -85,10 +97,10 @@ let int32_be : (int32, int32) t =
   let open Syntax in
   let open Int32.O in
 
-  let+ b0 = Int32.(fun x -> (of_int x) lsl 24) <$> Int32.(fun x -> to_int (x lsr 24)) @= int8
-  and+ b1 = Int32.(fun x -> (of_int x) lsl 16) <$> Int32.(fun x -> to_int (x lsr 16)) @= int8
-  and+ b2 = Int32.(fun x -> (of_int x) lsl 8) <$> Int32.(fun x -> to_int (x lsr 8)) @= int8
-  and+ b3 = Int32.of_int <$> Int32.to_int @= int8 in
+  let+ b0 = (fun x -> x lsl 24) <$> (fun x -> x lsr 24) @= int_to_i32 int8
+  and+ b1 = (fun x -> x lsl 16) <$> (fun x -> x lsr 16) @= int_to_i32 int8
+  and+ b2 = (fun x -> x lsl 8) <$> (fun x -> x lsr 8) @= int_to_i32 int8
+  and+ b3 = int_to_i32 int8 in
 
   b0 lor b1 lor b2 lor b3
 
@@ -96,10 +108,10 @@ let int32_le : (int32, int32) t =
   let open Syntax in
   let open Int32.O in
 
-  let+ b0 = Int32.of_int <$> Int32.to_int @= int8
-  and+ b1 = Int32.(fun x -> (of_int x) lsl 8) <$> Int32.(fun x -> to_int (x lsr 8)) @= int8
-  and+ b2 = Int32.(fun x -> (of_int x) lsl 16) <$> Int32.(fun x -> to_int (x lsr 16)) @= int8
-  and+ b3 = Int32.(fun x -> (of_int x) lsl 24) <$> Int32.(fun x -> to_int (x lsr 24)) @= int8 in
+  let+ b0 = int_to_i32 int8
+  and+ b1 = (fun x -> x lsl 8) <$> (fun x -> x lsr 8) @= int_to_i32 int8
+  and+ b2 = (fun x -> x lsl 16) <$> (fun x -> x lsr 16) @= int_to_i32 int8
+  and+ b3 = (fun x -> x lsl 24) <$> (fun x -> x lsr 24) @= int_to_i32 int8 in
 
   b0 lor b1 lor b2 lor b3
 
@@ -107,14 +119,14 @@ let int64_be : (int64, int64) t =
   let open Syntax in
   let open Int64.O in
 
-  let+ b0 = Int64.(fun x -> (of_int x) lsl 56) <$> Int64.(fun x -> to_int (x lsr 56)) @= int8
-  and+ b1 = Int64.(fun x -> (of_int x) lsl 48) <$> Int64.(fun x -> to_int (x lsr 48)) @= int8
-  and+ b2 = Int64.(fun x -> (of_int x) lsl 40) <$> Int64.(fun x -> to_int (x lsr 40)) @= int8
-  and+ b3 = Int64.(fun x -> (of_int x) lsl 32) <$> Int64.(fun x -> to_int (x lsr 32)) @= int8
-  and+ b4 = Int64.(fun x -> (of_int x) lsl 24) <$> Int64.(fun x -> to_int (x lsr 24)) @= int8
-  and+ b5 = Int64.(fun x -> (of_int x) lsl 16) <$> Int64.(fun x -> to_int (x lsr 16)) @= int8
-  and+ b6 = Int64.(fun x -> (of_int x) lsl 8) <$> Int64.(fun x -> to_int (x lsr 8)) @= int8
-  and+ b7 = Int64.of_int <$> Int64.to_int @= int8 in
+  let+ b0 = (fun x -> x lsl 56) <$> (fun x -> x lsr 56) @= int_to_i64 int8
+  and+ b1 = (fun x -> x lsl 48) <$> (fun x -> x lsr 48) @= int_to_i64 int8
+  and+ b2 = (fun x -> x lsl 40) <$> (fun x -> x lsr 40) @= int_to_i64 int8
+  and+ b3 = (fun x -> x lsl 32) <$> (fun x -> x lsr 32) @= int_to_i64 int8
+  and+ b4 = (fun x -> x lsl 24) <$> (fun x -> x lsr 24) @= int_to_i64 int8
+  and+ b5 = (fun x -> x lsl 16) <$> (fun x -> x lsr 16) @= int_to_i64 int8
+  and+ b6 = (fun x -> x lsl 8) <$> (fun x -> x lsr 8) @= int_to_i64 int8
+  and+ b7 = int_to_i64 int8 in
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 
@@ -122,14 +134,14 @@ let int64_le : (int64, int64) t =
   let open Syntax in
   let open Int64.O in
 
-  let+ b0 = Int64.of_int <$> Int64.to_int @= int8
-  and+ b1 = Int64.(fun x -> (of_int x) lsl 8) <$> Int64.(fun x -> to_int (x lsr 8)) @= int8
-  and+ b2 = Int64.(fun x -> (of_int x) lsl 16) <$> Int64.(fun x -> to_int (x lsr 16)) @= int8
-  and+ b3 = Int64.(fun x -> (of_int x) lsl 24) <$> Int64.(fun x -> to_int (x lsr 24)) @= int8
-  and+ b4 = Int64.(fun x -> (of_int x) lsl 32) <$> Int64.(fun x -> to_int (x lsr 32)) @= int8
-  and+ b5 = Int64.(fun x -> (of_int x) lsl 40) <$> Int64.(fun x -> to_int (x lsr 40)) @= int8
-  and+ b6 = Int64.(fun x -> (of_int x) lsl 48) <$> Int64.(fun x -> to_int (x lsr 48)) @= int8
-  and+ b7 = Int64.(fun x -> (of_int x) lsl 56) <$> Int64.(fun x -> to_int (x lsr 56)) @= int8 in
+  let+ b0 = int_to_i64 int8
+  and+ b1 = (fun x -> x lsl 8) <$> (fun x -> x lsr 8) @= int_to_i64 int8
+  and+ b2 = (fun x -> x lsl 16) <$> (fun x -> x lsr 16) @= int_to_i64 int8
+  and+ b3 = (fun x -> x lsl 24) <$> (fun x -> x lsr 24) @= int_to_i64 int8
+  and+ b4 = (fun x -> x lsl 32) <$> (fun x -> x lsr 32) @= int_to_i64 int8
+  and+ b5 = (fun x -> x lsl 40) <$> (fun x -> x lsr 40) @= int_to_i64 int8
+  and+ b6 = (fun x -> x lsl 48) <$> (fun x -> x lsr 48) @= int_to_i64 int8
+  and+ b7 = (fun x -> x lsl 56) <$> (fun x -> x lsr 56) @= int_to_i64 int8 in
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 
