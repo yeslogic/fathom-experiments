@@ -28,7 +28,7 @@ type t = {
 let header x = x.header
 let data x = x.data
 
-let format =
+let format : (t, t) Format.t =
   let open Format.Syntax in
 
   let* header = header @= Header.format in
