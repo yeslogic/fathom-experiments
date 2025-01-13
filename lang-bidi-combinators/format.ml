@@ -1,9 +1,3 @@
-(** The type of a format, parameterized by:
-
-    - ['a]: the type of the decoded value and the type of the value after
-            encoding (used for dependent encoders)
-    - ['c]: the type of the value being encoded
-*)
 type ('c, 'a) t = {
   decode : 'a Decoder.t;
   encode : ('c, 'a) Encoder.t;
