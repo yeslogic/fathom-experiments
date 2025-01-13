@@ -1,6 +1,9 @@
 # Bidirectional combinators
 
-A library of bidirectional parser combinators.
+A library of bidirectional binary format combinators.
+
+This is mainly based on “Composing Bidirectional Programs Monadically”,
+which demonstrates an approach for defining data-dependent (i.e. monadic) codecs.
 
 ## Examples
 
