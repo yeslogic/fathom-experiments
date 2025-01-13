@@ -167,7 +167,7 @@ end
 module Array = struct
 
   let repeat_len (type a) (elem : (a, a) t) (len : int) : (a array, a array) t =
-    (* FIXME: No clue if this actually works - write some tests! *)
+    (* FIXME: No clue if this actually works... and it’s really ugly! write some tests! *)
     let decode buf pos =
       if len <= 0 then Some ([||], pos) else
         let* (x, pos) = elem.decode buf pos in
