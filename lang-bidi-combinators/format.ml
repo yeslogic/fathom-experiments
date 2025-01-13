@@ -1,50 +1,51 @@
 (** The type of a format, parameterized by:
 
-    - ['ctx]: the context of the encoder
-    - ['a]: the type of the decoded value (used for dependent encoders)
+    - ['a]: the type of the decoded value and the type of the value after
+            encoding (used for dependent encoders)
+    - ['c]: the type of the value being encoded
 *)
-type ('ctx, 'a) t = {
+type ('c, 'a) t = {
   decode : 'a Decoder.t;
-  encode : ('ctx, 'a) Encoder.t;
+  encode : ('c, 'a) Encoder.t;
 }
 
 let ( let+ ) x f = Option.map f x
 let ( let* ) = Option.bind
 
-let pure (type ctx a) (x : a) : (ctx, a) t = {
+let pure (type a c) (x : a) : (c, a) t = {
   decode = Decoder.pure x;
   encode = Encoder.pure x;
 }
 
-let map (type ctx a b) (f : a -> b) (x : (ctx, a) t) : (ctx, b) t = {
+let map (type a b c) (f : a -> b) (x : (c, a) t) : (c, b) t = {
   decode = Decoder.map f x.decode;
   encode = Encoder.map f x.encode;
 }
 
-let both (type ctx a b) (x : (ctx, a) t) (y : (ctx, b) t) : (ctx, a * b) t = {
+let both (type a b c) (x : (c, a) t) (y : (c, b) t) : (c, a * b) t = {
   decode = Decoder.both x.decode y.decode;
   encode = Encoder.both x.encode y.encode;
 }
 
-let apply (type ctx a b) (f : (ctx, a -> b) t) (x : (ctx, a) t) : (ctx, b) t =
+let apply (type a b c) (f : (c, a -> b) t) (x : (c, a) t) : (c, b) t =
   both f x |> map (fun (f, x) -> f x)
 
-let bind (type ctx a b) (x : (ctx, a) t) (y : a -> (ctx, b) t) : (ctx, b) t = {
+let bind (type a b c) (x : (c, a) t) (y : a -> (c, b) t) : (c, b) t = {
   decode = Decoder.bind x.decode (fun x -> (y x).decode);
   encode = Encoder.bind x.encode (fun x -> (y x).encode);
 }
 
-let fail (type ctx a) : (ctx, a) t = {
+let fail (type a c) : (c, a) t = {
   decode = Decoder.fail;
   encode = Encoder.fail;
 }
 
-let dimap (type a b c c') (f : a -> b) (g : c' -> c) (x : (c, a) t) : (c', b) t = {
+let dimap (type a b c d) (f : a -> b) (g : d -> c) (x : (c, a) t) : (d, b) t = {
   decode = Decoder.map f x.decode;
   encode = Encoder.dimap f g x.encode;
 }
 
-let comap (type ctx ctx' a) (f : ctx' -> ctx) (x : (ctx, a) t) : (ctx', a) t =
+let comap (type a c d) (f : d -> c) (x : (c, a) t) : (d, a) t =
   { x with encode = Encoder.comap f x.encode }
 
 module Syntax = struct
