@@ -1,8 +1,3 @@
-(** The type of an encoder, parameterized by:
-
-    - ['a]: the type of the value after encoding (used for dependent encoders)
-    - ['c]: the type of the value being encoded
-*)
 type ('c, 'a) t = Buffer.t -> 'c -> 'a option
 
 let ( let+ ) x f = Option.map f x
