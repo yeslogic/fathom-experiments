@@ -39,6 +39,13 @@ More examples can be found in [the examples directory](./examples).
 
 - “Composing Bidirectional Programs Monadically”
   [[doi:10.1007/978-3-030-17184-1_6](https://doi.org/10.1007/978-3-030-17184-1_6)]
-- Codec: Easy bidirectional serialization in Haskell
-  [[hackage:codec](https://hackage.haskell.org/package/codec>)]
-  [[github:chpatrick/codec](https://github.com/chpatrick/codec>)]
+- [Towards monadic bidirectional serialization](https://blog.poisson.chat/posts/2016-10-12-bidirectional-serialization.html)
+- codec: Easy bidirectional serialization in Haskell
+  [[hackage:codec](https://hackage.haskell.org/package/codec)]
+  [[github:chpatrick/codec](https://github.com/chpatrick/codec)]
+- tomland: Bidirectional TOML serialization
+  [[hackage:tomland](https://hackage.haskell.org/package/tomland)]
+  [[github:kowainik/tomland](https://github.com/kowainik/tomland)]
+- autodocodec: Self-documenting encoder and decoder
+  [[hackage:autodocodec](https://hackage.haskell.org/package/autodocodec)]
+  [[github:NorfairKing/autodocodec](https://github.com/NorfairKing/autodocodec)]
