@@ -40,6 +40,11 @@ let fail (type a c) : (c, a) t = {
   encode = Encoder.fail;
 }
 
+let alt (type a c) (x : (c, a) t) (y : (c, a) t) : (c, a) t = {
+  decode = Decoder.alt x.decode y.decode;
+  encode = Encoder.alt x.encode y.encode;
+}
+
 let dimap (type a b c d) (f : a -> b) (g : d -> c) (x : (c, a) t) : (d, b) t = {
   decode = Decoder.map f x.decode;
   encode = Encoder.dimap f g x.encode;
@@ -52,6 +57,7 @@ module Syntax = struct
 
   let ( <$> ) = map
   let ( <*> ) = apply
+  let ( </> ) = alt
 
   let ( @= ) = comap
 

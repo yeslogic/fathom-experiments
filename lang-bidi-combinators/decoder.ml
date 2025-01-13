@@ -28,10 +28,17 @@ let bind (type a b) (x : a t) (y : a -> b t) : b t =
 let fail (type a) : a t =
   fun _ _ -> None
 
+let alt (type a) (x : a t) (y : a t) : a t =
+  fun buf pos ->
+    match x buf pos with
+    | None -> y buf pos
+    | Some (x, pos) -> Some (x, pos)
+
 module Syntax = struct
 
   let ( <$> ) = map
   let ( <*> ) = apply
+  let ( </> ) = alt
 
   let ( let+ ) x f = map f x
   let ( and+ ) = both

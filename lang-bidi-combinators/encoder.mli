@@ -11,6 +11,7 @@ val both : ('c, 'a) t -> ('c, 'b) t -> ('c, 'a * 'b) t
 val apply : ('c, 'a -> 'b) t -> ('c, 'a) t -> ('c, 'b) t
 val bind : ('c, 'a) t -> ('a -> ('c, 'b) t) -> ('c, 'b) t
 val fail : ('c, 'a) t
+val alt : ('c, 'a) t -> ('c, 'a) t -> ('c, 'a) t
 
 val dimap : ('a -> 'b) -> ('d -> 'c) -> ('c, 'a) t -> ('d, 'b) t
 val comap : ('d -> 'c) -> ('c, 'a) t -> ('d, 'a) t
@@ -19,6 +20,7 @@ module Syntax : sig
 
   val ( <$> ) : ('a -> 'b) -> ('c, 'a) t -> ('c, 'b) t
   val ( <*> ) : ('a, 'b -> 'c) t -> ('a, 'b) t -> ('a, 'c) t
+  val ( </> ) : ('c, 'a) t -> ('c, 'a) t -> ('c, 'a) t
 
   val ( @= ) : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
 

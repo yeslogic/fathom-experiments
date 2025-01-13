@@ -29,6 +29,12 @@ let fail (type a c) : (c, a) t =
   fun _ _ ->
     failwith "encoding fail format"
 
+let alt (type a c) (x : (c, a) t) (y : (c, a) t) : (c, a) t =
+  fun buf pos ->
+    match x buf pos with
+    | None -> y buf pos
+    | Some x -> Some x
+
 let dimap (type a b c d) (f : a -> b) (g : d -> c) (x : (c, a) t) : (d, b) t =
   fun buf c ->
     let+ x = x buf (g c) in
@@ -42,6 +48,7 @@ module Syntax = struct
 
   let ( <$> ) = map
   let ( <*> ) = apply
+  let ( </> ) = alt
 
   let ( @= ) = comap
 
