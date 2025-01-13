@@ -22,7 +22,7 @@ module Syntax : sig
   val ( <*> ) : ('a, 'b -> 'c) t -> ('a, 'b) t -> ('a, 'c) t
   val ( </> ) : ('c, 'a) t -> ('c, 'a) t -> ('c, 'a) t
 
-  val ( @= ) : ('a -> 'b) -> ('b, 'c) t -> ('a, 'c) t
+  val ( @= ) : ('d -> 'c) -> ('c, 'a) t -> ('d, 'a) t
 
   val ( let+ ) : ('a, 'b) t -> ('b -> 'c) -> ('a, 'c) t
   val ( and+ ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
