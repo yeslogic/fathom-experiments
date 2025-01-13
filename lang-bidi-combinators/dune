@@ -3,3 +3,5 @@
   (public_name bidi-combinators)
   (libraries
     sized-numbers))
+
+(mdx)

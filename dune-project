@@ -4,7 +4,7 @@
 
 (source (github yeslogic/fathom-experiments))
 
-; (using mdx 0.4)
+(using mdx 0.4)
 (using menhir 3.0)
 
 (implicit_transitive_deps false)
@@ -31,7 +31,8 @@
 (package
   (name bidi-combinators)
   (depends
-    sized-numbers))
+    sized-numbers
+    (mdx (and (>= "0.4") :with-test))))
 
 (package
   (name ll1-combinators)
