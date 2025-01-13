@@ -9,6 +9,8 @@ type ('c, 'a) t = {
   encode : ('c, 'a) Encoder.t;
 }
 
+type 'a value = ('a, 'a) t
+
 let ( let+ ) x f = Option.map f x
 let ( let* ) = Option.bind
 
@@ -75,21 +77,21 @@ open Sized_numbers
 
 (* Integer conversion formats *)
 
-let int_to_i32 : (int, int) t -> (int32, int32) t =
+let int_to_i32 : int value -> int32 value =
   dimap Int32.of_int Int32.to_int
 
-let int_to_i64 : (int, int) t -> (int64, int64) t =
+let int_to_i64 : int value -> int64 value =
   dimap Int64.of_int Int64.to_int
 
 
 (* Integer formats *)
 
-let int8 : (int, int) t = (* FIXME: int8 *)
+let int8 : int value = (* FIXME: int8 *)
   let decode buf pos = if pos < Bytes.length buf then Some (Bytes.get_int8 buf pos, pos + 1) else None
   and encode buf c = Buffer.add_int8 buf c; Some c in
   { decode; encode }
 
-let int16_be : (int, int) t = (* FIXME: int16 *)
+let int16_be : int value = (* FIXME: int16 *)
   let open Syntax in
 
   let+ b0 = int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
@@ -97,7 +99,7 @@ let int16_be : (int, int) t = (* FIXME: int16 *)
 
   b0 lor b1
 
-let int16_le : (int, int) t = (* FIXME: int16 *)
+let int16_le : int value = (* FIXME: int16 *)
   let open Syntax in
 
   let+ b0 = int8
@@ -105,7 +107,7 @@ let int16_le : (int, int) t = (* FIXME: int16 *)
 
   b0 lor b1
 
-let int32_be : (int32, int32) t =
+let int32_be : int32 value =
   let open Syntax in
   let open Int32.O in
 
@@ -116,7 +118,7 @@ let int32_be : (int32, int32) t =
 
   b0 lor b1 lor b2 lor b3
 
-let int32_le : (int32, int32) t =
+let int32_le : int32 value =
   let open Syntax in
   let open Int32.O in
 
@@ -127,7 +129,7 @@ let int32_le : (int32, int32) t =
 
   b0 lor b1 lor b2 lor b3
 
-let int64_be : (int64, int64) t =
+let int64_be : int64 value =
   let open Syntax in
   let open Int64.O in
 
@@ -142,7 +144,7 @@ let int64_be : (int64, int64) t =
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 
-let int64_le : (int64, int64) t =
+let int64_le : int64 value =
   let open Syntax in
   let open Int64.O in
 
@@ -162,7 +164,7 @@ module List = struct
 
   open Syntax
 
-  let repeat_len (type a) (elem : (a, a) t) (len : int) : (a list, a list) t =
+  let repeat_len (type a) (elem : a value) (len : int) : a list value =
     let rec repeat_len i =
       if i < len then
         (* FIXME: List.hd and List.tl fail on the empty list*)
@@ -178,7 +180,7 @@ end
 
 module Array = struct
 
-  let repeat_len (type a) (elem : (a, a) t) (len : int) : (a array, a array) t =
+  let repeat_len (type a) (elem : a value) (len : int) : a array value =
     (* FIXME: No clue if this actually works... and it’s really ugly! write some tests! *)
     let decode buf pos =
       if len <= 0 then Some ([||], pos) else

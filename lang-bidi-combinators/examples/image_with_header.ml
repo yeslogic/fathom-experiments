@@ -10,7 +10,7 @@ module Header = struct
   let width x = x.width
   let height x = x.height
 
-  let format : (t, t) Format.t =
+  let format : t Format.value =
     let open Format.Syntax in
 
     let+ width = width @= Format.int16_be
@@ -28,7 +28,7 @@ type t = {
 let header x = x.header
 let data x = x.data
 
-let format : (t, t) Format.t =
+let format : t Format.value =
   let open Format.Syntax in
 
   let* header = header @= Header.format in
