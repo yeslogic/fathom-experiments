@@ -34,6 +34,11 @@ let fail (type ctx a) : (ctx, a) t =
   fun _ _ ->
     failwith "encoding fail format"
 
+let dimap (type a b c c') (f : a -> b) (g : c' -> c) (x : (c, a) t) : (c', b) t =
+  fun buf c ->
+    let+ x = x buf (g c) in
+    f x
+
 let comap (type ctx ctx' a) (f : ctx' -> ctx) (x : (ctx, a) t) : (ctx', a) t =
   fun buf c ->
     x buf (f c)
