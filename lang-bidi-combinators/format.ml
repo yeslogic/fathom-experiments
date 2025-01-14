@@ -77,6 +77,9 @@ let int_to_i64 : int value -> int64 value =
 
 (* Integer formats *)
 
+(** FIXME: these formats reconstruct the same integer during encoding, rather
+    than just returning the input value unchanged. *)
+
 let int8 : int value = (* FIXME: int8 *)
   let decode buf pos = if pos < Bytes.length buf then Some (Bytes.get_int8 buf pos, pos + 1) else None
   and encode buf c = Buffer.add_int8 buf c; Some c in
