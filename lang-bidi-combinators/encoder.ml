@@ -26,8 +26,7 @@ let bind (type a b c) (x : (c, a) t) (y : a -> (c, b) t) : (c, b) t =
     (y x) buf c
 
 let fail (type a c) : (c, a) t =
-  fun _ _ ->
-    failwith "encoding fail format"
+  fun _ _ -> None
 
 let alt (type a c) (x : (c, a) t) (y : (c, a) t) : (c, a) t =
   fun buf pos ->
