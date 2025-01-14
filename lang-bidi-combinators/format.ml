@@ -5,9 +5,6 @@ type ('c, 'a) t = {
 
 type 'a value = ('a, 'a) t
 
-let ( let+ ) x f = Option.map f x
-let ( let* ) = Option.bind
-
 let pure (type a c) (x : a) : (c, a) t = {
   decode = Decoder.pure x;
   encode = Encoder.pure x;
@@ -173,6 +170,8 @@ module List = struct
 end
 
 module Array = struct
+
+  let ( let* ) = Option.bind
 
   let repeat_len (type a) (elem : a value) (len : int) : a array value =
     (* FIXME: No clue if this actually works... and it’s really ugly! write some tests! *)
