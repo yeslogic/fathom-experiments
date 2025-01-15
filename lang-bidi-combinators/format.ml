@@ -68,10 +68,10 @@ open Sized_numbers
 
 (* Integer conversion formats *)
 
-let int_to_i32 : int value -> int32 value =
+let int_to_int32 : int value -> int32 value =
   dimap Int32.of_int Int32.to_int
 
-let int_to_i64 : int value -> int64 value =
+let int_to_int64 : int value -> int64 value =
   dimap Int64.of_int Int64.to_int
 
 
@@ -105,10 +105,10 @@ let int32_be : int32 value =
   let open Syntax in
   let open Int32.O in
 
-  let+ b0 = int_to_i32 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
-  and+ b1 = int_to_i32 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
-  and+ b2 = int_to_i32 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
-  and+ b3 = int_to_i32 int8 in
+  let+ b0 = int_to_int32 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
+  and+ b1 = int_to_int32 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
+  and+ b2 = int_to_int32 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
+  and+ b3 = int_to_int32 int8 in
 
   b0 lor b1 lor b2 lor b3
 
@@ -116,10 +116,10 @@ let int32_le : int32 value =
   let open Syntax in
   let open Int32.O in
 
-  let+ b0 = int_to_i32 int8
-  and+ b1 = int_to_i32 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
-  and+ b2 = int_to_i32 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
-  and+ b3 = int_to_i32 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24) in
+  let+ b0 = int_to_int32 int8
+  and+ b1 = int_to_int32 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
+  and+ b2 = int_to_int32 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
+  and+ b3 = int_to_int32 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24) in
 
   b0 lor b1 lor b2 lor b3
 
@@ -127,14 +127,14 @@ let int64_be : int64 value =
   let open Syntax in
   let open Int64.O in
 
-  let+ b0 = int_to_i64 int8 |> dimap (fun x -> x lsl 56) (fun x -> x lsr 56)
-  and+ b1 = int_to_i64 int8 |> dimap (fun x -> x lsl 48) (fun x -> x lsr 48)
-  and+ b2 = int_to_i64 int8 |> dimap (fun x -> x lsl 40) (fun x -> x lsr 40)
-  and+ b3 = int_to_i64 int8 |> dimap (fun x -> x lsl 32) (fun x -> x lsr 32)
-  and+ b4 = int_to_i64 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
-  and+ b5 = int_to_i64 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
-  and+ b6 = int_to_i64 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
-  and+ b7 = int_to_i64 int8 in
+  let+ b0 = int_to_int64 int8 |> dimap (fun x -> x lsl 56) (fun x -> x lsr 56)
+  and+ b1 = int_to_int64 int8 |> dimap (fun x -> x lsl 48) (fun x -> x lsr 48)
+  and+ b2 = int_to_int64 int8 |> dimap (fun x -> x lsl 40) (fun x -> x lsr 40)
+  and+ b3 = int_to_int64 int8 |> dimap (fun x -> x lsl 32) (fun x -> x lsr 32)
+  and+ b4 = int_to_int64 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
+  and+ b5 = int_to_int64 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
+  and+ b6 = int_to_int64 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
+  and+ b7 = int_to_int64 int8 in
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 
@@ -142,14 +142,14 @@ let int64_le : int64 value =
   let open Syntax in
   let open Int64.O in
 
-  let+ b0 = int_to_i64 int8
-  and+ b1 = int_to_i64 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
-  and+ b2 = int_to_i64 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
-  and+ b3 = int_to_i64 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
-  and+ b4 = int_to_i64 int8 |> dimap (fun x -> x lsl 32) (fun x -> x lsr 32)
-  and+ b5 = int_to_i64 int8 |> dimap (fun x -> x lsl 40) (fun x -> x lsr 40)
-  and+ b6 = int_to_i64 int8 |> dimap (fun x -> x lsl 48) (fun x -> x lsr 48)
-  and+ b7 = int_to_i64 int8 |> dimap (fun x -> x lsl 56) (fun x -> x lsr 56) in
+  let+ b0 = int_to_int64 int8
+  and+ b1 = int_to_int64 int8 |> dimap (fun x -> x lsl 8) (fun x -> x lsr 8)
+  and+ b2 = int_to_int64 int8 |> dimap (fun x -> x lsl 16) (fun x -> x lsr 16)
+  and+ b3 = int_to_int64 int8 |> dimap (fun x -> x lsl 24) (fun x -> x lsr 24)
+  and+ b4 = int_to_int64 int8 |> dimap (fun x -> x lsl 32) (fun x -> x lsr 32)
+  and+ b5 = int_to_int64 int8 |> dimap (fun x -> x lsl 40) (fun x -> x lsr 40)
+  and+ b6 = int_to_int64 int8 |> dimap (fun x -> x lsl 48) (fun x -> x lsr 48)
+  and+ b7 = int_to_int64 int8 |> dimap (fun x -> x lsl 56) (fun x -> x lsr 56) in
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 

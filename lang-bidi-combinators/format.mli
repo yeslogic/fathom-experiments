@@ -39,8 +39,8 @@ end
 
 (** Integer conversion formats *)
 
-val int_to_i32 : int value -> int32 value
-val int_to_i64 : int value -> int64 value
+val int_to_int32 : int value -> int32 value
+val int_to_int64 : int value -> int64 value
 
 (** Integer formats *)
 
