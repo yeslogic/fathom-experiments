@@ -78,6 +78,10 @@ module UInt8 : sig
 
   include S with type t := t
 
+  val of_uint16_trunc : uint16 -> t
+  val of_uint32_trunc : uint32 -> t
+  val of_uint64_trunc : uint64 -> t
+
   val to_uint16 : t -> uint16
   val to_uint32 : t -> uint32
   val to_uint64 : t -> uint64
@@ -92,10 +96,14 @@ module UInt16 : sig
   include S with type t := t
 
   val of_uint8 : uint8 -> t
-  val to_uint8_opt : t -> uint8 option
+  val of_uint32_trunc : uint32 -> t
+  val of_uint64_trunc : uint64 -> t
+
   val to_uint32 : t -> uint32
   val to_uint64 : t -> uint64
   val to_int : t -> int
+  val to_uint8_trunc : t -> uint8
+  val to_uint8_opt : t -> uint8 option
 
 end
 
@@ -110,9 +118,13 @@ module UInt32 : sig
 
   val of_uint8 : uint8 -> t
   val of_uint16 : uint16 -> t
+  val of_uint64_trunc : uint64 -> t
+
+  val to_uint64 : t -> uint64
+  val to_uint8_trunc : t -> uint8
+  val to_uint16_trunc : t -> uint8
   val to_uint8_opt : t -> uint8 option
   val to_uint16_opt : t -> uint16 option
-  val to_uint64 : t -> uint64
   val to_int_opt : t -> int option
 
 end
@@ -129,6 +141,10 @@ module UInt64 : sig
   val of_uint8 : uint8 -> t
   val of_uint16 : uint16 -> t
   val of_uint32 : uint32 -> t
+
+  val to_uint8_trunc : t -> uint8
+  val to_uint16_trunc : t -> uint8
+  val to_uint32_trunc : t -> uint32
   val to_uint8_opt : t -> uint8 option
   val to_uint16_opt : t -> uint16 option
   val to_uint32_opt : t -> uint32 option

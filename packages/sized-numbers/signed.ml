@@ -208,15 +208,18 @@ module Int32 = struct
 
   end
 
-  let of_int8 x = of_int x
-  let of_int16 x = of_int x
+  let of_int8 x = Stdlib.Int32.of_int x
+  let of_int16 x = Stdlib.Int32.of_int x
+  let of_int x = Stdlib.Int32.of_int x
+
+  let to_int_trunc x = Stdlib.Int32.to_int x
 
   let to_int_opt =
-    let min_int = Int32.of_int Int.min_int in
-    let max_int = Int32.of_int Int.max_int in
+    let min_int = of_int Int.min_int in
+    let max_int = of_int Int.max_int in
     fun x ->
       if min_int <= x && x <= max_int then
-        Some (Int32.to_int x)
+        Some (to_int_trunc x)
       else
         None
 
@@ -256,16 +259,20 @@ module Int64 = struct
 
   end
 
-  let of_int8 x = of_int x
-  let of_int16 x = of_int x
-  let of_int32 x = of_int32 x
+  let of_int8 x = Stdlib.Int64.of_int x
+  let of_int16 x = Stdlib.Int64.of_int x
+  let of_int32 x = Stdlib.Int64.of_int32 x
+  let of_int x = Stdlib.Int64.of_int x
+
+  let to_int32_trunc x = Stdlib.Int64.to_int32 x
+  let to_int_trunc x = Stdlib.Int64.to_int x
 
   let to_int_opt =
-    let min_int = Int64.of_int Int.min_int in
-    let max_int = Int64.of_int Int.max_int in
+    let min_int = of_int Int.min_int in
+    let max_int = of_int Int.max_int in
     fun x ->
       if min_int <= x && x <= max_int then
-        Some (Int64.to_int x)
+        Some (to_int_trunc x)
       else
         None
 

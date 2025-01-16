@@ -321,6 +321,10 @@ module UInt8 = struct
 
   let pp ppf x = Format.pp_print_string ppf (to_string x)
 
+  let of_uint16_trunc x = x land 0xFF
+  let of_uint32_trunc x = Int32.to_int x land 0xFF
+  let of_uint64_trunc x = Int64.to_int x land 0xFF
+
   let to_uint16 x = x
   let to_uint32 x = Int32.of_int x
   let to_uint64 x = Int64.of_int x
@@ -383,15 +387,18 @@ module UInt16 = struct
   let hash = Int.hash
 
   let of_uint8 x = x
+  let of_uint32_trunc x = Int32.to_int x land 0xFFFF
+  let of_uint64_trunc x = Int64.to_int x land 0xFFFF
+
+  let to_uint32 x = Int32.of_int x
+  let to_uint64 x = Int64.of_int x
+  let to_int x = x
+  let to_uint8_trunc x = x land 0xFF
 
   let to_uint8_opt =
     let max_int = UInt8.max_int in
     fun x ->
       if O.(x <= max_int) then Some x else None
-
-  let to_uint32 x = Int32.of_int x
-  let to_uint64 x = Int64.of_int x
-  let to_int x = x
 
 end
 
@@ -446,6 +453,11 @@ module UInt32 = struct
 
   let of_uint8 x = Int32.of_int x
   let of_uint16 x = Int32.of_int x
+  let of_uint64_trunc x = Int64.to_int32 x
+
+  let to_uint64 x = Int64.of_int32 x
+  let to_uint8_trunc x = Int32.to_int x land 0xFF
+  let to_uint16_trunc x = Int32.to_int x land 0xFFFF
 
   let to_uint8_opt =
     let max_int = of_uint8 UInt8.max_int in
@@ -457,7 +469,6 @@ module UInt32 = struct
     fun x ->
       if O.(x <= max_int) then Some (Int32.to_int x) else None
 
-  let to_uint64 x = Int64.of_int32 x
   let to_int_opt = Int32.unsigned_to_int
 
 end
@@ -514,6 +525,10 @@ module UInt64 = struct
   let of_uint8 x = Int64.of_int x
   let of_uint16 x = Int64.of_int x
   let of_uint32 x = Int64.of_int32 x
+
+  let to_uint8_trunc x = Int64.to_int x land 0xFF
+  let to_uint16_trunc x = Int64.to_int x land 0xFFFF
+  let to_uint32_trunc x = Int64.to_int32 x
 
   let to_uint8_opt =
     let max_int = of_uint8 UInt8.max_int in

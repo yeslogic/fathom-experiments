@@ -378,7 +378,7 @@ module Semantics = struct
     let[@warning "-partial-match"] int64_int64_bool f [Int64_lit x; Int64_lit y] = Bool_lit (f x y) in
     let[@warning "-partial-match"] int64_int64 f [Int64_lit x] = Int64_lit (f x) in
     let[@warning "-partial-match"] int64_int64_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x y) in
-    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Sized_numbers.Int64.to_int y)) in
+    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Sized_numbers.Int64.to_int_opt y |> Option.get)) in
 
     match prim with
     | UInt64 Eq -> uint64_uint64_bool Sized_numbers.UInt64.equal

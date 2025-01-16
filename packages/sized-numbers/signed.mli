@@ -40,11 +40,13 @@ module Int32 : sig
 
   type t = int32 (* [@@immediate64] *)
 
-  include module type of Stdlib.Int32 with type t := t
   include S with type t := t
 
   val of_int8 : int8 -> t
   val of_int16 : int16 -> t
+  val of_int : int -> t
+
+  val to_int_trunc : t -> int
   val to_int_opt : t -> int option
 
 end
@@ -53,12 +55,15 @@ module Int64 : sig
 
   type t = int64
 
-  include module type of Stdlib.Int64 with type t := t
   include S with type t := t
 
   val of_int8 : int8 -> t
   val of_int16 : int16 -> t
   val of_int32 : int32 -> t
+  val of_int : int -> t
+
+  val to_int32_trunc : t -> int32
+  val to_int_trunc : t -> int
   val to_int_opt : t -> int option
 
 end

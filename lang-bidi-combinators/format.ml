@@ -69,10 +69,10 @@ open Sized_numbers
 (* Integer conversion formats *)
 
 let int_to_int32 : int value -> int32 value =
-  dimap Int32.of_int Int32.to_int
+  dimap Int32.of_int Int32.to_int_trunc
 
 let int_to_int64 : int value -> int64 value =
-  dimap Int64.of_int Int64.to_int
+  dimap Int64.of_int Int64.to_int_trunc
 
 
 (* Integer formats *)
