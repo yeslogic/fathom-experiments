@@ -176,12 +176,46 @@ end
 
 module Int32 = struct
 
-  include Stdlib.Int32
+  type t = int32
 
   let num_bits = 32
   let num_bytes = 4
+  let zero = Int32.zero
+  let one = Int32.one
+  let minus_one = Int32.minus_one
+  let min_int = Int32.min_int
+  let max_int = Int32.max_int
+
+  let neg = Int32.neg
+  let add = Int32.add
+  let sub = Int32.sub
+  let mul = Int32.mul
+  let div = Int32.div
+  let rem = Int32.rem
+  let succ = Int32.succ
+  let pred = Int32.pred
+  let abs = Int32.abs
+  let logand = Int32.logand
+  let logor = Int32.logor
+  let logxor = Int32.logxor
+  let lognot = Int32.lognot
+  let shift_left = Int32.shift_left
+  let shift_right = Int32.shift_right
+  let shift_right_logical = Int32.shift_right_logical
+
+  let equal = Int32.equal
+  let compare = Int32.compare
+  let min = Int32.min
+  let max = Int32.max
+
+  let of_string = Int32.of_string
+  let of_string_opt = Int32.of_string_opt
+  let to_string = Int32.to_string
 
   let pp ppf x = Format.pp_print_string ppf (to_string x)
+
+  let seeded_hash = Int32.seeded_hash
+  let hash = Int32.hash
 
   module O = struct
 
@@ -208,11 +242,11 @@ module Int32 = struct
 
   end
 
-  let of_int8 x = Stdlib.Int32.of_int x
-  let of_int16 x = Stdlib.Int32.of_int x
-  let of_int x = Stdlib.Int32.of_int x
+  let of_int8 = Int32.of_int
+  let of_int16 = Int32.of_int
+  let of_int = Int32.of_int
 
-  let to_int_trunc x = Stdlib.Int32.to_int x
+  let to_int_trunc = Int32.to_int
 
   let to_int_opt =
     let min_int = of_int Int.min_int in
@@ -227,12 +261,46 @@ end
 
 module Int64 = struct
 
-  include Stdlib.Int64
+  type t = int64
 
   let num_bits = 64
   let num_bytes = 8
+  let zero = Int64.zero
+  let one = Int64.one
+  let minus_one = Int64.minus_one
+  let min_int = Int64.min_int
+  let max_int = Int64.max_int
+
+  let neg = Int64.neg
+  let add = Int64.add
+  let sub = Int64.sub
+  let mul = Int64.mul
+  let div = Int64.div
+  let rem = Int64.rem
+  let succ = Int64.succ
+  let pred = Int64.pred
+  let abs = Int64.abs
+  let logand = Int64.logand
+  let logor = Int64.logor
+  let logxor = Int64.logxor
+  let lognot = Int64.lognot
+  let shift_left = Int64.shift_left
+  let shift_right = Int64.shift_right
+  let shift_right_logical = Int64.shift_right_logical
+
+  let equal = Int64.equal
+  let compare = Int64.compare
+  let min = Int64.min
+  let max = Int64.max
+
+  let of_string = Int64.of_string
+  let of_string_opt = Int64.of_string_opt
+  let to_string = Int64.to_string
 
   let pp ppf x = Format.pp_print_string ppf (to_string x)
+
+  let seeded_hash = Int64.seeded_hash
+  let hash = Int64.hash
 
   module O = struct
 
@@ -259,13 +327,13 @@ module Int64 = struct
 
   end
 
-  let of_int8 x = Stdlib.Int64.of_int x
-  let of_int16 x = Stdlib.Int64.of_int x
-  let of_int32 x = Stdlib.Int64.of_int32 x
-  let of_int x = Stdlib.Int64.of_int x
+  let of_int8 = Int64.of_int
+  let of_int16 = Int64.of_int
+  let of_int32 = Int64.of_int32
+  let of_int = Int64.of_int
 
-  let to_int32_trunc x = Stdlib.Int64.to_int32 x
-  let to_int_trunc x = Stdlib.Int64.to_int x
+  let to_int32_trunc = Int64.to_int32
+  let to_int_trunc = Int64.to_int
 
   let to_int_opt =
     let min_int = of_int Int.min_int in
