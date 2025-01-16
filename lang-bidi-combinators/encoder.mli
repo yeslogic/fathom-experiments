@@ -16,6 +16,8 @@ val alt : ('c, 'a) t -> ('c, 'a) t -> ('c, 'a) t
 val dimap : ('a -> 'b) -> ('d -> 'c) -> ('c, 'a) t -> ('d, 'b) t
 val comap : ('d -> 'c) -> ('c, 'a) t -> ('d, 'a) t
 
+val const : ('a, 'a) t -> 'a -> ('c, unit) t
+
 module Syntax : sig
 
   val ( <$> ) : ('a -> 'b) -> ('c, 'a) t -> ('c, 'b) t

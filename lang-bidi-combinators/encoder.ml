@@ -43,6 +43,10 @@ let comap (type a c d) (f : d -> c) (x : (c, a) t) : (d, a) t =
   fun buf c ->
     x buf (f c)
 
+let const (type a c) (x : (a, a) t) (expected : a) : (c, unit) t =
+  fun buf _ ->
+    let+ _ = x buf expected in ()
+
 module Syntax = struct
 
   let ( <$> ) = map

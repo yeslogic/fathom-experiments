@@ -9,6 +9,8 @@ val bind : 'a t -> ('a -> 'b t) -> 'b t
 val fail : 'a t
 val alt : 'a t -> 'a t -> 'a t
 
+val const : 'a t -> 'a -> unit t
+
 module Syntax : sig
 
   val ( <$> ) : ('a -> 'b) -> 'a t -> 'b t

@@ -18,8 +18,9 @@ let ( >> ) f g x = f x |> g
 let format : t Format.value =
   let open Format.Syntax in
 
-  let* station_id = station_id @= Format.int8
-  and* length = (data >> Array.length) @= Format.int8 in
-  let+ data = data @= Format.Array.repeat_len Format.int8 length in
+  let* station_id = Format.int8 |> Format.comap station_id
+  and+ length = Format.int8 |> Format.comap (data >> Array.length) in
+  let+ () = Format.(const int16_be 0b0000001111110001)
+  and+ data = Format.(Array.repeat_len int8 length) |> Format.comap data in
 
   { station_id; data }

@@ -22,6 +22,9 @@ val alt : ('c, 'a) t -> ('c, 'a) t -> ('c, 'a) t
 val dimap : ('a -> 'b) -> ('d -> 'c) -> ('c, 'a) t -> ('d, 'b) t
 val comap : ('d -> 'c) -> ('c, 'a) t -> ('d, 'a) t
 
+val const : 'a value -> 'a -> ('c, unit) t
+val unused : 'a value -> default:'a -> ('c, unit) t
+
 module Syntax : sig
 
   val ( <$> ) : ('a -> 'b) -> ('c, 'a) t -> ('c, 'b) t
@@ -36,13 +39,6 @@ module Syntax : sig
   val ( and* ) : ('a, 'b) t -> ('a, 'c) t -> ('a, 'b * 'c) t
 
 end
-
-(** Integer conversion formats *)
-
-val int_to_int32 : int value -> int32 value
-val int_to_int64 : int value -> int64 value
-
-(** Integer formats *)
 
 val int8 : int value
 val int16_be : int value

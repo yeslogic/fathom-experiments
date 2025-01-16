@@ -46,6 +46,15 @@ let dimap (type a b c d) (f : a -> b) (g : d -> c) (x : (c, a) t) : (d, b) t = {
 let comap (type a c d) (f : d -> c) (x : (c, a) t) : (d, a) t =
   { x with encode = Encoder.comap f x.encode }
 
+
+let const (type a c) (x : a value) (expected : a) : (c, unit) t = {
+  decode = Decoder.const x.decode expected;
+  encode = Encoder.const x.encode expected;
+}
+
+let unused (type a c) (x : a value) ~(default : a) : (c, unit) t =
+  x |> dimap (fun _ -> ()) (fun _ -> default)
+
 module Syntax = struct
 
   let ( <$> ) = map
