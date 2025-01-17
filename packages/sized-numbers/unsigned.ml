@@ -279,7 +279,7 @@ module UInt8 = struct
     let zero = 0
     let one = 1
     let min_int = 0
-    let max_int = 255 (* 2^8 - 1 *)
+    let max_int = 0xFF (* 2^8 - 1 *)
 
     let wrap_bounds x = x land max_int
 
@@ -321,13 +321,13 @@ module UInt8 = struct
 
   let pp ppf x = Format.pp_print_string ppf (to_string x)
 
-  let of_uint16_trunc x = x land 0xFF
-  let of_uint32_trunc x = Int32.to_int x land 0xFF
-  let of_uint64_trunc x = Int64.to_int x land 0xFF
+  let of_uint16_trunc x = wrap_bounds x
+  let of_uint32_trunc x = wrap_bounds (Int32.to_int x)
+  let of_uint64_trunc x = wrap_bounds (Int64.to_int x)
 
   let to_uint16 x = x
-  let to_uint32 x = Int32.of_int x
-  let to_uint64 x = Int64.of_int x
+  let to_uint32 = Int32.of_int
+  let to_uint64 = Int64.of_int
   let to_int x = x
 
 end
@@ -344,7 +344,7 @@ module UInt16 = struct
     let one = 1
     (* FIXME: will this work correctly on 32-bit platforms? *)
     let min_int = 0
-    let max_int = 65535 (* 2^16 - 1 *)
+    let max_int = 0xFFFF (* 2^16 - 1 *)
 
     let wrap_bounds x = x land max_int
 
@@ -387,13 +387,13 @@ module UInt16 = struct
   let hash = Int.hash
 
   let of_uint8 x = x
-  let of_uint32_trunc x = Int32.to_int x land 0xFFFF
-  let of_uint64_trunc x = Int64.to_int x land 0xFFFF
+  let of_uint32_trunc x = wrap_bounds (Int32.to_int x)
+  let of_uint64_trunc x = wrap_bounds (Int64.to_int x)
 
-  let to_uint32 x = Int32.of_int x
-  let to_uint64 x = Int64.of_int x
+  let to_uint32 = Int32.of_int
+  let to_uint64 = Int64.of_int
   let to_int x = x
-  let to_uint8_trunc x = x land 0xFF
+  let to_uint8_trunc = UInt8.of_uint16_trunc
 
   let to_uint8_opt =
     let max_int = UInt8.max_int in
@@ -451,13 +451,13 @@ module UInt32 = struct
   let of_bits x = x
   let to_bits x = x
 
-  let of_uint8 x = Int32.of_int x
-  let of_uint16 x = Int32.of_int x
-  let of_uint64_trunc x = Int64.to_int32 x
+  let of_uint8 = Int32.of_int
+  let of_uint16 = Int32.of_int
+  let of_uint64_trunc = Int64.to_int32
 
-  let to_uint64 x = Int64.of_int32 x
-  let to_uint8_trunc x = Int32.to_int x land 0xFF
-  let to_uint16_trunc x = Int32.to_int x land 0xFFFF
+  let to_uint64 = Int64.of_int32
+  let to_uint8_trunc = UInt8.of_uint32_trunc
+  let to_uint16_trunc = UInt16.of_uint32_trunc
 
   let to_uint8_opt =
     let max_int = of_uint8 UInt8.max_int in
@@ -522,13 +522,13 @@ module UInt64 = struct
   let of_bits x = x
   let to_bits x = x
 
-  let of_uint8 x = Int64.of_int x
-  let of_uint16 x = Int64.of_int x
-  let of_uint32 x = Int64.of_int32 x
+  let of_uint8 = Int64.of_int
+  let of_uint16 = Int64.of_int
+  let of_uint32 = Int64.of_int32
 
-  let to_uint8_trunc x = Int64.to_int x land 0xFF
-  let to_uint16_trunc x = Int64.to_int x land 0xFFFF
-  let to_uint32_trunc x = Int64.to_int32 x
+  let to_uint8_trunc = UInt8.of_uint64_trunc
+  let to_uint16_trunc = UInt16.of_uint64_trunc
+  let to_uint32_trunc = UInt32.of_uint64_trunc
 
   let to_uint8_opt =
     let max_int = of_uint8 UInt8.max_int in
