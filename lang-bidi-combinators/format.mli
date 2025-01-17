@@ -40,6 +40,13 @@ module Syntax : sig
 
 end
 
+open Sized_numbers
+
+val uint32_be : uint32 value
+val uint32_le : uint32 value
+val uint64_be : uint64 value
+val uint64_le : uint64 value
+
 val int8 : int value
 val int16_be : int value
 val int16_le : int value

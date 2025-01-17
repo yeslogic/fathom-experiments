@@ -162,6 +162,10 @@ let int64_le : int64 value =
 
   b0 lor b1 lor b2 lor b3 lor b4 lor b5 lor b6 lor b7
 
+let uint32_be : uint32 value = int32_be |> dimap UInt32.of_bits UInt32.to_bits
+let uint32_le : uint32 value = int32_le |> dimap UInt32.of_bits UInt32.to_bits
+let uint64_be : uint64 value = int64_be |> dimap UInt64.of_bits UInt64.to_bits
+let uint64_le : uint64 value = int64_le |> dimap UInt64.of_bits UInt64.to_bits
 
 module List = struct
 
