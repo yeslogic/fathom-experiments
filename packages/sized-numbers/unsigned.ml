@@ -281,21 +281,21 @@ module UInt8 = struct
     let min_int = 0
     let max_int = 0xFF (* 2^8 - 1 *)
 
-    let wrap_bounds x = x land max_int
+    let trunc x = x land max_int
 
-    let neg x = wrap_bounds (-x)
-    let add x y = wrap_bounds (x + y)
-    let sub x y = wrap_bounds (x - y)
-    let mul x y = wrap_bounds (x * y)
+    let neg x = trunc (-x)
+    let add x y = trunc (x + y)
+    let sub x y = trunc (x - y)
+    let mul x y = trunc (x * y)
     let div = Int.div
     let rem = Int.rem
-    let succ x = wrap_bounds (Int.succ x)
-    let pred x = wrap_bounds (Int.pred x)
+    let succ x = trunc (Int.succ x)
+    let pred x = trunc (Int.pred x)
     let logand = Int.logand
     let logor = Int.logor
     let logxor = Int.logxor
-    let lognot x = wrap_bounds (Int.lognot x)
-    let shift_left x y = wrap_bounds (x lsl y)
+    let lognot x = trunc (Int.lognot x)
+    let shift_left x y = trunc (x lsl y)
     let shift_right = Int.shift_right
 
     let equal = Stdlib.( = )
@@ -321,9 +321,9 @@ module UInt8 = struct
 
   let pp ppf x = Format.pp_print_string ppf (to_string x)
 
-  let of_uint16_trunc x = wrap_bounds x
-  let of_uint32_trunc x = wrap_bounds (Int32.to_int x)
-  let of_uint64_trunc x = wrap_bounds (Int64.to_int x)
+  let of_uint16_trunc x = trunc x
+  let of_uint32_trunc x = trunc (Int32.to_int x)
+  let of_uint64_trunc x = trunc (Int64.to_int x)
 
   let to_uint16 x = x
   let to_uint32 = Int32.of_int
@@ -346,21 +346,21 @@ module UInt16 = struct
     let min_int = 0
     let max_int = 0xFFFF (* 2^16 - 1 *)
 
-    let wrap_bounds x = x land max_int
+    let trunc x = x land max_int
 
-    let neg x = wrap_bounds (-x)
-    let add x y = wrap_bounds (x + y)
-    let sub x y = wrap_bounds (x - y)
-    let mul x y = wrap_bounds (x * y)
+    let neg x = trunc (-x)
+    let add x y = trunc (x + y)
+    let sub x y = trunc (x - y)
+    let mul x y = trunc (x * y)
     let div = Int.div
     let rem = Int.rem
-    let succ x = wrap_bounds (Int.succ x)
-    let pred x = wrap_bounds (Int.pred x)
+    let succ x = trunc (Int.succ x)
+    let pred x = trunc (Int.pred x)
     let logand = Int.logand
     let logor = Int.logor
     let logxor = Int.logxor
-    let lognot x = wrap_bounds (Int.lognot x)
-    let shift_left x y = wrap_bounds (x lsl y)
+    let lognot x = trunc (Int.lognot x)
+    let shift_left x y = trunc (x lsl y)
     let shift_right = Int.shift_right
 
     let equal = Stdlib.( = )
@@ -387,8 +387,8 @@ module UInt16 = struct
   let hash = Int.hash
 
   let of_uint8 x = x
-  let of_uint32_trunc x = wrap_bounds (Int32.to_int x)
-  let of_uint64_trunc x = wrap_bounds (Int64.to_int x)
+  let of_uint32_trunc x = trunc (Int32.to_int x)
+  let of_uint64_trunc x = trunc (Int64.to_int x)
 
   let to_uint32 = Int32.of_int
   let to_uint64 = Int64.of_int

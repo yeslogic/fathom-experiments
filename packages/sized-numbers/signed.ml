@@ -26,22 +26,22 @@ module Int8 = struct
   let max_int = 127 (* 2^(8 - 1) - 1 *)
 
   let shift = Sys.int_size - num_bits
-  let wrap_bounds x = (x lsl shift) asr shift
+  let trunc x = (x lsl shift) asr shift
 
-  let neg x = wrap_bounds (-x)
-  let add x y = wrap_bounds (x + y)
-  let sub x y = wrap_bounds (x - y)
-  let mul x y = wrap_bounds (x * y)
+  let neg x = trunc (-x)
+  let add x y = trunc (x + y)
+  let sub x y = trunc (x - y)
+  let mul x y = trunc (x * y)
   let div = Int.div
   let rem = Int.rem
-  let succ x = wrap_bounds (Int.succ x)
-  let pred x = wrap_bounds (Int.pred x)
+  let succ x = trunc (Int.succ x)
+  let pred x = trunc (Int.pred x)
   let abs = Int.abs
   let logand = Int.logand
   let logor = Int.logor
   let logxor = Int.logxor
   let lognot = Int.lognot
-  let shift_left x y = wrap_bounds (x lsl y)
+  let shift_left x y = trunc (x lsl y)
   let shift_right = Int.shift_right
   let shift_right_logical x y = ((x lsl shift) lsr y) asr shift
 
@@ -106,22 +106,22 @@ module Int16 = struct
   let max_int = 32767 (* 2^(16 - 1) - 1 *)
 
   let shift = Sys.int_size - num_bits
-  let wrap_bounds x = (x lsl shift) asr shift
+  let trunc x = (x lsl shift) asr shift
 
-  let neg x = wrap_bounds (-x)
-  let add x y = wrap_bounds (x + y)
-  let sub x y = wrap_bounds (x - y)
-  let mul x y = wrap_bounds (x * y)
+  let neg x = trunc (-x)
+  let add x y = trunc (x + y)
+  let sub x y = trunc (x - y)
+  let mul x y = trunc (x * y)
   let div = Int.div
   let rem = Int.rem
-  let succ x = wrap_bounds (Int.succ x)
-  let pred x = wrap_bounds (Int.pred x)
+  let succ x = trunc (Int.succ x)
+  let pred x = trunc (Int.pred x)
   let abs = Int.abs
   let logand = Int.logand
   let logor = Int.logor
   let logxor = Int.logxor
   let lognot = Int.lognot
-  let shift_left x y = wrap_bounds (x lsl y)
+  let shift_left x y = trunc (x lsl y)
   let shift_right = Int.shift_right
   let shift_right_logical x y = ((x lsl shift) lsr y) asr shift
 
