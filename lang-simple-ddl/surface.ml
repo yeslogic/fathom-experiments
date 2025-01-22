@@ -111,7 +111,7 @@ end = struct
   let eval_ty (ctx : context) : Core.ty -> Core.Semantics.vty =
     Core.Semantics.eval_ty ctx.items
 
-  let quote_vty : ?unfold_items:bool -> Core.Semantics.vty -> Core.ty =
+  let quote_vty : unfold:bool -> Core.Semantics.vty -> Core.ty =
     Core.Semantics.quote_vty
 
   let format_ty (ctx : context) (fmt : Core.format) : Core.ty =
@@ -123,8 +123,8 @@ end = struct
     | Core.Semantics.Failed_to_unify ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty (quote_vty vt1)
-          Core.pp_ty (quote_vty vt2))
+          Core.pp_ty (quote_vty ~unfold:false vt1)
+          Core.pp_ty (quote_vty ~unfold:false vt2))
 
 
   (** {1 Bidirectional elaboration} *)
@@ -153,7 +153,7 @@ end = struct
     | Let (name, def_ty, def, body) ->
         let def, def_vty = infer_ann_expr ctx def def_ty in
         let body = check_expr (extend_local ctx name.data def_vty) body vty in
-        Let (name.data, quote_vty def_vty, def, body)
+        Let (name.data, quote_vty ~unfold:false def_vty, def, body)
 
     | Record_lit field_tms ->
         begin match Core.Semantics.force_vty vty with
@@ -176,7 +176,7 @@ end = struct
           error tm.loc
             (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %s@]@ @[found: %a@]@]"
               "record type"
-              Core.pp_ty (quote_vty vty))
+              Core.pp_ty (quote_vty ~unfold:false vty))
         end
 
     | If_then_else (head, tm1, tm2) ->
@@ -197,7 +197,7 @@ end = struct
     | Let (name, def_ty, def, body) ->
         let def, def_vty = infer_ann_expr ctx def def_ty in
         let body = check_format (extend_local ctx name.data def_vty) body in
-        Bind (name.data, Pure (quote_vty def_vty, def), body)
+        Bind (name.data, Pure (quote_vty ~unfold:false def_vty, def), body)
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_expr ctx head Bool_type in
@@ -235,7 +235,7 @@ end = struct
       | Format_tm fmt -> fmt
       | Kind_tm _ -> error tm.loc "expected format, found kind"
       | Type_tm _ -> error tm.loc "expected format, found type"
-      | Expr_tm (expr, vty) -> Pure (quote_vty vty, expr)
+      | Expr_tm (expr, vty) -> Pure (quote_vty ~unfold:false vty, expr)
 
   (** Elaborate a surface term into a core term, inferring its type. *)
   and infer (ctx : context) (tm : tm) : elab_tm =
@@ -290,8 +290,8 @@ end = struct
     | Let (name, def_ty, def, body) ->
         let def, def_vty = infer_ann_expr ctx def def_ty in
         begin match infer (extend_local ctx name.data def_vty) body with
-        | Expr_tm (body, vty) -> Expr_tm (Let (name.data, quote_vty def_vty, def, body), vty)
-        | Format_tm body_fmt -> Format_tm (Bind (name.data, Pure (quote_vty def_vty, def), body_fmt))
+        | Expr_tm (body, vty) -> Expr_tm (Let (name.data, quote_vty ~unfold:false def_vty, def, body), vty)
+        | Format_tm body_fmt -> Format_tm (Bind (name.data, Pure (quote_vty ~unfold:false def_vty, def), body_fmt))
         | Kind_tm _ -> error tm.loc "expected expression or format, found kind"
         | Type_tm _ -> error tm.loc "expected expression or format, found type"
         end
@@ -459,7 +459,7 @@ end = struct
               | Let (_, def_ty, def) ->
                   let def, def_vty = infer_ann_expr ctx def def_ty in
                   let decls, body_fmt = go (extend_local ctx label.data def_vty) fmt_fields decls in
-                  decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
+                  decls, Bind (label.data, Pure (quote_vty ~unfold:false def_vty, def), body_fmt)
 
               (* let x <- fmt; fmt_fields... *)
               | Bind (_, fmt) ->
@@ -472,16 +472,16 @@ end = struct
               | Let_field (_, def_ty, def) ->
                   let def, def_vty = infer_ann_expr ctx def def_ty in
                   (* Add a new field to the record type *)
-                  let decls = Core.Label_map.add label.data (quote_vty def_vty) decls in
+                  let decls = Core.Label_map.add label.data (quote_vty ~unfold:false def_vty) decls in
                   let decls, body_fmt = go (extend_local ctx label.data def_vty) fmt_fields decls in
-                  decls, Bind (label.data, Pure (quote_vty def_vty, def), body_fmt)
+                  decls, Bind (label.data, Pure (quote_vty ~unfold:false def_vty, def), body_fmt)
 
               (* x <- fmt; fmt_fields... *)
               | Bind_field (_, fmt) ->
                   let fmt = check_format ctx fmt in
                   let fmt_vty = eval_ty ctx (format_ty ctx fmt) in
                   (* Add a new field to the record type *)
-                  let decls = Core.Label_map.add label.data (quote_vty fmt_vty) decls in
+                  let decls = Core.Label_map.add label.data (quote_vty ~unfold:false fmt_vty) decls in
                   let decls, body_fmt = go (extend_local ctx label.data fmt_vty) fmt_fields decls in
                   decls, Bind (label.data, fmt, body_fmt)
                 end
@@ -501,7 +501,7 @@ end = struct
         begin match infer_ann ctx tm ann with
         | Kind_tm _ -> error name.loc "kind definitions are not supported"
         | Type_tm ty -> extend_item ctx name.data (Type_def ty)
-        | Expr_tm (expr, ty) -> extend_item ctx name.data (Expr_def (quote_vty ty, expr))
+        | Expr_tm (expr, ty) -> extend_item ctx name.data (Expr_def (quote_vty ~unfold:false ty, expr))
         | Format_tm fmt -> extend_item ctx name.data (Format_def fmt)
         end
 

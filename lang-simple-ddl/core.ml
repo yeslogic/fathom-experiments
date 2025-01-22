@@ -280,9 +280,13 @@ module Semantics = struct
 
   (** {1 Semantic domain} *)
 
+  (** Neutral formats *)
+  type nformat =
+    | Item_var of string
+
+  (** Type values *)
   type vty =
-    | Item_var of string * vty Lazy.t
-    | Format_repr of string * vty Lazy.t
+    | Unfold of nty * vty Lazy.t
     | Record_type of string * vty Label_map.t
     | List_type of vty
     | UInt8_type
@@ -294,12 +298,19 @@ module Semantics = struct
     | Int32_type
     | Int64_type
     | Bool_type
+  (** Neutral types *)
+  and nty =
+    | Item_var of string
+    | Format_repr of nformat
 
-  (** Top-level items are “glued”, meaning that we remember the item they refer to. See.
-      {{:https://github.com/AndrasKovacs/elaboration-zoo/blob/master/GluedEval.hs} GluedEval.hs}
-      for more information on this technique.
+  (** Top-level items are “glued”, meaning that we remember the item they refer
+      to. See. {{:https://andraskovacs.github.io/pdfs/wits24prez.pdf} “Efficient
+      Elaboration with Controlled Definition Unfolding} and
+      {{:https://github.com/AndrasKovacs/elaboration-zoo/blob/master/GluedEval.hs}
+      GluedEval.hs} for more information on this technique.
   *)
 
+  (** Expression values *)
   type vexpr =
     | UInt8_lit of Sized_numbers.uint8
     | UInt16_lit of Sized_numbers.uint16
@@ -319,8 +330,7 @@ module Semantics = struct
 
   let rec force_vty (vty : vty) : vty =
     match vty with
-    | Item_var (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
-    | Format_repr (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
+    | Unfold (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
     | vty -> vty
 
 
@@ -336,7 +346,7 @@ module Semantics = struct
               Record_type (name, Label_map.map (eval_ty items) decls)
           | Format_def _ | Expr_def (_, _) -> failwith "type expected"
         in
-        Item_var (name, Lazy.from_fun vty)
+        Unfold (Item_var name, Lazy.from_fun vty)
     | List_type elem_ty -> List_type (eval_ty items elem_ty)
     | UInt8_type -> UInt8_type
     | UInt16_type -> UInt16_type
@@ -348,10 +358,8 @@ module Semantics = struct
     | Int64_type -> Int64_type
     | Bool_type -> Bool_type
     | Format_repr (Item_var name) ->
-        let vty () : vty =
-          eval_ty items (format_ty items (Item_var name))
-        in
-        Format_repr (name, Lazy.from_fun vty)
+        let vty () = eval_ty items (format_ty items (Item_var name)) in
+        Unfold (Format_repr (Item_var name), Lazy.from_fun vty)
     | Format_repr fmt ->
         eval_ty items (format_ty items fmt)
 
@@ -458,14 +466,13 @@ module Semantics = struct
 
   (** {1 Quotation} *)
 
-  let rec quote_vty ?(unfold_items=false) (vty : vty) : ty =
+  let rec quote_vty ~(unfold : bool) (vty : vty) : ty =
     match vty with
-    | Item_var (_, vty) when unfold_items -> quote_vty ~unfold_items (Lazy.force vty)
-    | Format_repr (_, vty) when unfold_items -> quote_vty ~unfold_items (Lazy.force vty)
-    | Item_var (name, _) -> Item_var name
-    | Format_repr (name, _) -> Format_repr (Item_var name)
+    | Unfold (_, vty) when unfold -> quote_vty ~unfold (Lazy.force vty)
+    | Unfold (Item_var name, _) -> Item_var name
+    | Unfold (Format_repr (Item_var name), _) -> Format_repr (Item_var name)
     | Record_type (name, _) -> Item_var name
-    | List_type vty -> List_type (quote_vty ~unfold_items vty)
+    | List_type vty -> List_type (quote_vty ~unfold vty)
     | UInt8_type -> UInt8_type
     | UInt16_type -> UInt16_type
     | UInt32_type -> UInt32_type
@@ -483,11 +490,10 @@ module Semantics = struct
 
   let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
     match force_vty vty1, force_vty vty2 with
-    | Item_var (name1, _), Item_var (name2, _) when name1 = name2 -> ()
-    | Format_repr (name1, _), Format_repr (name2, _) when name1 = name2 -> ()
+    | Unfold (Item_var name1, _), Unfold (Item_var name2, _) when name1 = name2 -> ()
+    | Unfold (Format_repr (Item_var name1), _), Unfold (Format_repr (Item_var name2), _) when name1 = name2 -> ()
 
-    | Item_var (_, vty1), vty2 | vty2, Item_var (_, vty1)
-    | Format_repr (_, vty1), vty2 | vty2, Format_repr (_, vty1) ->
+    | Unfold (_, vty1), vty2 | vty2, Unfold (_, vty1) ->
         unify_vtys items (Lazy.force vty1) vty2
 
     | Record_type (name1, _), Record_type (name2, _) when name1 = name2 -> ()
