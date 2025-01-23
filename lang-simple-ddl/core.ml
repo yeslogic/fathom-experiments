@@ -644,34 +644,26 @@ module Compile = struct
           compile_stmts ctx expr2
         )
     | Prim_app (prim, args) ->
-        let prefix op args : Rust.expr =
-          match args with
-          | [x] -> Prefix_op (op, compile_expr ctx x)
+        let int_prim_app (prim : int_prim) : Rust.expr =
+          match prim, args with
+          | Eq, [x; y] -> Infix_op (compile_expr ctx x, "==", compile_expr ctx y)
+          | Ne, [x; y] -> Infix_op (compile_expr ctx x, "!=", compile_expr ctx y)
+          | Le, [x; y] -> Infix_op (compile_expr ctx x, "<=", compile_expr ctx y)
+          | Lt, [x; y] -> Infix_op (compile_expr ctx x, "<", compile_expr ctx y)
+          | Gt, [x; y] -> Infix_op (compile_expr ctx x, ">", compile_expr ctx y)
+          | Ge, [x; y] -> Infix_op (compile_expr ctx x, ">=", compile_expr ctx y)
+          | Neg, [x] -> Prefix_op ("-", compile_expr ctx x)
+          | Add, [x; y] -> Infix_op (compile_expr ctx x, "+", compile_expr ctx y)
+          | Sub, [x; y] -> Infix_op (compile_expr ctx x, "-", compile_expr ctx y)
+          | Mul, [x; y] -> Infix_op (compile_expr ctx x, "*", compile_expr ctx y)
+          | Div, [x; y] -> Infix_op (compile_expr ctx x, "/", compile_expr ctx y)
+          | Bit_not, [x] -> Prefix_op ("!", compile_expr ctx x)
+          | Bit_and, [x; y] -> Infix_op (compile_expr ctx x, "&", compile_expr ctx y)
+          | Bit_or, [x; y] -> Infix_op (compile_expr ctx x, "|", compile_expr ctx y)
+          | Bit_xor, [x; y] -> Infix_op (compile_expr ctx x, "^", compile_expr ctx y)
+          | Bit_shl, [x; y] -> Infix_op (compile_expr ctx x, "<<", compile_expr ctx y)
+          | Bit_shr, [x; y] -> Infix_op (compile_expr ctx x, ">>", compile_expr ctx y)
           | _ -> failwith "invalid prim"
-        and infix op args : Rust.expr =
-          match args with
-          | [x; y] -> Infix_op (compile_expr ctx x, op, compile_expr ctx y)
-          | _ -> failwith "invalid prim"
-        in
-        let int_prim_app (prim : int_prim) =
-          match prim with
-          | Eq -> infix "==" args
-          | Ne -> infix "!=" args
-          | Le -> infix "<=" args
-          | Lt -> infix "<" args
-          | Gt -> infix ">" args
-          | Ge -> infix ">=" args
-          | Neg -> prefix "-" args
-          | Add -> infix "+" args
-          | Sub -> infix "-" args
-          | Mul -> infix "*" args
-          | Div -> infix "/" args
-          | Bit_not -> prefix "!" args
-          | Bit_and -> infix "&" args
-          | Bit_or -> infix "|" args
-          | Bit_xor -> infix "^" args
-          | Bit_shl -> infix "<<" args
-          | Bit_shr -> infix ">>" args
         in
         match prim with
         | UInt64 prim -> int_prim_app prim
