@@ -378,52 +378,46 @@ module Semantics = struct
     | Bool_elim (_, fmt1, _) -> format_ty items fmt1
 
   let prim_app (prim : prim) : vexpr list -> vexpr =
-    let[@warning "-partial-match"] uint64_uint64_bool f [UInt64_lit x; UInt64_lit y] = Bool_lit (f x y) in
-    let[@warning "-partial-match"] uint64_uint64 f [UInt64_lit x] = UInt64_lit (f x) in
-    let[@warning "-partial-match"] uint64_uint64_uint64 f [UInt64_lit x; UInt64_lit y] = UInt64_lit (f x y) in
-    let[@warning "-partial-match"] uint64_uint64'_uint64 f [UInt64_lit x; UInt64_lit y] = UInt64_lit (f x (Sized_numbers.UInt64.to_int_opt y |> Option.get)) in
+    let open Sized_numbers in
 
-    let[@warning "-partial-match"] int64_int64_bool f [Int64_lit x; Int64_lit y] = Bool_lit (f x y) in
-    let[@warning "-partial-match"] int64_int64 f [Int64_lit x] = Int64_lit (f x) in
-    let[@warning "-partial-match"] int64_int64_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x y) in
-    let[@warning "-partial-match"] int64_int64'_int64 f [Int64_lit x; Int64_lit y] = Int64_lit (f x (Sized_numbers.Int64.to_int_opt y |> Option.get)) in
+    (* TODO: Clean this up!! *)
 
     match prim with
-    | UInt64 Eq -> uint64_uint64_bool Sized_numbers.UInt64.equal
-    | UInt64 Ne -> uint64_uint64_bool Sized_numbers.UInt64.O.( <> )
-    | UInt64 Le -> uint64_uint64_bool Sized_numbers.UInt64.O.( <= )
-    | UInt64 Lt -> uint64_uint64_bool Sized_numbers.UInt64.O.( < )
-    | UInt64 Gt -> uint64_uint64_bool Sized_numbers.UInt64.O.( < )
-    | UInt64 Ge -> uint64_uint64_bool Sized_numbers.UInt64.O.( >= )
-    | UInt64 Neg -> uint64_uint64 Sized_numbers.UInt64.neg
-    | UInt64 Add -> uint64_uint64_uint64 Sized_numbers.UInt64.add
-    | UInt64 Sub -> uint64_uint64_uint64 Sized_numbers.UInt64.sub
-    | UInt64 Mul -> uint64_uint64_uint64 Sized_numbers.UInt64.mul
-    | UInt64 Div -> uint64_uint64_uint64 Sized_numbers.UInt64.div
-    | UInt64 Bit_not -> uint64_uint64 Sized_numbers.UInt64.lognot
-    | UInt64 Bit_and -> uint64_uint64_uint64 Sized_numbers.UInt64.logand
-    | UInt64 Bit_or -> uint64_uint64_uint64 Sized_numbers.UInt64.logor
-    | UInt64 Bit_xor -> uint64_uint64_uint64 Sized_numbers.UInt64.logxor
-    | UInt64 Bit_shl -> uint64_uint64'_uint64 Sized_numbers.UInt64.shift_left
-    | UInt64 Bit_shr -> uint64_uint64'_uint64 Sized_numbers.UInt64.shift_right
+    | UInt64 Eq -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.equal x y)
+    | UInt64 Ne -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <> y))
+    | UInt64 Le -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <= y))
+    | UInt64 Lt -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
+    | UInt64 Gt -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
+    | UInt64 Ge -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x >= y))
+    | UInt64 Neg -> fun[@warning"-partial-match"] [UInt64_lit x] -> UInt64_lit (UInt64.neg x)
+    | UInt64 Add -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.add x y)
+    | UInt64 Sub -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.sub x y)
+    | UInt64 Mul -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.mul x y)
+    | UInt64 Div -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.div x y)
+    | UInt64 Bit_not -> fun[@warning"-partial-match"] [UInt64_lit x] -> UInt64_lit (UInt64.lognot x)
+    | UInt64 Bit_and -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logand x y)
+    | UInt64 Bit_or -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logor x y)
+    | UInt64 Bit_xor -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logxor x y)
+    | UInt64 Bit_shl -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_left x (to_int_opt y |> Option.get)))
+    | UInt64 Bit_shr -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_right x (to_int_opt y |> Option.get)))
 
-    | Int64 Eq -> int64_int64_bool Sized_numbers.Int64.equal
-    | Int64 Ne -> int64_int64_bool Sized_numbers.Int64.O.( <> )
-    | Int64 Le -> int64_int64_bool Sized_numbers.Int64.O.( <= )
-    | Int64 Lt -> int64_int64_bool Sized_numbers.Int64.O.( < )
-    | Int64 Gt -> int64_int64_bool Sized_numbers.Int64.O.( < )
-    | Int64 Ge -> int64_int64_bool Sized_numbers.Int64.O.( >= )
-    | Int64 Neg -> int64_int64 Sized_numbers.Int64.neg
-    | Int64 Add -> int64_int64_int64 Sized_numbers.Int64.add
-    | Int64 Sub -> int64_int64_int64 Sized_numbers.Int64.sub
-    | Int64 Mul -> int64_int64_int64 Sized_numbers.Int64.mul
-    | Int64 Div -> int64_int64_int64 Sized_numbers.Int64.div
-    | Int64 Bit_not -> int64_int64 Sized_numbers.Int64.lognot
-    | Int64 Bit_and -> int64_int64_int64 Sized_numbers.Int64.logand
-    | Int64 Bit_or -> int64_int64_int64 Sized_numbers.Int64.logor
-    | Int64 Bit_xor -> int64_int64_int64 Sized_numbers.Int64.logxor
-    | Int64 Bit_shl -> int64_int64'_int64 Sized_numbers.Int64.shift_left
-    | Int64 Bit_shr -> int64_int64'_int64 Sized_numbers.Int64.shift_right
+    | Int64 Eq -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.equal x y)
+    | Int64 Ne -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <> y))
+    | Int64 Le -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <= y))
+    | Int64 Lt -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
+    | Int64 Gt -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
+    | Int64 Ge -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x >= y))
+    | Int64 Neg -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.neg x)
+    | Int64 Add -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.add x y)
+    | Int64 Sub -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.sub x y)
+    | Int64 Mul -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.mul x y)
+    | Int64 Div -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.div x y)
+    | Int64 Bit_not -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.lognot x)
+    | Int64 Bit_and -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logand x y)
+    | Int64 Bit_or -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logor x y)
+    | Int64 Bit_xor -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logxor x y)
+    | Int64 Bit_shl -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_left x (to_int_opt y |> Option.get)))
+    | Int64 Bit_shr -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_right x (to_int_opt y |> Option.get)))
 
   let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
     match expr with
