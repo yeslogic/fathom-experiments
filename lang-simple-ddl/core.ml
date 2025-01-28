@@ -6,34 +6,43 @@ module Label_map = Map.Make (String)
 
 (** {1 Syntax} *)
 
-type int_prim =
-  | Eq
-  | Ne
-  | Le
-  | Lt
-  | Ge
-  | Gt
-  | Neg
-  | Add
-  | Sub
-  | Mul
-  | Div
-  | Bit_not
-  | Bit_and
-  | Bit_or
-  | Bit_xor
-  | Bit_shl
-  | Bit_shr
+type unsigned_int_constr = [
+  | `UInt8
+  | `UInt16
+  | `UInt32
+  | `UInt64
+]
+
+type signed_int_constr = [
+  | `Int8
+  | `Int16
+  | `Int32
+  | `Int64
+]
+
+type int_constr = [
+  | unsigned_int_constr
+  | signed_int_constr
+]
 
 type prim =
-  | UInt8 of int_prim
-  | UInt16 of int_prim
-  | UInt32 of int_prim
-  | UInt64 of int_prim
-  | Int8 of int_prim
-  | Int16 of int_prim
-  | Int32 of int_prim
-  | Int64 of int_prim
+  | Eq of int_constr
+  | Ne of int_constr
+  | Le of int_constr
+  | Lt of int_constr
+  | Ge of int_constr
+  | Gt of int_constr
+  | Neg of signed_int_constr
+  | Add of int_constr
+  | Sub of int_constr
+  | Mul of int_constr
+  | Div of int_constr
+  | Bit_not of int_constr
+  | Bit_and of int_constr
+  | Bit_or of int_constr
+  | Bit_xor of int_constr
+  | Bit_shl of int_constr
+  | Bit_shr of int_constr
 
 type ty =
   | Item_var of string
@@ -90,30 +99,36 @@ type program =
 
 (** {2 Pretty printing} *)
 
-let pp_int_prim ppf (prim : int_prim) =
+let pp_constr ppf (prim : [< int_constr]) =
   match prim with
-  | Eq -> Format.pp_print_string ppf "eq"
-  | Ne -> Format.pp_print_string ppf "ne"
-  | Le -> Format.pp_print_string ppf "le"
-  | Lt -> Format.pp_print_string ppf "lt"
-  | Ge -> Format.pp_print_string ppf "ge"
-  | Gt -> Format.pp_print_string ppf "gt"
-  | Neg -> Format.pp_print_string ppf "neg"
-  | Add -> Format.pp_print_string ppf "add"
-  | Sub -> Format.pp_print_string ppf "sub"
-  | Mul -> Format.pp_print_string ppf "mul"
-  | Div -> Format.pp_print_string ppf "div"
-  | Bit_not -> Format.pp_print_string ppf "bit-not"
-  | Bit_and -> Format.pp_print_string ppf "bit-and"
-  | Bit_or -> Format.pp_print_string ppf "bit-or"
-  | Bit_xor -> Format.pp_print_string ppf "bit-xor"
-  | Bit_shl -> Format.pp_print_string ppf "bit-shl"
-  | Bit_shr -> Format.pp_print_string ppf "bit-shr"
+  | `UInt8 -> Format.pp_print_string ppf "uint64"
+  | `UInt16 -> Format.pp_print_string ppf "uint64"
+  | `UInt32 -> Format.pp_print_string ppf "uint64"
+  | `UInt64 -> Format.pp_print_string ppf "uint64"
+  | `Int8 -> Format.pp_print_string ppf "int64"
+  | `Int16 -> Format.pp_print_string ppf "int64"
+  | `Int32 -> Format.pp_print_string ppf "int64"
+  | `Int64 -> Format.pp_print_string ppf "int64"
 
 let pp_prim ppf (prim : prim) =
   match prim with
-  | UInt64 prim -> Format.fprintf ppf "uint64-%a" pp_int_prim prim
-  | Int64 prim -> Format.fprintf ppf "int64-%a" pp_int_prim prim
+  | Eq constr -> Format.fprintf ppf "%a-eq" pp_constr constr
+  | Ne constr -> Format.fprintf ppf "%a-ne" pp_constr constr
+  | Le constr -> Format.fprintf ppf "%a-le" pp_constr constr
+  | Lt constr -> Format.fprintf ppf "%a-lt" pp_constr constr
+  | Ge constr -> Format.fprintf ppf "%a-ge" pp_constr constr
+  | Gt constr -> Format.fprintf ppf "%a-gt" pp_constr constr
+  | Neg constr -> Format.fprintf ppf "%a-neg" pp_constr constr
+  | Add constr -> Format.fprintf ppf "%a-add" pp_constr constr
+  | Sub constr -> Format.fprintf ppf "%a-sub" pp_constr constr
+  | Mul constr -> Format.fprintf ppf "%a-mul" pp_constr constr
+  | Div constr -> Format.fprintf ppf "%a-div" pp_constr constr
+  | Bit_not constr -> Format.fprintf ppf "%a-bit-not" pp_constr constr
+  | Bit_and constr -> Format.fprintf ppf "%a-bit-and" pp_constr constr
+  | Bit_or constr -> Format.fprintf ppf "%a-bit-or" pp_constr constr
+  | Bit_xor constr -> Format.fprintf ppf "%a-bit-xor" pp_constr constr
+  | Bit_shl constr -> Format.fprintf ppf "%a-bit-shl" pp_constr constr
+  | Bit_shr constr -> Format.fprintf ppf "%a-bit-shr" pp_constr constr
 
 let rec pp_ty ppf (ty : ty) =
   match ty with
@@ -389,149 +404,145 @@ module Semantics = struct
     (* TODO: Clean this up!! *)
 
     match prim with
-    | UInt8 Eq -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.equal x y)
-    | UInt8 Ne -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x <> y))
-    | UInt8 Le -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x <= y))
-    | UInt8 Lt -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x < y))
-    | UInt8 Gt -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x < y))
-    | UInt8 Ge -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x >= y))
-    | UInt8 Neg -> fun[@warning"-partial-match"] [UInt8_lit x] -> UInt8_lit (UInt8.neg x)
-    | UInt8 Add -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.add x y)
-    | UInt8 Sub -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.sub x y)
-    | UInt8 Mul -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.mul x y)
-    | UInt8 Div -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.div x y)
-    | UInt8 Bit_not -> fun[@warning"-partial-match"] [UInt8_lit x] -> UInt8_lit (UInt8.lognot x)
-    | UInt8 Bit_and -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logand x y)
-    | UInt8 Bit_or -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logor x y)
-    | UInt8 Bit_xor -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logxor x y)
-    | UInt8 Bit_shl -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.(shift_left x (to_int y)))
-    | UInt8 Bit_shr -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.(shift_right x (to_int y)))
+    | Eq `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.equal x y)
+    | Ne `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x <> y))
+    | Le `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x <= y))
+    | Lt `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x < y))
+    | Gt `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x < y))
+    | Ge `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> Bool_lit (UInt8.O.(x >= y))
+    | Add `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.add x y)
+    | Sub `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.sub x y)
+    | Mul `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.mul x y)
+    | Div `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.div x y)
+    | Bit_not `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x] -> UInt8_lit (UInt8.lognot x)
+    | Bit_and `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logand x y)
+    | Bit_or `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logor x y)
+    | Bit_xor `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.logxor x y)
+    | Bit_shl `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.(shift_left x (to_int y)))
+    | Bit_shr `UInt8 -> fun[@warning"-partial-match"] [UInt8_lit x; UInt8_lit y] -> UInt8_lit (UInt8.(shift_right x (to_int y)))
 
-    | UInt16 Eq -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.equal x y)
-    | UInt16 Ne -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x <> y))
-    | UInt16 Le -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x <= y))
-    | UInt16 Lt -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x < y))
-    | UInt16 Gt -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x < y))
-    | UInt16 Ge -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x >= y))
-    | UInt16 Neg -> fun[@warning"-partial-match"] [UInt16_lit x] -> UInt16_lit (UInt16.neg x)
-    | UInt16 Add -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.add x y)
-    | UInt16 Sub -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.sub x y)
-    | UInt16 Mul -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.mul x y)
-    | UInt16 Div -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.div x y)
-    | UInt16 Bit_not -> fun[@warning"-partial-match"] [UInt16_lit x] -> UInt16_lit (UInt16.lognot x)
-    | UInt16 Bit_and -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logand x y)
-    | UInt16 Bit_or -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logor x y)
-    | UInt16 Bit_xor -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logxor x y)
-    | UInt16 Bit_shl -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.(shift_left x (to_int y)))
-    | UInt16 Bit_shr -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.(shift_right x (to_int y)))
+    | Eq `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.equal x y)
+    | Ne `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x <> y))
+    | Le `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x <= y))
+    | Lt `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x < y))
+    | Gt `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x < y))
+    | Ge `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> Bool_lit (UInt16.O.(x >= y))
+    | Add `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.add x y)
+    | Sub `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.sub x y)
+    | Mul `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.mul x y)
+    | Div `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.div x y)
+    | Bit_not `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x] -> UInt16_lit (UInt16.lognot x)
+    | Bit_and `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logand x y)
+    | Bit_or `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logor x y)
+    | Bit_xor `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.logxor x y)
+    | Bit_shl `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.(shift_left x (to_int y)))
+    | Bit_shr `UInt16 -> fun[@warning"-partial-match"] [UInt16_lit x; UInt16_lit y] -> UInt16_lit (UInt16.(shift_right x (to_int y)))
 
-    | UInt32 Eq -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.equal x y)
-    | UInt32 Ne -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x <> y))
-    | UInt32 Le -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x <= y))
-    | UInt32 Lt -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x < y))
-    | UInt32 Gt -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x < y))
-    | UInt32 Ge -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x >= y))
-    | UInt32 Neg -> fun[@warning"-partial-match"] [UInt32_lit x] -> UInt32_lit (UInt32.neg x)
-    | UInt32 Add -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.add x y)
-    | UInt32 Sub -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.sub x y)
-    | UInt32 Mul -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.mul x y)
-    | UInt32 Div -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.div x y)
-    | UInt32 Bit_not -> fun[@warning"-partial-match"] [UInt32_lit x] -> UInt32_lit (UInt32.lognot x)
-    | UInt32 Bit_and -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logand x y)
-    | UInt32 Bit_or -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logor x y)
-    | UInt32 Bit_xor -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logxor x y)
-    | UInt32 Bit_shl -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.(shift_left x (to_int_opt y |> Option.get)))
-    | UInt32 Bit_shr -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.(shift_right x (to_int_opt y |> Option.get)))
+    | Eq `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.equal x y)
+    | Ne `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x <> y))
+    | Le `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x <= y))
+    | Lt `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x < y))
+    | Gt `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x < y))
+    | Ge `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> Bool_lit (UInt32.O.(x >= y))
+    | Add `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.add x y)
+    | Sub `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.sub x y)
+    | Mul `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.mul x y)
+    | Div `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.div x y)
+    | Bit_not `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x] -> UInt32_lit (UInt32.lognot x)
+    | Bit_and `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logand x y)
+    | Bit_or `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logor x y)
+    | Bit_xor `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.logxor x y)
+    | Bit_shl `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.(shift_left x (to_int_opt y |> Option.get)))
+    | Bit_shr `UInt32 -> fun[@warning"-partial-match"] [UInt32_lit x; UInt32_lit y] -> UInt32_lit (UInt32.(shift_right x (to_int_opt y |> Option.get)))
 
-    | UInt64 Eq -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.equal x y)
-    | UInt64 Ne -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <> y))
-    | UInt64 Le -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <= y))
-    | UInt64 Lt -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
-    | UInt64 Gt -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
-    | UInt64 Ge -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x >= y))
-    | UInt64 Neg -> fun[@warning"-partial-match"] [UInt64_lit x] -> UInt64_lit (UInt64.neg x)
-    | UInt64 Add -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.add x y)
-    | UInt64 Sub -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.sub x y)
-    | UInt64 Mul -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.mul x y)
-    | UInt64 Div -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.div x y)
-    | UInt64 Bit_not -> fun[@warning"-partial-match"] [UInt64_lit x] -> UInt64_lit (UInt64.lognot x)
-    | UInt64 Bit_and -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logand x y)
-    | UInt64 Bit_or -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logor x y)
-    | UInt64 Bit_xor -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logxor x y)
-    | UInt64 Bit_shl -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_left x (to_int_opt y |> Option.get)))
-    | UInt64 Bit_shr -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_right x (to_int_opt y |> Option.get)))
+    | Eq `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.equal x y)
+    | Ne `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <> y))
+    | Le `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x <= y))
+    | Lt `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
+    | Gt `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x < y))
+    | Ge `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> Bool_lit (UInt64.O.(x >= y))
+    | Add `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.add x y)
+    | Sub `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.sub x y)
+    | Mul `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.mul x y)
+    | Div `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.div x y)
+    | Bit_not `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x] -> UInt64_lit (UInt64.lognot x)
+    | Bit_and `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logand x y)
+    | Bit_or `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logor x y)
+    | Bit_xor `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.logxor x y)
+    | Bit_shl `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_left x (to_int_opt y |> Option.get)))
+    | Bit_shr `UInt64 -> fun[@warning"-partial-match"] [UInt64_lit x; UInt64_lit y] -> UInt64_lit (UInt64.(shift_right x (to_int_opt y |> Option.get)))
 
-    | Int8 Eq -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.equal x y)
-    | Int8 Ne -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x <> y))
-    | Int8 Le -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x <= y))
-    | Int8 Lt -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x < y))
-    | Int8 Gt -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x < y))
-    | Int8 Ge -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x >= y))
-    | Int8 Neg -> fun[@warning"-partial-match"] [Int8_lit x] -> Int8_lit (Int8.neg x)
-    | Int8 Add -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.add x y)
-    | Int8 Sub -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.sub x y)
-    | Int8 Mul -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.mul x y)
-    | Int8 Div -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.div x y)
-    | Int8 Bit_not -> fun[@warning"-partial-match"] [Int8_lit x] -> Int8_lit (Int8.lognot x)
-    | Int8 Bit_and -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logand x y)
-    | Int8 Bit_or -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logor x y)
-    | Int8 Bit_xor -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logxor x y)
-    | Int8 Bit_shl -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.(shift_left x (to_int y)))
-    | Int8 Bit_shr -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.(shift_right x (to_int y)))
+    | Eq `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.equal x y)
+    | Ne `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x <> y))
+    | Le `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x <= y))
+    | Lt `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x < y))
+    | Gt `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x < y))
+    | Ge `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Bool_lit (Int8.O.(x >= y))
+    | Neg `Int8 -> fun[@warning"-partial-match"] [Int8_lit x] -> Int8_lit (Int8.neg x)
+    | Add `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.add x y)
+    | Sub `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.sub x y)
+    | Mul `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.mul x y)
+    | Div `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.div x y)
+    | Bit_not `Int8 -> fun[@warning"-partial-match"] [Int8_lit x] -> Int8_lit (Int8.lognot x)
+    | Bit_and `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logand x y)
+    | Bit_or `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logor x y)
+    | Bit_xor `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.logxor x y)
+    | Bit_shl `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.(shift_left x (to_int y)))
+    | Bit_shr `Int8 -> fun[@warning"-partial-match"] [Int8_lit x; Int8_lit y] -> Int8_lit (Int8.(shift_right x (to_int y)))
 
-    | Int16 Eq -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.equal x y)
-    | Int16 Ne -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x <> y))
-    | Int16 Le -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x <= y))
-    | Int16 Lt -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x < y))
-    | Int16 Gt -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x < y))
-    | Int16 Ge -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x >= y))
-    | Int16 Neg -> fun[@warning"-partial-match"] [Int16_lit x] -> Int16_lit (Int16.neg x)
-    | Int16 Add -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.add x y)
-    | Int16 Sub -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.sub x y)
-    | Int16 Mul -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.mul x y)
-    | Int16 Div -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.div x y)
-    | Int16 Bit_not -> fun[@warning"-partial-match"] [Int16_lit x] -> Int16_lit (Int16.lognot x)
-    | Int16 Bit_and -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logand x y)
-    | Int16 Bit_or -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logor x y)
-    | Int16 Bit_xor -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logxor x y)
-    | Int16 Bit_shl -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.(shift_left x (to_int y)))
-    | Int16 Bit_shr -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.(shift_right x (to_int y)))
+    | Eq `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.equal x y)
+    | Ne `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x <> y))
+    | Le `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x <= y))
+    | Lt `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x < y))
+    | Gt `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x < y))
+    | Ge `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Bool_lit (Int16.O.(x >= y))
+    | Neg `Int16 -> fun[@warning"-partial-match"] [Int16_lit x] -> Int16_lit (Int16.neg x)
+    | Add `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.add x y)
+    | Sub `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.sub x y)
+    | Mul `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.mul x y)
+    | Div `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.div x y)
+    | Bit_not `Int16 -> fun[@warning"-partial-match"] [Int16_lit x] -> Int16_lit (Int16.lognot x)
+    | Bit_and `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logand x y)
+    | Bit_or `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logor x y)
+    | Bit_xor `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.logxor x y)
+    | Bit_shl `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.(shift_left x (to_int y)))
+    | Bit_shr `Int16 -> fun[@warning"-partial-match"] [Int16_lit x; Int16_lit y] -> Int16_lit (Int16.(shift_right x (to_int y)))
 
-    | Int32 Eq -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.equal x y)
-    | Int32 Ne -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x <> y))
-    | Int32 Le -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x <= y))
-    | Int32 Lt -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x < y))
-    | Int32 Gt -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x < y))
-    | Int32 Ge -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x >= y))
-    | Int32 Neg -> fun[@warning"-partial-match"] [Int32_lit x] -> Int32_lit (Int32.neg x)
-    | Int32 Add -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.add x y)
-    | Int32 Sub -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.sub x y)
-    | Int32 Mul -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.mul x y)
-    | Int32 Div -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.div x y)
-    | Int32 Bit_not -> fun[@warning"-partial-match"] [Int32_lit x] -> Int32_lit (Int32.lognot x)
-    | Int32 Bit_and -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logand x y)
-    | Int32 Bit_or -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logor x y)
-    | Int32 Bit_xor -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logxor x y)
-    | Int32 Bit_shl -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.(shift_left x (to_int_opt y |> Option.get)))
-    | Int32 Bit_shr -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.(shift_right x (to_int_opt y |> Option.get)))
+    | Eq `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.equal x y)
+    | Ne `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x <> y))
+    | Le `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x <= y))
+    | Lt `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x < y))
+    | Gt `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x < y))
+    | Ge `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Bool_lit (Int32.O.(x >= y))
+    | Neg `Int32 -> fun[@warning"-partial-match"] [Int32_lit x] -> Int32_lit (Int32.neg x)
+    | Add `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.add x y)
+    | Sub `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.sub x y)
+    | Mul `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.mul x y)
+    | Div `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.div x y)
+    | Bit_not `Int32 -> fun[@warning"-partial-match"] [Int32_lit x] -> Int32_lit (Int32.lognot x)
+    | Bit_and `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logand x y)
+    | Bit_or `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logor x y)
+    | Bit_xor `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.logxor x y)
+    | Bit_shl `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.(shift_left x (to_int_opt y |> Option.get)))
+    | Bit_shr `Int32 -> fun[@warning"-partial-match"] [Int32_lit x; Int32_lit y] -> Int32_lit (Int32.(shift_right x (to_int_opt y |> Option.get)))
 
-    | Int64 Eq -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.equal x y)
-    | Int64 Ne -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <> y))
-    | Int64 Le -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <= y))
-    | Int64 Lt -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
-    | Int64 Gt -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
-    | Int64 Ge -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x >= y))
-    | Int64 Neg -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.neg x)
-    | Int64 Add -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.add x y)
-    | Int64 Sub -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.sub x y)
-    | Int64 Mul -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.mul x y)
-    | Int64 Div -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.div x y)
-    | Int64 Bit_not -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.lognot x)
-    | Int64 Bit_and -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logand x y)
-    | Int64 Bit_or -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logor x y)
-    | Int64 Bit_xor -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logxor x y)
-    | Int64 Bit_shl -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_left x (to_int_opt y |> Option.get)))
-    | Int64 Bit_shr -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_right x (to_int_opt y |> Option.get)))
+    | Eq `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.equal x y)
+    | Ne `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <> y))
+    | Le `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x <= y))
+    | Lt `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
+    | Gt `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x < y))
+    | Ge `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Bool_lit (Int64.O.(x >= y))
+    | Neg `Int64 -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.neg x)
+    | Add `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.add x y)
+    | Sub `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.sub x y)
+    | Mul `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.mul x y)
+    | Div `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.div x y)
+    | Bit_not `Int64 -> fun[@warning"-partial-match"] [Int64_lit x] -> Int64_lit (Int64.lognot x)
+    | Bit_and `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logand x y)
+    | Bit_or `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logor x y)
+    | Bit_xor `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.logxor x y)
+    | Bit_shl `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_left x (to_int_opt y |> Option.get)))
+    | Bit_shr `Int64 -> fun[@warning"-partial-match"] [Int64_lit x; Int64_lit y] -> Int64_lit (Int64.(shift_right x (to_int_opt y |> Option.get)))
 
   let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
     match expr with
@@ -752,36 +763,25 @@ module Compile = struct
           compile_stmts ctx expr2
         )
     | Prim_app (prim, args) ->
-        let int_prim_app (prim : int_prim) : Rust.expr =
-          match prim, args with
-          | Eq, [x; y] -> Infix_op (compile_expr ctx x, "==", compile_expr ctx y)
-          | Ne, [x; y] -> Infix_op (compile_expr ctx x, "!=", compile_expr ctx y)
-          | Le, [x; y] -> Infix_op (compile_expr ctx x, "<=", compile_expr ctx y)
-          | Lt, [x; y] -> Infix_op (compile_expr ctx x, "<", compile_expr ctx y)
-          | Gt, [x; y] -> Infix_op (compile_expr ctx x, ">", compile_expr ctx y)
-          | Ge, [x; y] -> Infix_op (compile_expr ctx x, ">=", compile_expr ctx y)
-          | Neg, [x] -> Prefix_op ("-", compile_expr ctx x)
-          | Add, [x; y] -> Infix_op (compile_expr ctx x, "+", compile_expr ctx y)
-          | Sub, [x; y] -> Infix_op (compile_expr ctx x, "-", compile_expr ctx y)
-          | Mul, [x; y] -> Infix_op (compile_expr ctx x, "*", compile_expr ctx y)
-          | Div, [x; y] -> Infix_op (compile_expr ctx x, "/", compile_expr ctx y)
-          | Bit_not, [x] -> Prefix_op ("!", compile_expr ctx x)
-          | Bit_and, [x; y] -> Infix_op (compile_expr ctx x, "&", compile_expr ctx y)
-          | Bit_or, [x; y] -> Infix_op (compile_expr ctx x, "|", compile_expr ctx y)
-          | Bit_xor, [x; y] -> Infix_op (compile_expr ctx x, "^", compile_expr ctx y)
-          | Bit_shl, [x; y] -> Infix_op (compile_expr ctx x, "<<", compile_expr ctx y)
-          | Bit_shr, [x; y] -> Infix_op (compile_expr ctx x, ">>", compile_expr ctx y)
-          | _ -> failwith "invalid prim"
-        in
-        match prim with
-        | UInt8 prim -> int_prim_app prim
-        | UInt16 prim -> int_prim_app prim
-        | UInt32 prim -> int_prim_app prim
-        | UInt64 prim -> int_prim_app prim
-        | Int8 prim -> int_prim_app prim
-        | Int16 prim -> int_prim_app prim
-        | Int32 prim -> int_prim_app prim
-        | Int64 prim -> int_prim_app prim
+        match prim, args with
+        | Eq _, [x; y] -> Infix_op (compile_expr ctx x, "==", compile_expr ctx y)
+        | Ne _, [x; y] -> Infix_op (compile_expr ctx x, "!=", compile_expr ctx y)
+        | Le _, [x; y] -> Infix_op (compile_expr ctx x, "<=", compile_expr ctx y)
+        | Lt _, [x; y] -> Infix_op (compile_expr ctx x, "<", compile_expr ctx y)
+        | Gt _, [x; y] -> Infix_op (compile_expr ctx x, ">", compile_expr ctx y)
+        | Ge _, [x; y] -> Infix_op (compile_expr ctx x, ">=", compile_expr ctx y)
+        | Neg _, [x] -> Prefix_op ("-", compile_expr ctx x)
+        | Add _, [x; y] -> Infix_op (compile_expr ctx x, "+", compile_expr ctx y)
+        | Sub _, [x; y] -> Infix_op (compile_expr ctx x, "-", compile_expr ctx y)
+        | Mul _, [x; y] -> Infix_op (compile_expr ctx x, "*", compile_expr ctx y)
+        | Div _, [x; y] -> Infix_op (compile_expr ctx x, "/", compile_expr ctx y)
+        | Bit_not _, [x] -> Prefix_op ("!", compile_expr ctx x)
+        | Bit_and _, [x; y] -> Infix_op (compile_expr ctx x, "&", compile_expr ctx y)
+        | Bit_or _, [x; y] -> Infix_op (compile_expr ctx x, "|", compile_expr ctx y)
+        | Bit_xor _, [x; y] -> Infix_op (compile_expr ctx x, "^", compile_expr ctx y)
+        | Bit_shl _, [x; y] -> Infix_op (compile_expr ctx x, "<<", compile_expr ctx y)
+        | Bit_shr _, [x; y] -> Infix_op (compile_expr ctx x, ">>", compile_expr ctx y)
+        | _ -> failwith "invalid prim"
 
   let rec compile_format_stmts (ctx : context) (fmt : format) : Rust.stmts =
     match fmt with

@@ -211,12 +211,12 @@ end = struct
     | Op2 (op, tm1, tm2) ->
         let prim : Core.prim =
           match op with
-          | `Eq -> Int64 Eq
-          | `Ne -> Int64 Ne
-          | `Le -> Int64 Le
-          | `Lt -> Int64 Lt
-          | `Ge -> Int64 Ge
-          | `Gt -> Int64 Gt
+          | `Eq -> Eq `Int64
+          | `Ne -> Ne `Int64
+          | `Le -> Le `Int64
+          | `Lt -> Lt `Int64
+          | `Ge -> Ge `Int64
+          | `Gt -> Gt `Int64
           | _ -> error tm.loc "unexpected binary operator in format refinement"
         in
         let fmt1 = check_format ctx tm1 in
@@ -347,8 +347,8 @@ end = struct
     | Op1 (op, tm) ->
         let op : Core.prim =
           match op with
-          | `Neg -> Int64 Neg
-          | `Bit_not -> Int64 Bit_not
+          | `Neg -> Neg `Int64
+          | `Bit_not -> Bit_not `Int64
         in
         let expr = check_expr ctx tm Int64_type in
         Expr_tm (Prim_app (op, [expr]), Int64_type)
@@ -356,21 +356,21 @@ end = struct
     | Op2 (op, tm1, tm2) ->
         let (op : Core.prim), (vty : Core.Semantics.vty) =
           match op with
-          | `Eq -> Int64 Eq, Bool_type
-          | `Ne -> Int64 Ne, Bool_type
-          | `Le -> Int64 Le, Bool_type
-          | `Lt -> Int64 Lt, Bool_type
-          | `Gt -> Int64 Gt, Bool_type
-          | `Ge -> Int64 Ge, Bool_type
-          | `Add -> Int64 Add, Int64_type
-          | `Sub -> Int64 Sub, Int64_type
-          | `Mul -> Int64 Mul, Int64_type
-          | `Div -> Int64 Div, Int64_type
-          | `Bit_and -> Int64 Bit_and, Int64_type
-          | `Bit_or -> Int64 Bit_or, Int64_type
-          | `Bit_xor -> Int64 Bit_xor, Int64_type
-          | `Bit_shl -> Int64 Bit_shl, Int64_type
-          | `Bit_shr -> Int64 Bit_shr, Int64_type
+          | `Eq -> Eq `Int64, Bool_type
+          | `Ne -> Ne `Int64, Bool_type
+          | `Le -> Le `Int64, Bool_type
+          | `Lt -> Lt `Int64, Bool_type
+          | `Gt -> Gt `Int64, Bool_type
+          | `Ge -> Ge `Int64, Bool_type
+          | `Add -> Add `Int64, Int64_type
+          | `Sub -> Sub `Int64, Int64_type
+          | `Mul -> Mul `Int64, Int64_type
+          | `Div -> Div `Int64, Int64_type
+          | `Bit_and -> Bit_and `Int64, Int64_type
+          | `Bit_or -> Bit_or `Int64, Int64_type
+          | `Bit_xor -> Bit_xor `Int64, Int64_type
+          | `Bit_shl -> Bit_shl `Int64, Int64_type
+          | `Bit_shr -> Bit_shr `Int64, Int64_type
         in
         let expr1 = check_expr ctx tm1 Int64_type in
         let expr2 = check_expr ctx tm2 Int64_type in
