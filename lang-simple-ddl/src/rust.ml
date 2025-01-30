@@ -76,17 +76,17 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) =
       Format.fprintf ppf "@[<hv>%a<%a>@]"
         pp_path parts
         (Format.pp_print_list pp_ty ~pp_sep) ty_args
-    | Ref ty ->
-        Format.fprintf ppf "&%a"
-          pp_ty ty
-    | Ref_mut ty ->
-        Format.fprintf ppf "@[&mut@ %a@]"
-          pp_ty ty
-    | Slice ty ->
-        Format.fprintf ppf "[%a]"
-          pp_ty ty
-    | Unit ->
-        Format.fprintf ppf "()"
+  | Ref ty ->
+      Format.fprintf ppf "&%a"
+        pp_ty ty
+  | Ref_mut ty ->
+      Format.fprintf ppf "@[&mut@ %a@]"
+        pp_ty ty
+  | Slice ty ->
+      Format.fprintf ppf "[%a]"
+        pp_ty ty
+  | Unit ->
+      Format.fprintf ppf "()"
 
 let rec pp_expr (ppf : Format.formatter) (expr : expr) =
   match expr with
