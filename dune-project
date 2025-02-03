@@ -62,6 +62,11 @@
     byte-set))
 
 (package
+  (name narcissus)
+  (depends
+    sized-numbers))
+
+(package
   (name simple-ddl)
   (depends
     ; CLI
