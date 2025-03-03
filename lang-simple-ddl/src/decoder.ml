@@ -42,7 +42,7 @@ let fail (type a) : a t =
     Error pos
 
 
-let byte (type a) : char t =
+let byte : char t =
   fun ~input ~pos ->
     if pos < Bytes.length input then
       Ok (pos + 1, Bytes.unsafe_get input pos)

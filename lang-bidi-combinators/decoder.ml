@@ -34,7 +34,7 @@ let alt (type a) (x : a t) (y : a t) : a t =
     | None -> y buf pos
     | Some (x, pos) -> Some (x, pos)
 
-let const (type a c) (x : a t) (expected : a) : unit t =
+let const (type a) (x : a t) (expected : a) : unit t =
   fun buf pos ->
     let* (x, pos) = x buf pos in
     if x = expected then Some ((), pos) else None
