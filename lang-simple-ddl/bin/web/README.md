@@ -5,7 +5,7 @@ Currently features a playground with support for elaborating and compiling DDL c
 ## Running the frontend
 
 ```text
-npm run simple-ddl/web dev
+npm run simple-ddl dev
 ```
 
 ## Todo list
