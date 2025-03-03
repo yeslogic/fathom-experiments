@@ -58,8 +58,7 @@
       devPackagesQuery = {
         ocaml-lsp-server = "*";
         ocamlformat = "*";
-        # Fix for “unpacker produced multiple directories”
-        # utop = "*";
+        utop = "*";
       };
 
       # Development package versions, along with the base compiler tools, used
@@ -75,7 +74,13 @@
 
       # Package-specific derivation overrides.
       overlay = eachSystem (system:
-        final: prev: { });
+        final: prev: {
+          utop = prev.utop.overrideAttrs (previousAttrs: {
+            # Fix for "unpacker produced multiple directories"
+            # See: https://stackoverflow.com/a/77161896
+            sourceRoot = ".";
+          });
+        });
 
       buildOpamProject = system: options:
         (opam-nix.lib.${system}.buildOpamProject' options ./. allPackagesQuery).overrideScope
