@@ -31,6 +31,7 @@
 %token PIPE "|"
 %token PLUS "+"
 %token SEMI ";"
+%token UNDERSCORE "_"
 
 %token LBRACE "{"
 %token RBRACE "}"
@@ -138,6 +139,8 @@ let atomic_tm :=
       { tm }
   | n = NAME;
       { Surface.Name (n, []) }
+  | "_";
+      { Surface.Placeholder }
   | i = INT;
       { Surface.Int_lit i }
   | "{"; tms = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";

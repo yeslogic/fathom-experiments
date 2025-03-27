@@ -30,6 +30,7 @@ let compile_item_var (ctx : context) (name : string) : string =
 let rec compile_ty (ctx : context) (ty : ty) : Rust.ty =
   match ty with
   | Item_var name -> Path ([compile_item_var ctx name], [])
+  | Meta_var id -> failwith (Printf.sprintf "compile_ty: encountered meta variable `$%i`" id)
   | List_type ty -> Path (["Vec"], [compile_ty ctx ty])
   | UInt8_type -> Path (["u8"], [])
   | UInt16_type -> Path (["u16"], [])

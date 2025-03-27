@@ -62,6 +62,7 @@ let rec token lexbuf =
   | "|" -> PIPE
   | "+" -> PLUS
   | ";" -> SEMI
+  | "_" -> UNDERSCORE
 
   | '{' -> LBRACE
   | '}' -> RBRACE

@@ -4,6 +4,8 @@ module Label_map = Map.Make (String)
 
 (** {1 Syntax} *)
 
+type meta_id = int
+
 type unsigned_int_constr = [
   | `UInt8
   | `UInt16
@@ -44,6 +46,7 @@ type prim =
 
 type ty =
   | Item_var of string
+  | Meta_var of meta_id
   | List_type of ty
   | UInt8_type
   | UInt16_type
@@ -136,6 +139,7 @@ let rec pp_ty ppf (ty : ty) =
 and pp_atomic_ty ppf ty =
   match ty with
   | Item_var name -> Format.pp_print_string ppf name
+  | Meta_var id -> Format.fprintf ppf "$%i" id
   | UInt8_type -> Format.pp_print_string ppf "#UInt8"
   | UInt16_type -> Format.pp_print_string ppf "#UInt16"
   | UInt32_type -> Format.pp_print_string ppf "#UInt32"

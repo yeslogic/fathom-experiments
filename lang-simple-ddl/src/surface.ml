@@ -43,6 +43,7 @@ type tm =
 
 and tm_node =
   | Name of string * tm list                  (* x *)
+  | Placeholder                               (* _ *)
   | Ann of tm * tm                            (* tm : tm *)
   | Let of binder * tm option * tm * tm       (* let x : tm := tm; tm *)
   | Bind of binder * tm * tm                  (* let x <- tm; tm *)
@@ -283,6 +284,9 @@ end = struct
                 end
             end
         end
+
+    | Placeholder ->
+        Type_tm (Meta_var (Core.Semantics.Meta.fresh ()))
 
     | Ann (tm, ann) ->
         infer_ann ctx tm (Some ann)
@@ -530,7 +534,7 @@ end = struct
         (List.to_seq items)
     in
 
-    let rec tm_deps (locals : String_set.t)  (tm : tm) : int list =
+    let rec tm_deps (locals : String_set.t) (tm : tm) : int list =
       match tm.data with
       | Name (name, args) ->
           let name =
@@ -538,6 +542,7 @@ end = struct
               String_map.find_opt name item_name_ids |> Option.to_list
           in
           name @ List.concat_map (tm_deps locals) args
+      | Placeholder -> []
       | Ann (tm, ann) ->
           tm_deps locals tm
             @ tm_deps locals ann

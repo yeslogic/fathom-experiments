@@ -8,6 +8,7 @@ type nformat =
 
 (** Type values *)
 type vty =
+  | Meta_var of meta_id
   | Unfold of nty * vty Lazy.t
   | Record_type of string * vty Label_map.t
   | List_type of vty
@@ -50,8 +51,49 @@ type vexpr =
 type env =
   vexpr list
 
+
+(** {1 Metavariables} *)
+
+module Meta : sig
+
+  type id = meta_id
+  type entry = Solved of vty | Unsolved
+
+  val fresh : unit -> id
+  val lookup : id -> entry
+  val set : id -> entry -> unit
+
+end = struct
+
+  type id = meta_id
+
+  type entry =
+    | Solved of vty
+    | Unsolved
+
+  let meta_env : entry Dynarray.t =
+    Dynarray.create ()
+
+  let fresh () : meta_id =
+    let id = Dynarray.length meta_env in
+    Dynarray.add_last meta_env Unsolved;
+    id
+
+  let lookup (id : meta_id) : entry =
+    Dynarray.get meta_env id
+
+  let set (id : meta_id) (entry : entry) =
+    Dynarray.set meta_env id entry
+
+end
+
 let rec force_vty (vty : vty) : vty =
   match vty with
+  | Meta_var id ->
+      begin match Meta.lookup id with
+      | Solved ty -> (force_vty [@tailcall]) ty
+      | Unsolved -> vty
+      end
   | Unfold (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
   | vty -> vty
 
@@ -69,6 +111,7 @@ let rec eval_ty (items : program) (ty : ty) : vty =
         | Format_def _ | Expr_def (_, _) -> failwith "type expected"
       in
       Unfold (Item_var name, Lazy.from_fun vty)
+  | Meta_var id -> Meta_var id
   | List_type elem_ty -> List_type (eval_ty items elem_ty)
   | UInt8_type -> UInt8_type
   | UInt16_type -> UInt16_type
@@ -287,7 +330,9 @@ let rec eval_expr (items : program) (locals : env) (expr : expr) : vexpr =
 (** {1 Quotation} *)
 
 let rec quote_vty ~(unfold : bool) (vty : vty) : ty =
+  (* TODO: ~(unfold : [`All | `Metas | `None]) *)
   match vty with
+  | Meta_var id -> Meta_var id
   | Unfold (_, vty) when unfold -> quote_vty ~unfold (Lazy.force vty)
   | Unfold (Item_var name, _) -> Item_var name
   | Unfold (Format_repr (Item_var name), _) -> Format_repr (Item_var name)
@@ -306,16 +351,32 @@ let rec quote_vty ~(unfold : bool) (vty : vty) : ty =
 
 (** {1 Unification} *)
 
+exception Infinite_type
+
+let rec occurs_vty (id : meta_id) (vty : vty) =
+  match force_vty vty with
+  | Meta_var id' -> if id = id' then raise Infinite_type
+  | Unfold (Item_var _, _) -> ()
+  | Unfold (Format_repr _, _) -> ()
+  | Record_type (_, decls) -> decls |> Label_map.iter (fun _ vty -> occurs_vty id vty)
+  | List_type vty -> occurs_vty id vty
+  | UInt8_type -> ()
+  | UInt16_type -> ()
+  | UInt32_type -> ()
+  | UInt64_type -> ()
+  | Int8_type -> ()
+  | Int16_type -> ()
+  | Int32_type -> ()
+  | Int64_type -> ()
+  | Bool_type -> ()
+
 exception Failed_to_unify
 
 let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
   match force_vty vty1, force_vty vty2 with
+  | Meta_var id1, Meta_var id2 when id1 = id2 -> ()
   | Unfold (Item_var name1, _), Unfold (Item_var name2, _) when name1 = name2 -> ()
   | Unfold (Format_repr (Item_var name1), _), Unfold (Format_repr (Item_var name2), _) when name1 = name2 -> ()
-
-  | Unfold (_, vty1), vty2 | vty2, Unfold (_, vty1) ->
-      unify_vtys items (Lazy.force vty1) vty2
-
   | Record_type (name1, _), Record_type (name2, _) when name1 = name2 -> ()
   | List_type elem_vty1, List_type elem_vty2 -> unify_vtys items elem_vty1 elem_vty2
   | UInt8_type, UInt8_type -> ()
@@ -327,6 +388,17 @@ let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
   | Int32_type, Int32_type -> ()
   | Int64_type, Int64_type -> ()
   | Bool_type, Bool_type -> ()
+
+  (* Update flexible types *)
+  | Meta_var id, vty | vty, Meta_var id ->
+      occurs_vty id vty;
+      (* Format.eprintf "solved $%i := %a\n" id pp_ty (quote_vty ~unfold:false vty); *)
+      Meta.set id (Solved vty)
+
+  (* Force lazy computations if required *)
+  | Unfold (_, vty1), vty2 | vty2, Unfold (_, vty1) ->
+      unify_vtys items (Lazy.force vty1) vty2
+
   | _ -> raise Failed_to_unify
 
 
