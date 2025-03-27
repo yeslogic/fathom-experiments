@@ -1,3 +1,17 @@
+(** Zonking visits each node in the syntax tree, inlining any solved
+    metavariables that are found. This is useful when we want to use the syntax
+    for other things without having to refer back to the metacontext, for
+    example when pretty printing or compiling programs.
+
+    {1 Resources}
+
+    - {{: https://stackoverflow.com/questions/31889048/what-does-the-ghc-source-mean-by-zonk}
+      What does the GHC source mean by "zonk"?} on Stack overflow
+    - {{: https://mail.haskell.org/pipermail/glasgow-haskell-users/2013-August/024209.html}
+      Question about correct GHC-API use for type checking (or zonking, or tidying)}
+      on the GHC mailing list
+*)
+
 open Syntax
 
 let rec zonk_ty (ty : ty) : ty =
