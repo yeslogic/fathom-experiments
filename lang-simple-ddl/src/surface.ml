@@ -605,7 +605,9 @@ end = struct
 
     (* TODO: Sort with strongly connected components, elaborating to fixed-points *)
     match Tsort.sort (collect_deps items) with
-    | Tsort.Sorted order -> go { items = []; locals = [] } order
+    | Tsort.Sorted order ->
+        go { items = []; locals = [] } order
+          |> Core.zonk_program
     | Tsort.ErrorCycle _ -> failwith "TODO: cyclic items" (* TODO: raise a better error *)
 
 end

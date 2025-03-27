@@ -19,7 +19,6 @@ let elab_program (filename : string) (input : in_channel) =
     |> Sedlexing.with_tokenizer Lexer.token
     |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
     |> Surface.Elab.check_program
-    |> Core.zonk_program
     |> Result.ok
   with
   | Lexer.Unexpected_char -> Error (Sedlexing.lexing_positions lexbuf, "unexpected character")
