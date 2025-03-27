@@ -142,11 +142,11 @@ end = struct
     match tm.data with
     (* Conversion *)
     | _ ->
-      match infer ctx tm with
-      | Type_tm ty -> ty
-      | Format_tm fmt -> Format_repr fmt
-      | Kind_tm _ -> error tm.loc "expected type, found kind"
-      | Expr_tm (_, _) -> error tm.loc "expected type, found expression"
+        match infer ctx tm with
+        | Type_tm ty -> ty
+        | Format_tm fmt -> Format_repr fmt
+        | Kind_tm _ -> error tm.loc "expected type, found kind"
+        | Expr_tm (_, _) -> error tm.loc "expected type, found expression"
 
   (** Elaborate a surface term into a core expression, given an expected type. *)
   and check_expr (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.expr =
