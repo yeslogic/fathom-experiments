@@ -248,7 +248,7 @@ and pp_format names ppf (fmt : format) =
       Format.fprintf ppf "@[<v>%a@]" (go names) fmt
 
   | Fail ty ->
-      Format.fprintf ppf "@[<hv 2>#fail@ %a@]"
+      Format.fprintf ppf "@[<hv 2>#fail@ %a]"
         pp_atomic_ty ty
 
   | Bool_elim (head, fmt1, fmt2) ->

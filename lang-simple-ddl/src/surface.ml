@@ -42,7 +42,7 @@ type tm =
   tm_node located
 
 and tm_node =
-  | Name of string * tm list                  (* x *)
+  | Name of string * arg list                 (* x | x tm ... tm *)
   | Placeholder                               (* _ *)
   | Ann of tm * tm                            (* tm : tm *)
   | Let of binder * tm option * tm * tm       (* let x : tm := tm; tm *)
@@ -53,6 +53,10 @@ and tm_node =
   | If_then_else of tm * tm * tm              (* if tm then tm else tm *)
   | Op1 of op1 * tm                           (* op tm *)
   | Op2 of op2 * tm * tm                      (* tm op tm *)
+
+and arg =
+  | Anon of tm                                (* tm *)
+  | Labelled of string located * tm           (* (l := tm) *)
 
 type format_field =
   | Let of binder * tm option * tm            (* let x : tm := tm *)
@@ -262,22 +266,28 @@ end = struct
                 begin match name, args with
                 | "Type", [] -> Kind_tm `Type
                 | "Format", [] -> Kind_tm `Format
-                | "List", [ty] ->
+                | "List", [Anon ty] ->
                     let ty = check_type ctx ty in
                     Type_tm (List_type ty)
                 | "Int64", [] -> Type_tm Int64_type
-                | "repeat-len", [len; fmt] ->
+                | "repeat-len", [Anon len; Anon fmt] ->
                     let len = check_expr ctx len Int64_type in
                     let fmt = check_format ctx fmt in
                     Format_tm (Repeat_len (len, fmt))
-                | "pure", [ty; expr] ->
+                | "pure", [Labelled ({ data = "A"; _ }, ty); Anon expr] ->
                     let ty = check_type ctx ty in
                     let expr = check_expr ctx expr (eval_ty ctx ty) in
                     Format_tm (Pure (ty, expr))
+                | "pure", [Anon expr] ->
+                    let ty : Core.ty = Meta_var (Core.Semantics.Meta.fresh ()) in
+                    let expr = check_expr ctx expr (eval_ty ctx ty) in
+                    Format_tm (Pure (ty, expr))
                 | "byte", [] -> Format_tm Byte
-                | "fail", [ty] ->
+                | "fail", [Labelled ({ data = "A"; _ }, ty)] ->
                     let ty = check_type ctx ty in
                     Format_tm (Fail ty)
+                | "fail", [] ->
+                    Format_tm (Fail (Meta_var (Core.Semantics.Meta.fresh ())))
                 | ("Type" | "Format" | "List" | "Int64" | "repeat-len" | "pure" | "byte" | "fail"), _ ->
                     error tm.loc (Format.asprintf "arity mismatch for `%s`" name)
                 | _, _ -> error tm.loc (Format.asprintf "unbound name `%s`" name)
@@ -541,7 +551,7 @@ end = struct
             if String_set.mem name locals then [] else
               String_map.find_opt name item_name_ids |> Option.to_list
           in
-          name @ List.concat_map (tm_deps locals) args
+          name @ List.concat_map (fun (Anon tm | Labelled (_, tm)) -> tm_deps locals tm) args
       | Placeholder -> []
       | Ann (tm, ann) ->
           tm_deps locals tm

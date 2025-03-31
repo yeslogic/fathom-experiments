@@ -1,0 +1,9 @@
+format test1 :=
+  pure (A := Int64) 3;
+
+format test2 :=
+  pure (3 : Int64);
+
+format test3 :=
+  let x : Int64 := 3;
+  pure x;

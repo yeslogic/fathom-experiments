@@ -137,26 +137,23 @@ type Header {
 format header :=
   let magic <-
     let x <- u64le;
-    if #int64-eq x 72057594037927680 then (#pure #Int64 x) else #fail #Int64;
-  let manufacturer-id <- u16le;
-  let product-code <- u16le;
-  let serial <- u32le;
-  let manufacturer-week <- u8;
-  let manufacturer-year-mod <- u8;
-  let edid-version-major <- u8;
-  let edid-version-minor <- u8;
-  #pure
-    Header
-    (Header {
-       edid-version-major := edid-version-major;
-       edid-version-minor := edid-version-minor;
-       magic := magic;
-       manufacturer-id := manufacturer-id;
-       manufacturer-week := manufacturer-week;
-       manufacturer-year-mod := manufacturer-year-mod;
-       product-code := product-code;
-       serial := serial
-     });
+    if #int64-eq x 72057594037927680 then (#pure #Int64 x) else #fail #Int64];
+    let manufacturer-id <- u16le; let product-code <- u16le;
+    let serial <- u32le; let manufacturer-week <- u8;
+    let manufacturer-year-mod <- u8; let edid-version-major <- u8;
+    let edid-version-minor <- u8;
+    #pure
+      Header
+      (Header {
+         edid-version-major := edid-version-major;
+         edid-version-minor := edid-version-minor;
+         magic := magic;
+         manufacturer-id := manufacturer-id;
+         manufacturer-week := manufacturer-week;
+         manufacturer-year-mod := manufacturer-year-mod;
+         product-code := product-code;
+         serial := serial
+       });
 
 type Main {
   chromacity-coordinates : Chromacity-coordinates;

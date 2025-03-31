@@ -11,4 +11,4 @@ def my-point : point.Repr := {
 };
 
 format repeat-pure :=
-  repeat-len 3 (pure Int64 42);
+  repeat-len 3 (pure (A := Int64) 42);

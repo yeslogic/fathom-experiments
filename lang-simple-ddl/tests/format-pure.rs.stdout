@@ -1,0 +1,12 @@
+fn read_test2(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    Ok(3)
+}
+
+fn read_test1(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    Ok(3)
+}
+
+fn read_test3(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
+    let x: i64 = 3;
+    Ok(x)
+}

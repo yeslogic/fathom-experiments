@@ -1,0 +1,6 @@
+format test2 := #pure #Int64 3;
+
+format test1 := #pure #Int64 3;
+
+format test3 := let x <- #pure #Int64 3;
+                #pure #Int64 x;
