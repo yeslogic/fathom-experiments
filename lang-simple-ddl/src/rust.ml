@@ -128,9 +128,31 @@ let rec pp_expr (ppf : Format.formatter) (expr : expr) =
       pp_atomic_expr ppf expr
 
 and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
+  let pp_struct_fields ppf fields =
+    let pp_sep ppf () = Format.fprintf ppf "," in
+    let pp_field ppf (label, expr) =
+      (* Render field with punning if possible *)
+      match expr with
+      | Path ([x]) when x = label -> Format.fprintf ppf "%s" x
+      | _ -> Format.fprintf ppf "@[%s:@ %a@]" label pp_expr expr
+    in
+    Format.pp_print_list (pp_indent pp_field) ~pp_sep ppf fields
+    (* TODO: trailing comma with [pp_print_if_newline] *)
+  in
+
   match expr with
   | Path parts ->
       pp_path ppf parts
+
+  (* HACK: Render hanging block-style expressions *)
+  | Call (expr, [StructLit (name, fields)]) ->
+      Format.fprintf ppf "@[<hv>@[%a(%s@ {@]%a@ })@]"
+        pp_expr expr
+        name
+        pp_struct_fields fields
+  (* FIXME: Use a more systematic approach for block-style expressions, e.g.  *)
+  (* | Call (expr, [Call (StructLit (name, fields))]) -> ... *)
+
   | Call (expr, args) ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
       Format.fprintf ppf "@[<hov>%a(%a)@]"
@@ -155,16 +177,9 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
   | Unit_lit->
       Format.fprintf ppf "()"
   | StructLit (name, fields) ->
-      let pp_sep ppf () = Format.fprintf ppf "," in
-      let pp_field ppf (label, expr) =
-        (* Render field with punning if possible *)
-        match expr with
-        | Path ([x]) when x = label -> Format.fprintf ppf "%s" x
-        | _ -> Format.fprintf ppf "@[%s:@ %a@]" label pp_expr expr
-      in
       Format.fprintf ppf "@[<hv>@[%s@ {@]%a@ }@]"
         name
-        (Format.pp_print_list (pp_indent pp_field) ~pp_sep) fields
+        pp_struct_fields fields
         (* TODO: trailing comma with [pp_print_if_newline] *)
   | StructProj (expr, label) ->
       Format.fprintf ppf "%a.%s"
@@ -182,7 +197,7 @@ and pp_stmt (ppf : Format.formatter) (stmt : stmt) =
     Format.pp_print_option (fun ppf -> Format.fprintf ppf ":@ %a" pp_ty)
   in
   match stmt with
-  (* Render hanging block expressions *)
+  (* HACK: Render hanging block-style expressions *)
   | Let (name, ty, Block stmts) ->
       Format.fprintf ppf "@[<hv>@[let@ %s%a@ =@ {@]%a@ }@]"
         name
@@ -194,7 +209,8 @@ and pp_stmt (ppf : Format.formatter) (stmt : stmt) =
         pp_ann ty
         (pp_indent_vbox pp_stmts) stmts
         op
-  (* FIXME: Use a more systematic approach for “hanging” expressions  *)
+
+  (* FIXME: Use a more systematic approach for block-style expressions, e.g.  *)
   (* | Let (name, ty, StructLit (name, fields)) -> ... *)
   (* | Let (name, ty, Postfix_op (...)) -> ... *)
 

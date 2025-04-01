@@ -81,17 +81,17 @@ fn read_chromacity_coordinates(
     let white_x_msb = read_u8(input, pos)?;
     let white_y_msb = read_u8(input, pos)?;
     Ok(ChromacityCoordinates {
-           blue_white_lsb,
-           blue_x_msb,
-           blue_y_msb,
-           green_x_msb,
-           green_y_msb,
-           red_green_lsb,
-           red_x_msb,
-           red_y_msb,
-           white_x_msb,
-           white_y_msb
-       })
+        blue_white_lsb,
+        blue_x_msb,
+        blue_y_msb,
+        green_x_msb,
+        green_y_msb,
+        red_green_lsb,
+        red_x_msb,
+        red_y_msb,
+        white_x_msb,
+        white_y_msb
+    })
 }
 
 struct DisplayParameters {
@@ -112,12 +112,12 @@ fn read_display_parameters(
     let gamma_mod = read_u8(input, pos)?;
     let supported_features = read_u8(input, pos)?;
     Ok(DisplayParameters {
-           gamma_mod,
-           screen_size_h,
-           screen_size_v,
-           supported_features,
-           video_input_parameters
-       })
+        gamma_mod,
+        screen_size_h,
+        screen_size_v,
+        supported_features,
+        video_input_parameters
+    })
 }
 
 struct EstablishedTiming {
@@ -156,15 +156,15 @@ fn read_header(input: &[u8], pos: &mut usize) -> Result<Header, ()> {
     let edid_version_major = read_u8(input, pos)?;
     let edid_version_minor = read_u8(input, pos)?;
     Ok(Header {
-           edid_version_major,
-           edid_version_minor,
-           magic,
-           manufacturer_id,
-           manufacturer_week,
-           manufacturer_year_mod,
-           product_code,
-           serial
-       })
+        edid_version_major,
+        edid_version_minor,
+        magic,
+        manufacturer_id,
+        manufacturer_week,
+        manufacturer_year_mod,
+        product_code,
+        serial
+    })
 }
 
 struct Main {
@@ -183,10 +183,10 @@ fn read_main(input: &[u8], pos: &mut usize) -> Result<Main, ()> {
     let standard_timing_information =
         read_standard_timing_information(input, pos)?;
     Ok(Main {
-           chromacity_coordinates,
-           display_parameters,
-           established_timing,
-           header,
-           standard_timing_information
-       })
+        chromacity_coordinates,
+        display_parameters,
+        established_timing,
+        header,
+        standard_timing_information
+    })
 }
