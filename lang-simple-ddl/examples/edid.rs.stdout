@@ -144,11 +144,10 @@ struct Header {
 }
 
 fn read_header(input: &[u8], pos: &mut usize) -> Result<Header, ()> {
-    let magic =
-        {
-            let x = read_u64le(input, pos)?;
-            if x == 72057594037927680 { Ok(x) } else { Err(()) }
-        }?;
+    let magic = {
+        let x = read_u64le(input, pos)?;
+        if x == 72057594037927680 { Ok(x) } else { Err(()) }
+    }?
     let manufacturer_id = read_u16le(input, pos)?;
     let product_code = read_u16le(input, pos)?;
     let serial = read_u32le(input, pos)?;

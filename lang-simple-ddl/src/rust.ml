@@ -133,7 +133,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       pp_path ppf parts
   | Call (expr, args) ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
-      Format.fprintf ppf "@[%a(%a)@]"
+      Format.fprintf ppf "@[<hov>%a(%a)@]"
         pp_expr expr
         (Format.pp_print_list pp_expr ~pp_sep) args
   | Vec_lit exprs ->
@@ -178,15 +178,30 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
         pp_expr expr
 
 and pp_stmt (ppf : Format.formatter) (stmt : stmt) =
+  let pp_ann =
+    Format.pp_print_option (fun ppf -> Format.fprintf ppf ":@ %a" pp_ty)
+  in
   match stmt with
-  | Let (name, None, expr) ->
-      Format.fprintf ppf "@[<hv 4>@[let@ %s@ =@]@ @[%a;@]@]"
+  (* Render hanging block expressions *)
+  | Let (name, ty, Block stmts) ->
+      Format.fprintf ppf "@[<hv>@[let@ %s%a@ =@ {@]%a@ }@]"
         name
-        pp_expr expr
-  | Let (name, Some ty, expr) ->
-      Format.fprintf ppf "@[<hv 4>@[let@ %s:@ %a@ =@]@ @[%a;@]@]"
+        pp_ann ty
+        (pp_indent_vbox pp_stmts) stmts
+  | Let (name, ty, Postfix_op (Block stmts, op)) ->
+      Format.fprintf ppf "@[<hv>@[let@ %s%a@ =@ {@]%a@ }%s@]"
         name
-        pp_ty ty
+        pp_ann ty
+        (pp_indent_vbox pp_stmts) stmts
+        op
+  (* FIXME: Use a more systematic approach for “hanging” expressions  *)
+  (* | Let (name, ty, StructLit (name, fields)) -> ... *)
+  (* | Let (name, ty, Postfix_op (...)) -> ... *)
+
+  | Let (name, ty, expr) ->
+      Format.fprintf ppf "@[<hv 4>@[let@ %s%a@ =@]@ @[%a;@]@]"
+        name
+        pp_ann ty
         pp_expr expr
 
 and pp_stmts (ppf : Format.formatter) (stmts, expr : stmts) =
