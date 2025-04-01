@@ -74,24 +74,24 @@ and compile_expr (ctx : context) (expr : expr) : Rust.expr =
             compile_expr ctx expr)
         |> List.of_seq
       in
-      StructLit (name, fields)
+      Struct_lit (name, fields)
   | Record_proj (head, label) ->
       (* TODO: get the type of the head *)
       (* TODO: lookup field mappings *)
-      StructProj (
+      Struct_proj (
         compile_expr ctx head,
         Case_conv.quiet_snake_case label (* TODO: handle this better? *)
       )
   | List_lit exprs ->
       Vec_lit (List.map (compile_expr ctx) exprs)
-  | UInt8_lit i -> U8Lit i
-  | UInt16_lit i -> U16Lit i
-  | UInt32_lit i -> U32Lit i
-  | UInt64_lit i -> U64Lit i
-  | Int8_lit i -> I8Lit i
-  | Int16_lit i -> I16Lit i
-  | Int32_lit i -> I32Lit i
-  | Int64_lit i -> I64Lit i
+  | UInt8_lit i -> U8_lit i
+  | UInt16_lit i -> U16_lit i
+  | UInt32_lit i -> U32_lit i
+  | UInt64_lit i -> U64_lit i
+  | Int8_lit i -> I8_lit i
+  | Int16_lit i -> I16_lit i
+  | Int32_lit i -> I32_lit i
+  | Int64_lit i -> I64_lit i
   | Bool_lit b -> Bool_lit b
   | Bool_elim (head, expr1, expr2) ->
       If_else (

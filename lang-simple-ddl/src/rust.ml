@@ -16,18 +16,18 @@ type expr =
   | Postfix_op of expr * string
   | Infix_op of expr * string * expr
   | Vec_lit of expr list
-  | U8Lit of uint8
-  | U16Lit of uint16
-  | U32Lit of uint32
-  | U64Lit of uint64
-  | I8Lit of int8
-  | I16Lit of int16
-  | I32Lit of int32
-  | I64Lit of int64
+  | U8_lit of uint8
+  | U16_lit of uint16
+  | U32_lit of uint32
+  | U64_lit of uint64
+  | I8_lit of int8
+  | I16_lit of int16
+  | I32_lit of int32
+  | I64_lit of int64
   | Bool_lit of bool
   | Unit_lit
-  | StructLit of string * (string * expr) list
-  | StructProj of expr * string
+  | Struct_lit of string * (string * expr) list
+  | Struct_proj of expr * string
   | If_else of expr * stmts * stmts
   | Block of stmts
 
@@ -145,13 +145,13 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       pp_path ppf parts
 
   (* HACK: Render hanging block-style expressions *)
-  | Call (expr, [StructLit (name, fields)]) ->
+  | Call (expr, [Struct_lit (name, fields)]) ->
       Format.fprintf ppf "@[<hv>@[%a(%s@ {@]%a@ })@]"
         pp_expr expr
         name
         pp_struct_fields fields
   (* FIXME: Use a more systematic approach for block-style expressions, e.g.  *)
-  (* | Call (expr, [Call (StructLit (name, fields))]) -> ... *)
+  (* | Call (expr, [Call (Struct_lit (name, fields))]) -> ... *)
 
   | Call (expr, args) ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
@@ -162,26 +162,26 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
       Format.fprintf ppf "vec![%a]"
         (Format.pp_print_list pp_expr ~pp_sep) exprs
-  | U8Lit i -> UInt8.pp ppf i
-  | U16Lit i -> UInt16.pp ppf i
-  | U32Lit i -> UInt32.pp ppf i
-  | U64Lit i -> UInt64.pp ppf i
-  | I8Lit i -> Int8.pp ppf i
-  | I16Lit i -> Int16.pp ppf i
-  | I32Lit i -> Int32.pp ppf i
-  | I64Lit i -> Int64.pp ppf i
+  | U8_lit i -> UInt8.pp ppf i
+  | U16_lit i -> UInt16.pp ppf i
+  | U32_lit i -> UInt32.pp ppf i
+  | U64_lit i -> UInt64.pp ppf i
+  | I8_lit i -> Int8.pp ppf i
+  | I16_lit i -> Int16.pp ppf i
+  | I32_lit i -> Int32.pp ppf i
+  | I64_lit i -> Int64.pp ppf i
   | Bool_lit true ->
       Format.fprintf ppf "true"
   | Bool_lit false ->
       Format.fprintf ppf "false"
   | Unit_lit->
       Format.fprintf ppf "()"
-  | StructLit (name, fields) ->
+  | Struct_lit (name, fields) ->
       Format.fprintf ppf "@[<hv>@[%s@ {@]%a@ }@]"
         name
         pp_struct_fields fields
         (* TODO: trailing comma with [pp_print_if_newline] *)
-  | StructProj (expr, label) ->
+  | Struct_proj (expr, label) ->
       Format.fprintf ppf "%a.%s"
         pp_expr expr
         label
@@ -211,7 +211,7 @@ and pp_stmt (ppf : Format.formatter) (stmt : stmt) =
         op
 
   (* FIXME: Use a more systematic approach for block-style expressions, e.g.  *)
-  (* | Let (name, ty, StructLit (name, fields)) -> ... *)
+  (* | Let (name, ty, Struct_lit (name, fields)) -> ... *)
   (* | Let (name, ty, Postfix_op (...)) -> ... *)
 
   | Let (name, ty, expr) ->
