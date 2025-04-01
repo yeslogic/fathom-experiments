@@ -29,19 +29,19 @@ Additional experiments could be added as additional projects, exploring the foll
 
 Additional language features:
 
-- Metavariables
-- Untagged alternative formats
-- Tagged alternative formats
-- More integer types
-- Postponed elaboration
-- Refinement types
-- Parameterised types
-- Parameterised formats
-- Parameterised expressions
-- Module imports
-- Bidirectional formats
+- [x] Metavariables
+- [ ] Untagged alternative formats
+- [ ] Tagged alternative formats
+- [ ] More integer types
+- [ ] Postponed elaboration
+- [ ] Refinement types
+- [ ] Parameterised types
+- [ ] Parameterised formats
+- [ ] Parameterised expressions
+- [ ] Module imports
+- [ ] Bidirectional formats
   - Custom formats from encoder/decoder pairs
-- FFI for external encoder/decoders
+- [ ] FFI for external encoder/decoders
 
 ## Resources
 
