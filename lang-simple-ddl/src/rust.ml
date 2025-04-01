@@ -129,15 +129,19 @@ let rec pp_expr (ppf : Format.formatter) (expr : expr) =
 
 and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
   let pp_struct_fields ppf fields =
-    let pp_sep ppf () = Format.fprintf ppf "," in
-    let pp_field ppf (label, expr) =
-      (* Render field with punning if possible *)
-      match expr with
-      | Path ([x]) when x = label -> Format.fprintf ppf "%s" x
-      | _ -> Format.fprintf ppf "@[%s:@ %a@]" label pp_expr expr
-    in
-    Format.pp_print_list (pp_indent pp_field) ~pp_sep ppf fields
-    (* TODO: trailing comma with [pp_print_if_newline] *)
+    match fields with
+    | [] -> Format.fprintf ppf ""
+    | fields ->
+        let pp_sep ppf () = Format.fprintf ppf "," in
+        let pp_field ppf (label, expr) =
+          (* Render field with punning if possible *)
+          match expr with
+          | Path ([x]) when x = label -> Format.fprintf ppf "%s" x
+          | _ -> Format.fprintf ppf "@[%s:@ %a@]" label pp_expr expr
+        in
+        Format.fprintf ppf "%a@ "
+          (Format.pp_print_list (pp_indent pp_field) ~pp_sep) fields
+          (* TODO: trailing comma with [pp_print_if_newline] *)
   in
 
   match expr with
@@ -146,7 +150,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
 
   (* HACK: Render hanging block-style expressions *)
   | Call (expr, [Struct_lit (name, fields)]) ->
-      Format.fprintf ppf "@[<hv>@[%a(%s@ {@]%a@ })@]"
+      Format.fprintf ppf "@[<hv>@[%a(%s@ {@]%a})@]"
         pp_expr expr
         name
         pp_struct_fields fields
@@ -177,7 +181,7 @@ and pp_atomic_expr (ppf : Format.formatter) (expr : expr) =
   | Unit_lit->
       Format.fprintf ppf "()"
   | Struct_lit (name, fields) ->
-      Format.fprintf ppf "@[<hv>@[%s@ {@]%a@ }@]"
+      Format.fprintf ppf "@[<hv>@[%s@ {@]%a}@]"
         name
         pp_struct_fields fields
         (* TODO: trailing comma with [pp_print_if_newline] *)

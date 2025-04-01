@@ -17,7 +17,7 @@ fn read_standard_timing_information(
     input: &[u8],
     pos: &mut usize
 ) -> Result<StandardTimingInformation, ()> {
-    Ok(StandardTimingInformation { })
+    Ok(StandardTimingInformation {})
 }
 
 fn read_u16le(input: &[u8], pos: &mut usize) -> Result<i64, ()> {
