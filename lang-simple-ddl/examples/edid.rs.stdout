@@ -11,9 +11,7 @@ fn read_repeat_len<T>(
     move |input, pos| (0..len).map(|_| read_elem(input, pos)).collect()
 }
 
-struct StandardTimingInformation {
-    
-}
+struct StandardTimingInformation {}
 
 fn read_standard_timing_information(
     input: &[u8],

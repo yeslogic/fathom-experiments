@@ -234,6 +234,9 @@ let pp_item (ppf : Format.formatter) (item : item) =
       Format.fprintf ppf "type@ %s@ =@ %a;@."
         name
         pp_ty ty
+  | Struct (name, []) ->
+      Format.fprintf ppf "@[struct@ %s@ {}@]@."
+        name
   | Struct (name, fields) ->
       let pp_field ppf (label, ty) =
         Format.fprintf ppf "@[%s:@ %a,@]" label pp_ty ty
