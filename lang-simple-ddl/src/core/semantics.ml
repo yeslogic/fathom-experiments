@@ -392,7 +392,6 @@ let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
   (* Update flexible types *)
   | Meta_var id, vty | vty, Meta_var id ->
       occurs_vty id vty;
-      (* Format.eprintf "solved $%i := %a\n" id pp_ty (quote_vty ~unfold:false vty); *)
       Meta.set id (Solved vty)
 
   (* Force lazy computations if required *)
