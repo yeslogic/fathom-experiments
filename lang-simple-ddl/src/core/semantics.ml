@@ -46,7 +46,6 @@ type vexpr =
   | Bool_lit of bool
   | List_lit of vexpr list
   | Record_lit of string * vexpr Label_map.t
-  | TupleLit of vexpr list
 
 type env =
   vexpr list
