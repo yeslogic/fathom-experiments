@@ -161,7 +161,7 @@ end = struct
         Let (name.data, quote_vty ~unfold:false def_vty, def, body)
 
     | Record_lit field_tms ->
-        begin match Core.Semantics.force_vty vty with
+        begin match Core.Semantics.force_all_vty vty with
         | Record_type (name, field_tys) ->
             let rec go field_tms field_exprs =
               match field_tms with
@@ -330,7 +330,7 @@ end = struct
     | Proj (head, label) ->
         begin match infer ctx head with
         | Expr_tm (head, head_vty) ->
-            begin match Core.Semantics.force_vty head_vty with
+            begin match Core.Semantics.force_all_vty head_vty with
             | Record_type (_, field_vtys) ->
                 begin match Core.Label_map.find_opt label.data field_vtys with
                 | Some vty -> Expr_tm (Record_proj (head, label.data), vty)

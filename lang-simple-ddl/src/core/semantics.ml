@@ -87,14 +87,26 @@ end = struct
 
 end
 
-let rec force_vty (vty : vty) : vty =
+(** Force meta variables and unfoldable values *)
+let rec force_all_vty (vty : vty) : vty =
   match vty with
   | Meta_var id ->
       begin match Meta.lookup id with
-      | Solved ty -> (force_vty [@tailcall]) ty
+      | Solved ty -> (force_all_vty [@tailcall]) ty
       | Unsolved -> vty
       end
-  | Unfold (_, vty) -> (force_vty [@tailcall]) (Lazy.force vty)
+  | Unfold (_, vty) ->
+      (force_all_vty [@tailcall]) (Lazy.force vty)
+  | vty -> vty
+
+(** Force meta variables only *)
+let rec force_metas_vty (vty : vty) : vty =
+  match vty with
+  | Meta_var id ->
+      begin match Meta.lookup id with
+      | Solved ty -> (force_metas_vty [@tailcall]) ty
+      | Unsolved -> vty
+      end
   | vty -> vty
 
 
@@ -354,11 +366,11 @@ let rec quote_vty ~(unfold : bool) (vty : vty) : ty =
 exception Infinite_type
 
 let rec occurs_vty (id : meta_id) (vty : vty) =
-  match force_vty vty with
+  match force_all_vty vty with
   | Meta_var id' -> if id = id' then raise Infinite_type
   | Unfold (Item_var _, _) -> ()
   | Unfold (Format_repr _, _) -> ()
-  | Record_type (_, decls) -> decls |> Label_map.iter (fun _ vty -> occurs_vty id vty)
+  | Record_type (_, decls) -> decls |> Label_map.iter (fun _ -> occurs_vty id)
   | List_type vty -> occurs_vty id vty
   | UInt8_type -> ()
   | UInt16_type -> ()
@@ -373,7 +385,7 @@ let rec occurs_vty (id : meta_id) (vty : vty) =
 exception Failed_to_unify
 
 let rec unify_vtys (items : program) (vty1 : vty) (vty2 : vty) =
-  match force_vty vty1, force_vty vty2 with
+  match force_metas_vty vty1, force_metas_vty vty2 with
   | Meta_var id1, Meta_var id2 when id1 = id2 -> ()
   | Unfold (Item_var name1, _), Unfold (Item_var name2, _) when name1 = name2 -> ()
   | Unfold (Format_repr (Item_var name1), _), Unfold (Format_repr (Item_var name2), _) when name1 = name2 -> ()
