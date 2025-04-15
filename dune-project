@@ -57,6 +57,11 @@
     (tsort (>= "2.1"))))
 
 (package
+  (name ll1-zippy)
+  (depends
+    byte-set))
+
+(package
   (name llk-simple)
   (depends
     byte-set))

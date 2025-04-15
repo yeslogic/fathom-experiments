@@ -1,0 +1,5 @@
+(library
+  (name ll1_zippy)
+  (public_name ll1-zippy)
+  (libraries
+    byte-set))
