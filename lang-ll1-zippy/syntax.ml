@@ -14,8 +14,8 @@ module type S = sig
   val seq : 'a t -> 'b t -> ('a * 'b) t
   val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val parse_naive : 'a t -> token list -> ('a * token list) option
-  val parse_derivative : 'a t -> token list -> ('a * token list) option
+  val parse_naive : 'a t -> token Seq.t -> ('a * token Seq.t) option
+  val parse_derivative : 'a t -> token Seq.t -> ('a * token Seq.t) option
 
 end
 
@@ -119,22 +119,25 @@ module Make (T : Token.S) : S = struct
 
   (* Parsing *)
 
-  let rec parse_naive : type a. a t -> token list -> (a * token list) option =
+  let rec parse_naive : type a. a t -> token Seq.t -> (a * token Seq.t) option =
     let open Option.Notation in
     fun s ts ->
-      match s, ts with
-      | Elem tk, t :: ts when T.Set.mem t tk ->
-          Some (T.Set.singleton t, ts)
-      | Elem _, _ -> None
-      | Fail, _ -> None
-      | Pure x, ts -> Some (x, ts)
-      | Alt (s1, s2), ts ->
+      match s with
+      | Elem tk ->
+          let* (t, ts) = Seq.uncons ts in
+          if T.Set.mem t tk then
+            Some (T.Set.singleton t, ts)
+          else
+            None
+      | Fail -> None
+      | Pure x -> Some (x, ts)
+      | Alt (s1, s2) ->
           Option.alt (parse_naive s1 ts) (fun () -> parse_naive s2 ts)
-      | Seq (s1, s2), ts ->
+      | Seq (s1, s2) ->
           let* (x1, ts) = parse_naive s1 ts in
           let+ (x2, ts) = parse_naive s2 ts in
           ((x1, x2), ts)
-      | Map (f, s), ts ->
+      | Map (f, s) ->
           let+ (x, ts) = parse_naive s ts in
           (f x, ts)
 
@@ -166,13 +169,14 @@ module Make (T : Token.S) : S = struct
           let+ s' = derivative t s in
           Map (f, s')
 
-  let rec parse_derivative : type a. a t -> token list -> (a * token list) option =
+  let rec parse_derivative : type a. a t -> token Seq.t -> (a * token Seq.t) option =
     let open Option.Notation in
     fun s ts ->
-      match ts with
-      | [] ->
-          let+ x = nullable s  in (x, [])
-      | t :: ts ->
+      match Seq.uncons ts with
+      | None ->
+          let+ x = nullable s  in
+          (x, Seq.empty)
+      | Some (t, ts) ->
           if T.Set.mem t (first s) then
             let* s' = derivative t s in
             parse_derivative s' ts
