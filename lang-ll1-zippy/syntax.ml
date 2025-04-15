@@ -1,5 +1,3 @@
-(* From “Zippy LL(1) parsing with derivatives” *)
-
 module type S = sig
 
   type token
@@ -7,7 +5,7 @@ module type S = sig
 
   type _ t
 
-  val elem : token_set -> token_set t
+  val elem : token_set -> token t
   val fail : 'a t
   val pure : 'a -> 'a t
   val alt : 'a t -> 'a t -> 'a t
@@ -25,7 +23,7 @@ module Make (T : Token.S) : S = struct
   type token_set = T.Set.t
 
   type _ t =
-    | Elem : token_set -> token_set t
+    | Elem : token_set -> token t
     | Fail : 'a t
     | Pure : 'a -> 'a t
     | Alt : 'a t * 'a t -> 'a t
@@ -125,10 +123,7 @@ module Make (T : Token.S) : S = struct
       match s with
       | Elem tk ->
           let* (t, ts) = Seq.uncons ts in
-          if T.Set.mem t tk then
-            Some (T.Set.singleton t, ts)
-          else
-            None
+          if T.Set.mem t tk then Some (t, ts) else None
       | Fail -> None
       | Pure x -> Some (x, ts)
       | Alt (s1, s2) ->
@@ -147,7 +142,7 @@ module Make (T : Token.S) : S = struct
     fun t s ->
       match s with
       | Elem tk when T.Set.mem t tk ->
-          Some (Pure (T.Set.singleton t))
+          Some (Pure t)
       | Elem _ -> None
       | Fail -> None
       | Pure _ -> None
