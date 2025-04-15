@@ -7,7 +7,7 @@ module type S = sig
 
   type _ t
 
-  val elem : token -> token t
+  val elem : token_set -> token_set t
   val fail : 'a t
   val pure : 'a -> 'a t
   val alt : 'a t -> 'a t -> 'a t
@@ -25,7 +25,7 @@ module Make (T : Token.S) : S = struct
   type token_set = T.Set.t
 
   type _ t =
-    | Elem : token -> token t
+    | Elem : token_set -> token_set t
     | Fail : 'a t
     | Pure : 'a -> 'a t
     | Alt : 'a t * 'a t -> 'a t
@@ -72,7 +72,7 @@ module Make (T : Token.S) : S = struct
 
   let rec first : type a. a t -> token_set =
     function
-    | Elem t -> T.Set.singleton t
+    | Elem t -> t
     | Fail -> T.Set.empty
     | Pure _ -> T.Set.empty
     | Alt (s1, s2) ->
@@ -123,7 +123,8 @@ module Make (T : Token.S) : S = struct
     let open Option.Notation in
     fun s ts ->
       match s, ts with
-      | Elem t, t' :: ts when t = t' -> Some (t, ts)
+      | Elem tk, t :: ts when T.Set.mem t tk ->
+          Some (T.Set.singleton t, ts)
       | Elem _, _ -> None
       | Fail, _ -> None
       | Pure x, ts -> Some (x, ts)
@@ -142,7 +143,8 @@ module Make (T : Token.S) : S = struct
     let open Option.Notation in
     fun t s ->
       match s with
-      | Elem t' when t = t' -> Some (Pure t)
+      | Elem tk when T.Set.mem t tk ->
+          Some (Pure (T.Set.singleton t))
       | Elem _ -> None
       | Fail -> None
       | Pure _ -> None
