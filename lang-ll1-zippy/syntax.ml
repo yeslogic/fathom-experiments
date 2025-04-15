@@ -17,7 +17,12 @@ module type S = sig
 
 end
 
-module Make (T : Token.S) : S = struct
+module Make (T : Token.S) : S
+
+  with type token = T.t
+  with type token_set = T.Set.t
+
+= struct
 
   type token = T.t
   type token_set = T.Set.t
