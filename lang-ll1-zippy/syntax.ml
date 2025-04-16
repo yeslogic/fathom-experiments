@@ -12,8 +12,8 @@ module type S = sig
   val seq : 'a t -> 'b t -> ('a * 'b) t
   val map : ('a -> 'b) -> 'a t -> 'b t
 
-  (** LL parser semantics, implemented with recursive-descent and backtracking *)
-  module Ll : sig
+  (** Top-down parser semantics, implemented with recursive-descent and backtracking *)
+  module Rd : sig
 
     val parse : 'a t -> token Seq.t -> ('a * token Seq.t) option
 
@@ -67,7 +67,7 @@ module Make (T : Token.S) : S
   let seq s1 s2 = Seq (s1, s2)
   let map f s = Map (f, s)
 
-  module Ll = struct
+  module Rd = struct
 
     let rec parse : type a. a t -> token Seq.t -> (a * token Seq.t) option =
       let open Option.Notation in
