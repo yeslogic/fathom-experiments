@@ -16,10 +16,10 @@ module type S = sig
 
 end
 
-module Make (T : Token.S) = struct
+module Make (T : Token_set.S) = struct
 
-  type token = T.t
-  type token_set = T.Set.t
+  type token = T.elt
+  type token_set = T.t
 
   type _ t =
     | Elem : token_set -> token t

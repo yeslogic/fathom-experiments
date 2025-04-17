@@ -6,11 +6,9 @@ module type S = sig
 
 end
 
-module Make (T : Token.S) : S
-
-  with type token = T.t
-  with type token_set = T.Set.t
-
+module Make (T : Token_set.S) : S
+  with type token = T.elt
+  with type token_set = T.t
 = struct
 
   include Core.Make (T)
@@ -46,29 +44,29 @@ module Make (T : Token.S) : S
   let rec first : type a. a t -> token_set =
     function
     | Elem t -> t
-    | Fail -> T.Set.empty
-    | Pure _ -> T.Set.empty
+    | Fail -> T.empty
+    | Pure _ -> T.empty
     | Alt (s1, s2) ->
-        T.Set.union (first s1) (first s2)
+        T.union (first s1) (first s2)
     | Seq (s1, s2) ->
-        T.Set.empty
-        |> T.Set.union (if is_nullable s1 then first s2 else T.Set.empty)
-        |> T.Set.union (if is_productive s2 then first s1 else T.Set.empty)
+        T.empty
+        |> T.union (if is_nullable s1 then first s2 else T.empty)
+        |> T.union (if is_productive s2 then first s1 else T.empty)
     | Map (_, s) -> first s
 
   let rec should_not_follow : type a. a t -> token_set =
     function
-    | Elem _ -> T.Set.empty
-    | Fail -> T.Set.empty
-    | Pure _ -> T.Set.empty
+    | Elem _ -> T.empty
+    | Fail -> T.empty
+    | Pure _ -> T.empty
     | Alt (s1, s2) ->
-        T.Set.union (should_not_follow s1) (should_not_follow s2)
-        |> T.Set.union (if is_nullable s2 then first s1 else T.Set.empty)
-        |> T.Set.union (if is_nullable s1 then first s2 else T.Set.empty)
+        T.union (should_not_follow s1) (should_not_follow s2)
+        |> T.union (if is_nullable s2 then first s1 else T.empty)
+        |> T.union (if is_nullable s1 then first s2 else T.empty)
     | Seq (s1, s2) ->
-        T.Set.empty
-        |> T.Set.union (if is_nullable s2 then should_not_follow s1 else T.Set.empty)
-        |> T.Set.union (if is_productive s1 then should_not_follow s2 else T.Set.empty)
+        T.empty
+        |> T.union (if is_nullable s2 then should_not_follow s1 else T.empty)
+        |> T.union (if is_productive s1 then should_not_follow s2 else T.empty)
     | Map (_, s) ->
         should_not_follow s
 
@@ -81,11 +79,11 @@ module Make (T : Token.S) : S
         has_conflict s1
           || has_conflict s2
           || (is_nullable s1 && is_nullable s2)
-          || not (T.Set.disjoint (first s1) (first s2))
+          || not (T.disjoint (first s1) (first s2))
     | Seq (s1, s2) ->
         has_conflict s1
           || has_conflict s2
-          || not (T.Set.disjoint (should_not_follow s1) (first s2))
+          || not (T.disjoint (should_not_follow s1) (first s2))
     | Map (_, s) ->
         has_conflict s
 
@@ -94,19 +92,19 @@ module Make (T : Token.S) : S
     let open Option.Notation in
     fun t s ->
       match s with
-      | Elem tk when T.Set.mem t tk ->
+      | Elem tk when T.mem t tk ->
           Some (Pure t)
       | Elem _ -> None
       | Fail -> None
       | Pure _ -> None
       | Alt (s1, s2) ->
-          begin match T.Set.mem t (first s1) with
+          begin match T.mem t (first s1) with
           | true -> derive t s1
           | false -> derive t s2
           end
       | Seq (s1, s2) ->
           begin match nullable s1 with
-          | Some x when T.Set.mem t (first s2)->
+          | Some x when T.mem t (first s2)->
               let* s2' = derive t s2 in
               Some (Seq (Pure x, s2'))
           | Some _ | None ->
@@ -124,7 +122,7 @@ module Make (T : Token.S) : S
         match Seq.uncons ts with
         | None -> nullable s
         | Some (t, ts) ->
-            if T.Set.mem t (first s) then
+            if T.mem t (first s) then
               let* s' = derive t s in
               (parse [@tailcall]) s' ts
             else
@@ -135,4 +133,4 @@ module Make (T : Token.S) : S
 
 end
 
-module Char = Make (Token.Char)
+module Char = Make (Token_set.Char)

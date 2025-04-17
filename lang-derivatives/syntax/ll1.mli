@@ -18,9 +18,9 @@ module type S = sig
 
 end
 
-module Make (T : Token.S) : S
-  with type token = T.t
-  with type token_set = T.Set.t
+module Make (T : Token_set.S) : S
+  with type token = T.elt
+  with type token_set = T.t
 
 module Char : S
   with type token = char

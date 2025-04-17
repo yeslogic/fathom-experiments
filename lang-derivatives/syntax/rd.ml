@@ -6,11 +6,9 @@ module type S = sig
 
 end
 
-module Make (T : Token.S) : S
-
-  with type token = T.t
-  with type token_set = T.Set.t
-
+module Make (T : Token_set.S) : S
+  with type token = T.elt
+  with type token_set = T.t
 = struct
 
   include Core.Make (T)
@@ -21,7 +19,7 @@ module Make (T : Token.S) : S
       match s with
       | Elem tk ->
           let* (t, ts) = Seq.uncons ts in
-          if T.Set.mem t tk then Some (t, ts) else None
+          if T.mem t tk then Some (t, ts) else None
       | Fail -> None
       | Pure x -> Some (x, ts)
       | Alt (s1, s2) ->
@@ -36,4 +34,4 @@ module Make (T : Token.S) : S
 
 end
 
-module Char = Make (Token.Char)
+module Char = Make (Token_set.Char)
