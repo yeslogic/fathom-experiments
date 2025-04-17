@@ -116,8 +116,8 @@ module Make (T : Token_set.S) : S
           Map (f, s')
 
   let parse (type a) (s : a t) : (token Seq.t -> a option) option =
+    let open Option.Notation in
     let rec parse : type a. a t -> token Seq.t -> a option =
-      let open Option.Notation in
       fun s ts ->
         match Seq.uncons ts with
         | None -> nullable s
