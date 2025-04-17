@@ -1,4 +1,4 @@
-(** Extensions to the [Option] module *)
+(** Extensions to [Stdlib.Option] *)
 
 include Stdlib.Option
 

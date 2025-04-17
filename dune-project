@@ -35,6 +35,11 @@
     (mdx (and (>= "0.4") :with-test))))
 
 (package
+  (name derivatives)
+  (depends
+    byte-set))
+
+(package
   (name ll1-combinators)
   (depends
     byte-set))
@@ -55,11 +60,6 @@
     (menhirLib (>= "20240715"))
     (sedlex (>= "3.3"))
     (tsort (>= "2.1"))))
-
-(package
-  (name ll1-zippy)
-  (depends
-    byte-set))
 
 (package
   (name llk-simple)

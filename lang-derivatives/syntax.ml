@@ -22,11 +22,11 @@ module type S = sig
   (** LL(1) parser semantics, implemented with derivatives *)
   module Ll1 : sig
 
-    val parse : 'a t -> token Seq.t -> 'a option
+    val parse : 'a t -> (token Seq.t -> 'a option) option
 
   end
 
-  (* TODO: LL(k) parsing (like Daedalus) *)
+  (* TODO: Parsing with derivatives *)
   (* TODO: Zippy LL(1) parsing *)
   (* TODO: Compile NFA-style syntax descriptions to DFA-style syntax (like Daedalus) *)
 
@@ -185,7 +185,7 @@ module Make (T : Token.S) : S
             let+ s' = derive t s in
             Map (f, s')
 
-    let parse (type a) (s : a t) (ts : token Seq.t) : a option =
+    let parse (type a) (s : a t) : (token Seq.t -> a option) option =
       let rec parse : type a. a t -> token Seq.t -> a option =
         let open Option.Notation in
         fun s ts ->
@@ -199,7 +199,7 @@ module Make (T : Token.S) : S
                 None
       in
       if has_conflict s then None else
-        parse s ts
+        Some (parse s)
 
   end
 
