@@ -22,16 +22,7 @@ module type S = sig
   (** LL(1) parser semantics, implemented with derivatives *)
   module Ll1 : sig
 
-    val nullable : 'a t -> 'a option
-    val is_nullable : 'a t -> bool
-    val is_productive : 'a t -> bool
-    val first : 'a t -> token_set
-    val should_not_follow : 'a t -> token_set
-    val has_conflict : 'a t -> bool
-
-    val derive : token -> 'a t -> 'a t option
-
-    val parse : 'a t -> token Seq.t -> ('a * token Seq.t) option
+    val parse : 'a t -> token Seq.t -> 'a option
 
   end
 
@@ -194,20 +185,21 @@ module Make (T : Token.S) : S
             let+ s' = derive t s in
             Map (f, s')
 
-    let rec parse : type a. a t -> token Seq.t -> (a * token Seq.t) option =
-      (* TODO: Check for conflicts first? *)
-      let open Option.Notation in
-      fun s ts ->
-        match Seq.uncons ts with
-        | None ->
-            let+ x = nullable s  in
-            (x, Seq.empty)
-        | Some (t, ts) ->
-            if T.Set.mem t (first s) then
-              let* s' = derive t s in
-              (parse [@tailcall]) s' ts
-            else
-              None
+    let parse (type a) (s : a t) (ts : token Seq.t) : a option =
+      let rec parse : type a. a t -> token Seq.t -> a option =
+        let open Option.Notation in
+        fun s ts ->
+          match Seq.uncons ts with
+          | None -> nullable s
+          | Some (t, ts) ->
+              if T.Set.mem t (first s) then
+                let* s' = derive t s in
+                (parse [@tailcall]) s' ts
+              else
+                None
+      in
+      if has_conflict s then None else
+        parse s ts
 
   end
 
