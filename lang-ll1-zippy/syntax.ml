@@ -29,7 +29,7 @@ module type S = sig
     val should_not_follow : 'a t -> token_set
     val has_conflict : 'a t -> bool
 
-    val derivative : token -> 'a t -> 'a t option
+    val derive : token -> 'a t -> 'a t option
 
     val parse : 'a t -> token Seq.t -> ('a * token Seq.t) option
 
@@ -167,7 +167,7 @@ module Make (T : Token.S) : S
           has_conflict s
 
     (** Returns the state of the syntax after seeing a token *)
-    let rec derivative : type a. token -> a t -> a t option =
+    let rec derive : type a. token -> a t -> a t option =
       let open Option.Notation in
       fun t s ->
         match s with
@@ -177,21 +177,21 @@ module Make (T : Token.S) : S
         | Fail -> None
         | Pure _ -> None
         | Alt (s1, s2) ->
-            if T.Set.mem t (first s1) then
-              derivative t s1
-            else
-              derivative t s2
+            begin match T.Set.mem t (first s1) with
+            | true -> derive t s1
+            | false -> derive t s2
+            end
         | Seq (s1, s2) ->
             begin match nullable s1 with
             | Some x when T.Set.mem t (first s2)->
-                let* s2' = derivative t s2 in
+                let* s2' = derive t s2 in
                 Some (Seq (Pure x, s2'))
             | Some _ | None ->
-                let* s1' = derivative t s1 in
+                let* s1' = derive t s1 in
                 Some (Seq (s1', s2))
             end
         | Map (f, s) ->
-            let+ s' = derivative t s in
+            let+ s' = derive t s in
             Map (f, s')
 
     let rec parse : type a. a t -> token Seq.t -> (a * token Seq.t) option =
@@ -204,7 +204,7 @@ module Make (T : Token.S) : S
             (x, Seq.empty)
         | Some (t, ts) ->
             if T.Set.mem t (first s) then
-              let* s' = derivative t s in
+              let* s' = derive t s in
               (parse [@tailcall]) s' ts
             else
               None
