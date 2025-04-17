@@ -6,6 +6,8 @@ A repository of Fathom-related binary parsing experiments.
 
 - [**bidi-combinators**](./lang-bidi-combinators/):
   A library of bidirectional binary format combinators.
+- [**derivatives**](./lang-derivatives/):
+  Derivative-based parser experiments.
 - [**ll1-combinators**](./lang-ll1-combinators):
   Linear-time parser combinators based on Neel Krishnaswami’s blog post.
 - [**ll1-dsl**](./lang-ll1-dsl):

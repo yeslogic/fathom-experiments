@@ -18,7 +18,10 @@ module type S = sig
 
 end
 
-module Char : S = struct
+module Char : S
+  with type t = char
+  with type Set.t = Byte_set.t
+= struct
 
   type t = char
 
@@ -32,7 +35,9 @@ module Char : S = struct
 
 end
 
-module Make_ordered (Ord : Set.OrderedType) : S = struct
+module Make_ordered (Ord : Set.OrderedType) : S
+  with type t = Ord.t
+= struct
 
   type t = Ord.t
 
