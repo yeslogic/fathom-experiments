@@ -6,13 +6,13 @@ module type S = sig
 
 end
 
-module Make (T : Set.S) : S
-  with type token = T.elt
-  with type token_set = T.t
-= struct
+module Make (T : Set.S) = struct
 
   include Core.Make (T)
 
+  (** Returns a value if the syntax associates an empty sequence of tokens with
+      that value. In the case of multiple possibilities, the first is chosen,
+      leaving the detection of ambiguities up to the {!has_conflict} predicate. *)
   let rec nullable : type a. a t -> a option =
     function
     | Elem _ -> None
@@ -22,6 +22,7 @@ module Make (T : Set.S) : S
     | Seq (s1, s2) -> Option.both (nullable s1) (nullable s2)
     | Map (f, s) -> nullable s |> Option.map f
 
+  (** Returns [true] if the syntax might parse an empty sequence of tokens. *)
   let rec is_nullable : type a. a t -> bool =
     (* fun s -> Option.is_some (nullable s) *)
     function
@@ -32,6 +33,8 @@ module Make (T : Set.S) : S
     | Seq (s1, s2) -> is_nullable s1 && is_nullable s2
     | Map (_, s) -> is_nullable s
 
+  (** Returns [true] if the syntax associates at least one sequence of tokens
+      with a value. *)
   let rec is_productive : type a. a t -> bool =
     function
     | Elem _ -> true
@@ -61,33 +64,43 @@ module Make (T : Set.S) : S
     | Pure _ -> T.empty
     | Alt (s1, s2) ->
         T.union (should_not_follow s1) (should_not_follow s2)
+        (* Elements of the should-not-follow set are introduced below *)
         |> T.union (if is_nullable s2 then first s1 else T.empty)
         |> T.union (if is_nullable s1 then first s2 else T.empty)
     | Seq (s1, s2) ->
         T.empty
+        (* If the trailing syntax is nullable, take the should-not-follow set
+           from the preceding syntax *)
         |> T.union (if is_nullable s2 then should_not_follow s1 else T.empty)
+        (* If the preceding syntax has a chance of succeeding, then take the
+           should-not-follow set of the trailing syntax *)
         |> T.union (if is_productive s1 then should_not_follow s2 else T.empty)
     | Map (_, s) ->
         should_not_follow s
 
+  (** Returns [true] if an LL1 conflict was found in the syntax *)
   let rec has_conflict : type a. a t -> bool =
     function
     | Elem _ -> false
     | Fail -> false
     | Pure _ -> false
     | Alt (s1, s2) ->
-        has_conflict s1
-          || has_conflict s2
+        (has_conflict s1 || has_conflict s2)
+          (* There should only be one nullable branch *)
           || (is_nullable s1 && is_nullable s2)
+          (* The branches of the alternation must be disjoint *)
           || not (T.disjoint (first s1) (first s2))
     | Seq (s1, s2) ->
-        has_conflict s1
-          || has_conflict s2
+        (has_conflict s1 || has_conflict s2)
+          (* The first set of the trailing syntax should not contain any element
+             from the should-not-follow set of the preceding syntax. s *)
           || not (T.disjoint (should_not_follow s1) (first s2))
     | Map (_, s) ->
         has_conflict s
 
-  (** Returns the state of the syntax after seeing a token *)
+  (** Returns the state of the syntax after seeing a token. This operation is
+      {i not} tail-recursive, and the resulting derivative can grow larger than
+      the original syntax. *)
   let rec derive : type a. token -> a t -> a t option =
     let open Option.Notation in
     fun t s ->
