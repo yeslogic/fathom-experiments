@@ -1,3 +1,5 @@
+(** Minimal set interface for comparing sets of tokens *)
+
 module type S = sig
 
   type elt
@@ -17,16 +19,15 @@ module Char : S
   with type t = Byte_set.t
 = struct
 
-  type elt = char
-
   include Byte_set
+  type elt = char
 
 end
 
-module Make_ordered (Ord : Set.OrderedType) : S
-  with type elt = Ord.t
+module Ord (A : Stdlib.Set.OrderedType) : S
+  with type elt = A.t
 = struct
 
-  include Set.Make (Ord)
+  include Stdlib.Set.Make (A)
 
 end

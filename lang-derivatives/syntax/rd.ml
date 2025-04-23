@@ -6,7 +6,7 @@ module type S = sig
 
 end
 
-module Make (T : Token_set.S) : S
+module Make (T : Set.S) : S
   with type token = T.elt
   with type token_set = T.t
 = struct
@@ -34,4 +34,4 @@ module Make (T : Token_set.S) : S
 
 end
 
-module Char = Make (Token_set.Char)
+module Char = Make (Set.Char)

@@ -1,2 +1,2 @@
-module Token_set = Token_set
+module Set = Set
 module Syntax = Syntax
