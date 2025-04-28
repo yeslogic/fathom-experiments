@@ -2,6 +2,8 @@
 
 (name fathom-experiments)
 
+(license MIT)
+(authors "YesLogic Pty. Ltd. <info@yeslogic.com>")
 (source (github yeslogic/fathom-experiments))
 
 (using mdx 0.4)
