@@ -13,16 +13,16 @@ module type S = sig
   type token
   type token_set
 
-  type _ t
+  type _ syntax
 
-  val elem : token_set -> token t
-  val fail : 'a t
-  val pure : 'a -> 'a t
-  val alt : 'a t -> 'a t -> 'a t
-  val seq : 'a t -> 'b t -> ('a * 'b) t
-  val map : ('a -> 'b) -> 'a t -> 'b t
+  val elem : token_set -> token syntax
+  val fail : 'a syntax
+  val pure : 'a -> 'a syntax
+  val alt : 'a syntax -> 'a syntax -> 'a syntax
+  val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax
+  val map : ('a -> 'b) -> 'a syntax -> 'b syntax
 
-  val parse : 'a t -> (token Seq.t -> 'a option) option
+  val parse : 'a syntax -> (token Seq.t -> 'a option) option
   (** Returns a parse function for the provided syntax, provided it is free from
       LL(1) conflicts. *)
 
@@ -36,13 +36,13 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
-  type _ t =
-    | Elem : token_set -> token t
-    | Fail : 'a t
-    | Pure : 'a -> 'a t
-    | Alt : 'a t * 'a t -> 'a t
-    | Seq : 'a t * 'b t -> ('a * 'b) t
-    | Map : ('a -> 'b) * 'a t -> 'b t
+  type _ syntax =
+    | Elem : token_set -> token syntax
+    | Fail : 'a syntax
+    | Pure : 'a -> 'a syntax
+    | Alt : 'a syntax * 'a syntax -> 'a syntax
+    | Seq : 'a syntax * 'b syntax -> ('a * 'b) syntax
+    | Map : ('a -> 'b) * 'a syntax -> 'b syntax
     (* TODO: variables *)
 
   let elem t = Elem t
@@ -55,7 +55,7 @@ module Make (T : Set.S) : S
   (** Returns a value if the syntax associates an empty sequence of tokens with
       that value. In the case of multiple possibilities, the first is chosen,
       leaving the detection of ambiguities up to the {!has_conflict} predicate. *)
-  let rec nullable : type a. a t -> a option =
+  let rec nullable : type a. a syntax -> a option =
     function
     | Elem _ -> None
     | Fail -> None
@@ -65,7 +65,7 @@ module Make (T : Set.S) : S
     | Map (f, s) -> nullable s |> Option.map f
 
   (** Returns [true] if the syntax might parse an empty sequence of tokens. *)
-  let rec is_nullable : type a. a t -> bool =
+  let rec is_nullable : type a. a syntax -> bool =
     (* fun s -> Option.is_some (nullable s) *)
     function
     | Elem _ -> false
@@ -77,7 +77,7 @@ module Make (T : Set.S) : S
 
   (** Returns [true] if the syntax associates at least one sequence of tokens
       with a value. *)
-  let rec is_productive : type a. a t -> bool =
+  let rec is_productive : type a. a syntax -> bool =
     function
     | Elem _ -> true
     | Fail -> false
@@ -86,7 +86,7 @@ module Make (T : Set.S) : S
     | Seq (s1, s2) -> is_productive s1 && is_productive s2
     | Map (_, s) -> is_productive s
 
-  let rec first : type a. a t -> token_set =
+  let rec first : type a. a syntax -> token_set =
     function
     | Elem t -> t
     | Fail -> T.empty
@@ -99,7 +99,7 @@ module Make (T : Set.S) : S
         |> T.union (if is_productive s2 then first s1 else T.empty)
     | Map (_, s) -> first s
 
-  let rec should_not_follow : type a. a t -> token_set =
+  let rec should_not_follow : type a. a syntax -> token_set =
     function
     | Elem _ -> T.empty
     | Fail -> T.empty
@@ -121,7 +121,7 @@ module Make (T : Set.S) : S
         should_not_follow s
 
   (** Returns [true] if an LL1 conflict was found in the syntax *)
-  let rec has_conflict : type a. a t -> bool =
+  let rec has_conflict : type a. a syntax -> bool =
     function
     | Elem _ -> false
     | Fail -> false
@@ -143,7 +143,7 @@ module Make (T : Set.S) : S
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
       the original syntax. *)
-  let rec derive : type a. token -> a t -> a t option =
+  let rec derive : type a. token -> a syntax -> a syntax option =
     let open Option.Notation in
     fun t s ->
       match s with
@@ -170,9 +170,9 @@ module Make (T : Set.S) : S
           let+ s' = derive t s in
           Map (f, s')
 
-  let parse (type a) (s : a t) : (token Seq.t -> a option) option =
+  let parse (type a) (s : a syntax) : (token Seq.t -> a option) option =
     let open Option.Notation in
-    let rec parse : type a. a t -> token Seq.t -> a option =
+    let rec parse : type a. a syntax -> token Seq.t -> a option =
       fun s ts ->
         match Seq.uncons ts with
         | None -> nullable s
