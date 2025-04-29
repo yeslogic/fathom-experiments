@@ -1,5 +1,3 @@
-module Core = Core
-
 module Ll = Ll
 module Ll1 = Ll1
 

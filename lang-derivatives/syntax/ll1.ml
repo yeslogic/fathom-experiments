@@ -1,12 +1,37 @@
+(** An LL(1) parser language implemented with derivatives.
+
+    {2 Resources}
+
+    - Romain Edelmann, Jad Hamza, Viktor Kunčak, “Zippy LL(1) parsing with
+      derivatives”, PLDI 2020, https://doi.org/10.1145/3385412.3385992
+    - {{: https://github.com/epfl-lara/scallion} epfl-lara/scallion} on Github
+    - {{: https://github.com/epfl-lara/scallion-proofs>} epfl-lara/scallion-proofs} on Github
+*)
+
 module type S = sig
 
-  include Core.S
+  type token
+  type token_set
+
+  type _ t
+
+  val elem : token_set -> token t
+  val fail : 'a t
+  val pure : 'a -> 'a t
+  val alt : 'a t -> 'a t -> 'a t
+  val seq : 'a t -> 'b t -> ('a * 'b) t
+  val map : ('a -> 'b) -> 'a t -> 'b t
 
   val parse : 'a t -> (token Seq.t -> 'a option) option
+  (** Returns a parse function for the provided syntax, provided it is free from
+      LL(1) conflicts. *)
 
 end
 
-module Make (T : Set.S) = struct
+module Make (T : Set.S) : S
+  with type token = T.elt
+  with type token_set = T.t
+= struct
 
   type token = T.elt
   type token_set = T.t
