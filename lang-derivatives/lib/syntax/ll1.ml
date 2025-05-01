@@ -159,7 +159,7 @@ module Make (T : Set.S) : S
           end
       | Seq (s1, s2) ->
           begin match nullable s1 with
-          | Some x when T.mem t (first s2)->
+          | Some x when T.mem t (first s2) ->
               let* s2' = derive t s2 in
               Some (Seq (Pure x, s2'))
           | Some _ | None ->
