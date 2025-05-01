@@ -143,9 +143,9 @@ module Make (T : Set.S) : S
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
       the original syntax. *)
-  let rec derive : type a. token -> a syntax -> a syntax option =
+  let rec derive : type a. a syntax -> token -> a syntax option =
     let open Option.Notation in
-    fun t s ->
+    fun s t ->
       match s with
       | Elem tk when T.mem t tk ->
           Some (Pure t)
@@ -154,20 +154,20 @@ module Make (T : Set.S) : S
       | Pure _ -> None
       | Alt (s1, s2) ->
           begin match T.mem t (first s1) with
-          | true -> derive t s1
-          | false -> derive t s2
+          | true -> derive s1 t
+          | false -> derive s2 t
           end
       | Seq (s1, s2) ->
           begin match nullable s1 with
           | Some x when T.mem t (first s2) ->
-              let* s2' = derive t s2 in
+              let* s2' = derive s2 t in
               Some (Seq (Pure x, s2'))
           | Some _ | None ->
-              let* s1' = derive t s1 in
+              let* s1' = derive s1 t in
               Some (Seq (s1', s2))
           end
       | Map (f, s) ->
-          let+ s' = derive t s in
+          let+ s' = derive s t in
           Map (f, s')
 
   let parse (type a) (s : a syntax) : (token Seq.t -> a option) option =
@@ -178,13 +178,96 @@ module Make (T : Set.S) : S
         | None -> nullable s
         | Some (t, ts) ->
             if T.mem t (first s) then
-              let* s' = derive t s in
+              let* s' = derive s t in
               (parse [@tailcall]) s' ts
             else
               None
     in
     if has_conflict s then None else
       Some (parse s)
+
+  (** Deterministic syntax descriptions.
+
+      These can be parsed with a single token of lookahead.
+  *)
+  module Det = struct
+
+    (** Deterministic syntax descriptions *)
+    type 'a syntax = {
+      pure : 'a option;
+      alt : (token_set * 'a syntax_k) list;
+    }
+
+    (** Syntax descriptions with a “hole” in them *)
+    and 'a syntax_k =
+      | Elem_k : token syntax_k
+      | Seq_k1 : 'a * 'b syntax_k -> ('a * 'b) syntax_k
+      | Seq_k2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
+      | Map_k : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
+
+
+    let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
+      (* TODO: It would be nice if we could make this function return [a option]
+        instead of [(a * token Seq.t) option], in a similar fashion to the
+        derivative-based parser. *)
+      let open Option.Notation in
+      fun s ts ->
+        match Seq.uncons ts with
+        | None -> s.pure |> Option.map (fun x -> x, Seq.empty)
+        | Some (t, ts) ->
+            let* (_, sk) = s.alt |> List.find_opt (fun (tk, _) -> T.mem t tk) in
+            parse_k sk t ts
+
+    and parse_k : type a. a syntax_k -> token -> token Seq.t -> (a * token Seq.t) option =
+      let open Option.Notation in
+      fun sk t ts ->
+        match sk with
+        | Elem_k -> Some (t, ts)
+        | Seq_k1 (x1, sk) ->
+            let+ (x2, ts) = parse_k sk t ts in
+            ((x1, x2), ts)
+        | Seq_k2 (sk, s) ->
+            let* (x1, ts) = parse_k sk t ts in
+            let+ (x2, ts) = parse s ts in
+            ((x1, x2), ts)
+        | Map_k (f, sk) ->
+            let+ (x, ts) = parse_k sk t ts in
+            (f x, ts)
+
+  end
+
+  (** Compile to a deterministic syntax description, avoiding the need compute
+      the derivative at runtime. *)
+  let compile (type a) (s : a syntax) : a Det.syntax option =
+    let rec compile : type a. a syntax -> a Det.syntax =
+      fun s -> {
+        pure = nullable s;
+        alt = compile_branches s;
+      }
+
+    and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
+      function
+      | Elem tk -> [tk, Elem_k]
+      | Fail -> []
+      | Pure _ -> []
+      | Alt (s1, s2) ->
+          compile_branches s1 @ compile_branches s2
+      | Seq (s1, s2) ->
+          let branches1 =
+            match nullable s1 with
+            | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq_k1 (x, s2)))
+            | None -> []
+          and branches2 =
+            let s2 = compile s2 in (* FIXME: Join-point? *)
+            compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq_k2 (s1, s2)))
+          in
+          branches1 @ branches2
+      | Map (f, s) ->
+          compile_branches s |> List.map Det.(fun (tk, s) -> (tk, Map_k (f, s)))
+    in
+
+    if has_conflict s then None else
+      Some (compile s)
 
 end
 
