@@ -26,6 +26,16 @@ module type S = sig
   (** Returns a parse function for the provided syntax, provided it is free from
       LL(1) conflicts. *)
 
+  module Det : sig
+
+    type _ syntax
+
+    val parse : 'a syntax -> token Seq.t -> ('a * token Seq.t) option
+
+  end
+
+  val compile : 'a syntax -> 'a Det.syntax option
+
 end
 
 module Make (T : Set.S) : S
@@ -94,9 +104,9 @@ module Make (T : Set.S) : S
     | Alt (s1, s2) ->
         T.union (first s1) (first s2)
     | Seq (s1, s2) ->
-        T.empty
-        |> T.union (if is_nullable s1 then first s2 else T.empty)
-        |> T.union (if is_productive s2 then first s1 else T.empty)
+        T.union
+          (if is_nullable s1 then first s2 else T.empty)
+          (if is_productive s2 then first s1 else T.empty)
     | Map (_, s) -> first s
 
   let rec should_not_follow : type a. a syntax -> token_set =
@@ -110,13 +120,13 @@ module Make (T : Set.S) : S
         |> T.union (if is_nullable s2 then first s1 else T.empty)
         |> T.union (if is_nullable s1 then first s2 else T.empty)
     | Seq (s1, s2) ->
-        T.empty
-        (* If the trailing syntax is nullable, take the should-not-follow set
-           from the preceding syntax *)
-        |> T.union (if is_nullable s2 then should_not_follow s1 else T.empty)
-        (* If the preceding syntax has a chance of succeeding, then take the
-           should-not-follow set of the trailing syntax *)
-        |> T.union (if is_productive s1 then should_not_follow s2 else T.empty)
+        T.union
+          (* If the trailing syntax is nullable, take the should-not-follow set
+            from the preceding syntax *)
+          (if is_nullable s2 then should_not_follow s1 else T.empty)
+          (* If the preceding syntax has a chance of succeeding, then take the
+            should-not-follow set of the trailing syntax *)
+          (if is_productive s1 then should_not_follow s2 else T.empty)
     | Map (_, s) ->
         should_not_follow s
 
@@ -194,8 +204,8 @@ module Make (T : Set.S) : S
 
     (** Deterministic syntax descriptions *)
     type 'a syntax = {
-      pure : 'a option;
-      alt : (token_set * 'a syntax_k) list;
+      pure : 'a option;                       (** Value associated with the empty token stream *)
+      alt : (token_set * 'a syntax_k) list;   (** Syntaxes associated a token stream of one or more tokens *)
     }
 
     (** Syntax descriptions with a “hole” in them *)
