@@ -268,7 +268,8 @@ module Make (T : Set.S) : S
             | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq_k1 (x, s2)))
             | None -> []
           and branches2 =
-            let s2 = compile s2 in (* FIXME: Join-point? *)
+            (* TODO: Adding a join-point would avoid duplication in the generated code *)
+            let s2 = compile s2 in
             compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq_k2 (s1, s2)))
           in
           branches1 @ branches2

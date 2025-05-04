@@ -1,4 +1,4 @@
-open Derivatives.Syntax.Ll1.Char
+open Derivatives.Syntax.Ll1_simple.Char
 
 type _ cat =
   | [] : unit cat
