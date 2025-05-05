@@ -215,7 +215,6 @@ module Make (T : Set.S) : S
       | Seq_k2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
       | Map_k : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
 
-
     let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
       (* TODO: It would be nice if we could make this function return [a option]
         instead of [(a * token Seq.t) option], in a similar fashion to the
@@ -257,7 +256,7 @@ module Make (T : Set.S) : S
 
     and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
       function
-      | Elem tk -> [tk, Elem_k]
+      | Elem tk -> [(tk, Elem_k)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
