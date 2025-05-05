@@ -1,4 +1,4 @@
-(** Fully backtracking, recursive descent parser semantics *)
+(** Top-down, left-to-right parsing with full backtracking. *)
 
 module type S = sig
 

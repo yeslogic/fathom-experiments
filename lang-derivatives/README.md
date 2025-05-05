@@ -1,8 +1,22 @@
 # Derivative-based parser experiments
 
-The hope is to experiment with parsing-with-derivatives, and explore compiling
-NFA-style syntax descriptions to DFA-style syntax descriptions, as is
-implemented in Daedalus[^daedalus-paper][^daedalus-code].
+The hope for this project is to experiment with parsing-with-derivatives, e
+xploring compiling NFA-style syntax descriptions to DFA-style syntax
+descriptions, as is implemented in Daedalus[^daedalus-paper][^daedalus-code].
+
+The main modules of interest are:
+
+| Name | Description |
+| ---- | ----------- |
+| [`Ll_naive`] | Top-down, left-to-right parsing with full backtracking. |
+| [`Ll1_simple`] | Top-down, LL(1) parsing with derivatives, recomputing LL(1) properties as needed. Compiles to the [`Ll1_det`] language. |
+| [`Ll1_record`] | Top-down, LL(1) parsing with derivatives, precomputing LL(1) properties ahead of time. Compiles to the [`Ll1_det`] language. |
+| [`Ll1_det`] | Non-backtracking parsing with a single token of lookahead. |
+
+[`Ll_naive`]: lib/syntax/ll_naive.ml
+[`Ll1_simple`]: lib/syntax/ll1_simple.ml
+[`Ll1_record`]: lib/syntax/ll1_record.ml
+[`Ll1_det`]: lib/syntax/ll1_det.ml
 
 ## Resources
 
