@@ -262,7 +262,7 @@ module Make (T : Set.S) : S
   and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
     fun s ->
       match s.data with
-      | Elem tk -> [(tk, Elem)]
+      | Elem tk -> [(tk, Det.Elem)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
@@ -270,20 +270,16 @@ module Make (T : Set.S) : S
       | Seq (s1, s2) ->
           let branches1 =
             match s1.nullable with
-            | Some x ->
-                compile_branches s2
-                |> List.map Det.(fun (tk, s2) -> (tk, Seq1 (x, s2)))
+            | Some x -> compile_branches s2 |> List.map (fun (tk, s2) -> (tk, Det.Seq1 (x, s2)))
             | None -> []
           and branches2 =
             (* TODO: Adding a join-point would avoid duplication in the generated code *)
             let s2 = compile s2 in
-            compile_branches s1
-            |> List.map Det.(fun (tk, s1) -> (tk, Seq2 (s1, s2)))
+            compile_branches s1 |> List.map (fun (tk, s1) -> (tk, Det.Seq2 (s1, s2)))
           in
           branches1 @ branches2
       | Map (f, s) ->
-          compile_branches s
-          |> List.map Det.(fun (tk, s) -> (tk, Map (f, s)))
+          compile_branches s |> List.map (fun (tk, s) -> (tk, Det.Map (f, s)))
 
 end
 
