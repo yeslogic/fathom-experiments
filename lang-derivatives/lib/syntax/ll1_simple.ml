@@ -210,10 +210,10 @@ module Make (T : Set.S) : S
 
     (** Syntax descriptions with a “hole” in them *)
     and 'a syntax_k =
-      | Elem_k : token syntax_k
-      | Seq_k1 : 'a * 'b syntax_k -> ('a * 'b) syntax_k
-      | Seq_k2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
-      | Map_k : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
+      | Elem : token syntax_k
+      | Seq1 : 'a * 'b syntax_k -> ('a * 'b) syntax_k
+      | Seq2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
+      | Map : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
 
     let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
       (* TODO: It would be nice if we could make this function return [a option]
@@ -231,15 +231,15 @@ module Make (T : Set.S) : S
       let open Option.Notation in
       fun sk t ts ->
         match sk with
-        | Elem_k -> Some (t, ts)
-        | Seq_k1 (x1, sk) ->
+        | Elem -> Some (t, ts)
+        | Seq1 (x1, sk) ->
             let+ (x2, ts) = parse_k sk t ts in
             ((x1, x2), ts)
-        | Seq_k2 (sk, s) ->
+        | Seq2 (sk, s) ->
             let* (x1, ts) = parse_k sk t ts in
             let+ (x2, ts) = parse s ts in
             ((x1, x2), ts)
-        | Map_k (f, sk) ->
+        | Map (f, sk) ->
             let+ (x, ts) = parse_k sk t ts in
             (f x, ts)
 
@@ -256,7 +256,7 @@ module Make (T : Set.S) : S
 
     and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
       function
-      | Elem tk -> [(tk, Elem_k)]
+      | Elem tk -> [(tk, Elem)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
@@ -264,16 +264,16 @@ module Make (T : Set.S) : S
       | Seq (s1, s2) ->
           let branches1 =
             match nullable s1 with
-            | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq_k1 (x, s2)))
+            | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq1 (x, s2)))
             | None -> []
           and branches2 =
             (* TODO: Adding a join-point would avoid duplication in the generated code *)
             let s2 = compile s2 in
-            compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq_k2 (s1, s2)))
+            compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq2 (s1, s2)))
           in
           branches1 @ branches2
       | Map (f, s) ->
-          compile_branches s |> List.map Det.(fun (tk, s) -> (tk, Map_k (f, s)))
+          compile_branches s |> List.map Det.(fun (tk, s) -> (tk, Map (f, s)))
     in
 
     if has_conflict s then None else
