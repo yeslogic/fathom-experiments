@@ -1,11 +1,13 @@
-(** An LL(1) parser language implemented with derivatives.
+(** Syntax descriptions that are guaranteed to be LL(1) when they are
+    constructed. These syntax descriptions can either be parsed with derivatives
+    or compiled to {!Ll1_det} syntax descriptions for improved performance.
 
-    {2 Resources}
-
-    - Romain Edelmann, Jad Hamza, Viktor Kunčak, “Zippy LL(1) parsing with
-      derivatives”, PLDI 2020, https://doi.org/10.1145/3385412.3385992
-    - {{: https://github.com/epfl-lara/scallion} epfl-lara/scallion} on Github
-    - {{: https://github.com/epfl-lara/scallion-proofs} epfl-lara/scallion-proofs} on Github
+    The implementation is very similar to the one used in {!LL1_simple}, but we
+    precompute the LL(1) properties of syntax descriptions ahead of time, in
+    order to avoid computing them multiple times during parsing or compilation.
+    Note that the implementation of {{: https://doi.org/10.1145/3385412.3385992}
+    “Zippy LL(1) parsing with derivatives”} uses {i propagator networks} to
+    account for cyclic syntaxes arising from top-level mutual recursion.
 *)
 
 module type S = sig
@@ -44,16 +46,23 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
+  (** Syntax descriptions along with properties about these descriptions.
+
+      We could have implemented these properties as separate functions on
+      {!syntax_data}, but because we use them multiple times, it’s probably
+      more efficient to compute them eagerly and store them for later use as
+      we build the syntax descriptions.
+  *)
   type 'a syntax = {
     data : 'a syntax_data;
     nullable : 'a option;
     is_productive : bool;
     first : token_set;
     should_not_follow : token_set;
-    (* id : int; *)
     (* visited : int list; *)
   }
 
+  (** Syntax descriptions *)
   and 'a syntax_data =
     | Elem : token_set -> token syntax_data
     | Fail : 'a syntax_data

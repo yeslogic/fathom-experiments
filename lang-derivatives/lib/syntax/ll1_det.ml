@@ -1,6 +1,5 @@
-(** Deterministic syntax descriptions.
-
-    These can be parsed with a single token of lookahead.
+(** Non-backtracking syntax descriptions that can be parsed with a single token
+    of lookahead.
 *)
 
 module type S = sig
