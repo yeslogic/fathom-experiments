@@ -22,48 +22,52 @@ let rec cat : type a. a cat -> a tuple syntax =
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
 
-let parse_both s ts =
-  let ts = String.to_seq ts in
-  let x = parse s ts in
-  let y = Det.parse (compile s) ts in
-  assert (x = y);
-  x
+(** Create a parser that asserts that both the derivative-based and compiled
+    parsers produce the same result. *)
+let make_parser s =
+  let det_s = compile s in
+  fun ts ->
+    let ts = String.to_seq ts in
+    let x = parse s ts in
+    let y = Det.parse det_s ts in
+    assert (x = y);
+    x
 
 let () =
   Printexc.record_backtrace true
 
 let () =
-  let syntax = alts [
+  let parser = make_parser @@ alts [
     char_of "A";
     char_of "B";
   ] in
 
-  assert (parse_both syntax "A" = Some 'A');
-  assert (parse_both syntax "B" = Some 'B');
-  assert (parse_both syntax "C" = None);
-  assert (parse_both syntax "AB" = None)
+  assert (parser "A" = Some 'A');
+  assert (parser "B" = Some 'B');
+  assert (parser "C" = None);
+  assert (parser "AB" = None)
 
 (* nullable left *)
 let () =
-  let syntax = alts [
+  let parser = make_parser @@ alts [
     pure 'A' |> map Fun.id;
     char 'B';
   ] in
 
-  assert (parse_both syntax "" = Some 'A');
-  assert (parse_both syntax "B" = Some 'B');
-  assert (parse_both syntax "C" = None)
+  assert (parser "" = Some 'A');
+  assert (parser "B" = Some 'B');
+  assert (parser "C" = None)
 
 (* nullable right *)
 let () =
-  let syntax = alts [
+  let parser = make_parser @@ alts [
     char 'A';
     pure 'B' |> map Fun.id;
   ] in
 
-  assert (parse_both syntax "A" = Some 'A');
-  assert (parse_both syntax "" = Some 'B');
-  assert (parse_both syntax "C" = None)
+  assert (parser "A" = Some 'A');
+  assert (parser "" = Some 'B');
+  assert (parser "C" = None)
 
 (* nullable both *)
 let () =
@@ -75,15 +79,15 @@ let () =
   | _ -> failwith "expected Nullable_conflict"
 
 let () =
-  let syntax = alts [
+  let parser = make_parser @@ alts [
     cat [pure (); char 'B'];
     char 'A' |> map (fun x -> [(); x]);
   ] in
 
-  assert (parse_both syntax "A" = Some [(); 'A']);
-  assert (parse_both syntax "B" = Some [(); 'B']);
-  assert (parse_both syntax "C" = None);
-  assert (parse_both syntax "AB" = None)
+  assert (parser "A" = Some [(); 'A']);
+  assert (parser "B" = Some [(); 'B']);
+  assert (parser "C" = None);
+  assert (parser "AB" = None)
 
 (* Ambiguous alternations *)
 

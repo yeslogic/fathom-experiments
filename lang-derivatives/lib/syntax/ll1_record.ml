@@ -28,13 +28,9 @@ module type S = sig
 
   val parse : 'a syntax -> token Seq.t -> 'a option
 
-  module Det : sig
-
-    type _ syntax
-
-    val parse : 'a syntax -> token Seq.t -> 'a option
-
-  end
+  module Det : Ll1_det.S
+    with type token = token
+    with type token_set = token_set
 
   val compile : 'a syntax -> 'a Det.syntax
 
@@ -197,72 +193,19 @@ module Make (T : Set.S) : S
             else
               None
 
-  (** Deterministic syntax descriptions.
-
-      These can be parsed with a single token of lookahead.
-  *)
-  module Det = struct
-
-    (** Deterministic syntax descriptions *)
-    type 'a syntax = {
-      pure : 'a option;
-      (** Value associated with the empty token stream *)
-
-      alt : (token_set * 'a syntax_k) list;
-      (** Syntaxes associated a token stream of one or more tokens *)
-    }
-
-    (** Syntax descriptions with a “hole” in them *)
-    and 'a syntax_k =
-      | Elem : token syntax_k
-      | Seq1 : 'a * 'b syntax_k -> ('a * 'b) syntax_k
-      | Seq2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
-      | Map : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
-
-    let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
-      let open Option.Notation in
-      fun s ts ->
-        match Seq.uncons ts with
-        | None -> s.pure |> Option.map (fun x -> x, Seq.empty)
-        | Some (t, ts) ->
-            let* (_, sk) = s.alt |> List.find_opt (fun (tk, _) -> T.mem t tk) in
-            parse_k sk t ts
-
-    and parse_k : type a. a syntax_k -> token -> token Seq.t -> (a * token Seq.t) option =
-      let open Option.Notation in
-      fun sk t ts ->
-        match sk with
-        | Elem -> Some (t, ts)
-        | Seq1 (x1, sk) ->
-            let+ (x2, ts) = parse_k sk t ts in
-            ((x1, x2), ts)
-        | Seq2 (sk, s) ->
-            let* (x1, ts) = parse_k sk t ts in
-            let+ (x2, ts) = parse s ts in
-            ((x1, x2), ts)
-        | Map (f, sk) ->
-            let+ (x, ts) = parse_k sk t ts in
-            (f x, ts)
-
-    let parse (type a) (s : a syntax) (ts : token Seq.t) : a option =
-      let open Option.Notation in
-      let* (x, ts) = parse s ts in
-      if Seq.is_empty ts then Some x else None
-
-  end
+  (** Deterministic syntax descriptions *)
+  module Det = Ll1_det.Make (T)
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)
   let rec compile : type a. a syntax -> a Det.syntax =
-    fun s -> {
-      pure = s.nullable;
-      alt = compile_branches s;
-    }
+    fun s ->
+      Det.syntax s.nullable (compile_branches s)
 
   and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
     fun s ->
       match s.data with
-      | Elem tk -> [(tk, Det.Elem)]
+      | Elem tk -> [(tk, Det.elem)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
@@ -270,16 +213,16 @@ module Make (T : Set.S) : S
       | Seq (s1, s2) ->
           let branches1 =
             match s1.nullable with
-            | Some x -> compile_branches s2 |> List.map (fun (tk, s2) -> (tk, Det.Seq1 (x, s2)))
+            | Some x -> compile_branches s2 |> List.map (fun (tk, s2) -> (tk, Det.seq1 x s2))
             | None -> []
           and branches2 =
             (* TODO: Adding a join-point would avoid duplication in the generated code *)
             let s2 = compile s2 in
-            compile_branches s1 |> List.map (fun (tk, s1) -> (tk, Det.Seq2 (s1, s2)))
+            compile_branches s1 |> List.map (fun (tk, s1) -> (tk, Det.seq2 s1 s2))
           in
           branches1 @ branches2
       | Map (f, s) ->
-          compile_branches s |> List.map (fun (tk, s) -> (tk, Det.Map (f, s)))
+          compile_branches s |> List.map (fun (tk, s) -> (tk, Det.map f s))
 
 end
 
