@@ -5,7 +5,7 @@
     - Romain Edelmann, Jad Hamza, Viktor Kunčak, “Zippy LL(1) parsing with
       derivatives”, PLDI 2020, https://doi.org/10.1145/3385412.3385992
     - {{: https://github.com/epfl-lara/scallion} epfl-lara/scallion} on Github
-    - {{: https://github.com/epfl-lara/scallion-proofs>} epfl-lara/scallion-proofs} on Github
+    - {{: https://github.com/epfl-lara/scallion-proofs} epfl-lara/scallion-proofs} on Github
 *)
 
 module type S = sig
