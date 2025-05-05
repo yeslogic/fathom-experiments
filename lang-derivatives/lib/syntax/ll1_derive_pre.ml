@@ -1,8 +1,8 @@
 (** Syntax descriptions that are guaranteed to be LL(1) when they are
-    constructed. These syntax descriptions can either be parsed with derivatives
-    or compiled to {!Ll1_det} syntax descriptions for improved performance.
+    constructed. They can either be parsed with derivatives or compiled to
+    {!Ll1} syntax descriptions for improved performance.
 
-    The implementation is very similar to the one used in {!LL1_simple}, but we
+    The implementation is very similar to the one used in {!Peg_ll1}, but we
     precompute the LL(1) properties of syntax descriptions ahead of time,
     storing them in a mutually defined record in  order to avoid recomputing
     them multiple times during parsing or compilation. Note that the
@@ -31,7 +31,7 @@ module type S = sig
 
   val parse : 'a syntax -> token Seq.t -> 'a option
 
-  module Det : Ll1_det.S
+  module Det : Ll1.S
     with type token = token
     with type token_set = token_set
 
@@ -223,7 +223,7 @@ module Make (T : Set.S) : S
               None
 
   (** Deterministic syntax descriptions *)
-  module Det = Ll1_det.Make (T)
+  module Det = Ll1.Make (T)
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)

@@ -4,19 +4,21 @@ The hope for this project is to experiment with parsing-with-derivatives, e
 xploring compiling NFA-style syntax descriptions to DFA-style syntax
 descriptions, as is implemented in Daedalus[^daedalus-paper][^daedalus-code].
 
+## Project overview
+
 The main modules of interest are:
 
 | Name | Description |
 | ---- | ----------- |
-| [`Ll_naive`] | Top-down, left-to-right parsing with full backtracking. |
-| [`Ll1_simple`] | Top-down, LL(1) parsing with derivatives, recomputing LL(1) properties as needed. Compiles to the [`Ll1_det`] language. |
-| [`Ll1_record`] | Top-down, LL(1) parsing with derivatives, precomputing LL(1) properties ahead of time. Compiles to the [`Ll1_det`] language. |
-| [`Ll1_det`] | Non-backtracking parsing with a single token of lookahead. |
+| [`Peg`] | Top-down parsers with full backtracking and left-biased alternation. |
+| [`Ll1_derive`] | Top-down LL(1) parsing with derivatives, recomputing LL(1) properties as needed. Also compiles to the [`Ll1`] language. |
+| [`Ll1_derive_pre`] | Top-down LL(1) parsing with derivatives, precomputing LL(1) properties ahead of time. Also compiles to the [`Ll1`] language. |
+| [`Ll1`] | Top-down, LL(1), non-backtracking parsers with a single token of lookahead. |
 
-[`Ll_naive`]: lib/syntax/ll_naive.ml
-[`Ll1_simple`]: lib/syntax/ll1_simple.ml
-[`Ll1_record`]: lib/syntax/ll1_record.ml
-[`Ll1_det`]: lib/syntax/ll1_det.ml
+[`Peg`]: lib/syntax/ll.ml
+[`Ll1_derive`]: lib/syntax/ll1_derive.ml
+[`Ll1_derive_pre`]: lib/syntax/ll1_derive_precomp.ml
+[`Ll1`]: lib/syntax/ll1.ml
 
 ## Resources
 

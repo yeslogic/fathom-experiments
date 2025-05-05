@@ -1,6 +1,6 @@
 (** Syntax descriptions that are guaranteed to be LL(1) when they are
-    constructed. These syntax descriptions can either be parsed with derivatives
-    or compiled to {!Ll1_det} syntax descriptions for improved performance.
+    constructed. They can either be parsed with derivatives or compiled to
+    {!Ll1} syntax descriptions for improved performance.
 
     The approach to checking parsing with derivatives and checking for LL(1)
     conflicts was inspired by {{: https://doi.org/10.1145/3385412.3385992}
@@ -27,7 +27,7 @@ module type S = sig
 
   val parse : 'a syntax -> token Seq.t -> 'a option
 
-  module Det : Ll1_det.S
+  module Det : Ll1.S
     with type token = token
     with type token_set = token_set
 
@@ -192,7 +192,7 @@ module Make (T : Set.S) : S
             None
 
   (** Deterministic syntax descriptions *)
-  module Det = Ll1_det.Make (T)
+  module Det = Ll1.Make (T)
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)

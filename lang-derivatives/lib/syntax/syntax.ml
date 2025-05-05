@@ -1,6 +1,6 @@
-module Ll_naive = Ll_naive
-module Ll1_simple = Ll1_simple
-module Ll1_record = Ll1_record
-module Ll1_det = Ll1_det
+module Peg = Peg
+module Ll1_derive = Ll1_derive
+module Ll1_derive_pre = Ll1_derive_pre
+module Ll1 = Ll1
 
 (* TODO: Zippy LL(1) parsing *)

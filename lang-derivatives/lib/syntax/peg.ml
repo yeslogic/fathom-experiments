@@ -1,4 +1,6 @@
-(** Top-down, left-to-right parsing with full backtracking. *)
+(** Top-down parsers with full backtracking and left-biased alternation. This is
+    effectively a simplified form of {i parsing expression grammar} (PEG).
+*)
 
 module type S = sig
 
