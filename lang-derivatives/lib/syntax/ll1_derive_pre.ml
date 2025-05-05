@@ -1,4 +1,4 @@
-(** Syntax descriptions that are guaranteed to be LL(1) when they are
+(** PEG-like syntax descriptions that are guaranteed to be LL(1) when they are
     constructed. They can either be parsed with derivatives or compiled to
     {!Ll1} syntax descriptions for improved performance.
 

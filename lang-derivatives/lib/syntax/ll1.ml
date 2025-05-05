@@ -1,4 +1,4 @@
-(** Top-down, LL(1), non-backtracking parsers with a single token of lookahead. *)
+(** Top-down parsers with a single token of lookahead. *)
 
 module type S = sig
 

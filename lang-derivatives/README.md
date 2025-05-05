@@ -11,9 +11,9 @@ The main modules of interest are:
 | Name | Description |
 | ---- | ----------- |
 | [`Peg`] | Top-down parsers with full backtracking and left-biased alternation. |
-| [`Ll1_derive`] | Top-down LL(1) parsing with derivatives, recomputing LL(1) properties as needed. Also compiles to the [`Ll1`] language. |
-| [`Ll1_derive_pre`] | Top-down LL(1) parsing with derivatives, precomputing LL(1) properties ahead of time. Also compiles to the [`Ll1`] language. |
-| [`Ll1`] | Top-down, LL(1), non-backtracking parsers with a single token of lookahead. |
+| [`Ll1_derive`] | Top-down parsing with derivatives, recomputing LL(1) properties as needed. Also compiles to the [`Ll1`] language. |
+| [`Ll1_derive_pre`] | Top-down parsing with derivatives, precomputing LL(1) properties ahead of time. Also compiles to the [`Ll1`] language. |
+| [`Ll1`] | Top-down parsers with a single token of lookahead. |
 
 [`Peg`]: lib/syntax/ll.ml
 [`Ll1_derive`]: lib/syntax/ll1_derive.ml
