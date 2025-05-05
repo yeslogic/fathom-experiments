@@ -22,6 +22,13 @@ let rec cat : type a. a cat -> a tuple syntax =
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
 
+let parse_both s ts =
+  let ts = String.to_seq ts in
+  let x = parse s ts in
+  let y = Det.parse (compile s) ts in
+  assert (x = y);
+  x
+
 let () =
   Printexc.record_backtrace true
 
@@ -31,10 +38,10 @@ let () =
     char_of "B";
   ] in
 
-  assert (parse syntax (String.to_seq "A") = Some 'A');
-  assert (parse syntax (String.to_seq "B") = Some 'B');
-  assert (parse syntax (String.to_seq "C") = None);
-  assert (parse syntax (String.to_seq "AB") = None)
+  assert (parse_both syntax "A" = Some 'A');
+  assert (parse_both syntax "B" = Some 'B');
+  assert (parse_both syntax "C" = None);
+  assert (parse_both syntax "AB" = None)
 
 (* nullable left *)
 let () =
@@ -43,9 +50,9 @@ let () =
     char 'B';
   ] in
 
-  assert (parse syntax (String.to_seq "") = Some 'A');
-  assert (parse syntax (String.to_seq "B") = Some 'B');
-  assert (parse syntax (String.to_seq "C") = None)
+  assert (parse_both syntax "" = Some 'A');
+  assert (parse_both syntax "B" = Some 'B');
+  assert (parse_both syntax "C" = None)
 
 (* nullable right *)
 let () =
@@ -54,9 +61,9 @@ let () =
     pure 'B' |> map Fun.id;
   ] in
 
-  assert (parse syntax (String.to_seq "A") = Some 'A');
-  assert (parse syntax (String.to_seq "") = Some 'B');
-  assert (parse syntax (String.to_seq "C") = None)
+  assert (parse_both syntax "A" = Some 'A');
+  assert (parse_both syntax "" = Some 'B');
+  assert (parse_both syntax "C" = None)
 
 (* nullable both *)
 let () =
@@ -73,10 +80,10 @@ let () =
     char 'A' |> map (fun x -> [(); x]);
   ] in
 
-  assert (parse syntax (String.to_seq "A") = Some [(); 'A']);
-  assert (parse syntax (String.to_seq "B") = Some [(); 'B']);
-  assert (parse syntax (String.to_seq "C") = None);
-  assert (parse syntax (String.to_seq "AB") = None)
+  assert (parse_both syntax "A" = Some [(); 'A']);
+  assert (parse_both syntax "B" = Some [(); 'B']);
+  assert (parse_both syntax "C" = None);
+  assert (parse_both syntax "AB" = None)
 
 (* Ambiguous alternations *)
 

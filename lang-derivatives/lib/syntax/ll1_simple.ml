@@ -32,7 +32,7 @@ module type S = sig
 
     type _ syntax
 
-    val parse : 'a syntax -> token Seq.t -> ('a * token Seq.t) option
+    val parse : 'a syntax -> token Seq.t -> 'a option
 
   end
 
@@ -216,9 +216,6 @@ module Make (T : Set.S) : S
       | Map : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
 
     let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
-      (* TODO: It would be nice if we could make this function return [a option]
-        instead of [(a * token Seq.t) option], in a similar fashion to the
-        derivative-based parser. *)
       let open Option.Notation in
       fun s ts ->
         match Seq.uncons ts with
@@ -242,6 +239,11 @@ module Make (T : Set.S) : S
         | Map (f, sk) ->
             let+ (x, ts) = parse_k sk t ts in
             (f x, ts)
+
+    let parse (type a) (s : a syntax) (ts : token Seq.t) : a option =
+      let open Option.Notation in
+      let* (x, ts) = parse s ts in
+      if Seq.is_empty ts then Some x else None
 
   end
 

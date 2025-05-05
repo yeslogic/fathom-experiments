@@ -14,7 +14,7 @@ module type S = sig
   val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax
   val map : ('a -> 'b) -> 'a syntax -> 'b syntax
 
-  val parse : 'a syntax -> token Seq.t -> ('a * token Seq.t) option
+  val parse : 'a syntax -> token Seq.t -> 'a option
 
 end
 
@@ -60,6 +60,11 @@ module Make (T : Set.S) : S
       | Map (f, s) ->
           let+ (x, ts) = parse s ts in
           (f x, ts)
+
+  let parse (type a) (s : a syntax) (ts : token Seq.t) : a option =
+    let open Option.Notation in
+    let* (x, ts) = parse s ts in
+    if Seq.is_empty ts then Some x else None
 
 end
 
