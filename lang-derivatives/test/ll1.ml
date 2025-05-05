@@ -17,11 +17,13 @@ let rec alts : 'a syntax list -> 'a syntax =
   | [s] -> s
   | s :: ss -> alt s (alts ss)
 
-
 let rec cat : type a. a cat -> a tuple syntax =
   function
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
+
+let () =
+  Printexc.record_backtrace true
 
 let () =
   let syntax = alts [
@@ -29,12 +31,10 @@ let () =
     char_of "B";
   ] in
 
-  let parser = parse syntax |> Option.get in
-
-  assert (parser (String.to_seq "A") = Some 'A');
-  assert (parser (String.to_seq "B") = Some 'B');
-  assert (parser (String.to_seq "C") = None);
-  assert (parser (String.to_seq "AB") = None)
+  assert (parse syntax (String.to_seq "A") = Some 'A');
+  assert (parse syntax (String.to_seq "B") = Some 'B');
+  assert (parse syntax (String.to_seq "C") = None);
+  assert (parse syntax (String.to_seq "AB") = None)
 
 (* nullable left *)
 let () =
@@ -43,11 +43,9 @@ let () =
     char 'B';
   ] in
 
-  let parser = parse syntax |> Option.get in
-
-  assert (parser (String.to_seq "") = Some 'A');
-  assert (parser (String.to_seq "B") = Some 'B');
-  assert (parser (String.to_seq "C") = None)
+  assert (parse syntax (String.to_seq "") = Some 'A');
+  assert (parse syntax (String.to_seq "B") = Some 'B');
+  assert (parse syntax (String.to_seq "C") = None)
 
 (* nullable right *)
 let () =
@@ -56,20 +54,18 @@ let () =
     pure 'B' |> map Fun.id;
   ] in
 
-  let parser = parse syntax |> Option.get in
-
-  assert (parser (String.to_seq "A") = Some 'A');
-  assert (parser (String.to_seq "") = Some 'B');
-  assert (parser (String.to_seq "C") = None)
+  assert (parse syntax (String.to_seq "A") = Some 'A');
+  assert (parse syntax (String.to_seq "") = Some 'B');
+  assert (parse syntax (String.to_seq "C") = None)
 
 (* nullable both *)
 let () =
-  let syntax = alts [
+  match alts [
     alt (pure 'B') (char 'A');
     pure 'B';
-  ] in
-
-  assert (Option.is_none (parse syntax))
+  ] with
+  | exception Nullable_conflict -> ()
+  | _ -> failwith "expected Nullable_conflict"
 
 let () =
   let syntax = alts [
@@ -77,26 +73,30 @@ let () =
     char 'A' |> map (fun x -> [(); x]);
   ] in
 
-  let parser = parse syntax |> Option.get in
-
-  assert (parser (String.to_seq "A") = Some [(); 'A']);
-  assert (parser (String.to_seq "B") = Some [(); 'B']);
-  assert (parser (String.to_seq "C") = None);
-  assert (parser (String.to_seq "AB") = None)
+  assert (parse syntax (String.to_seq "A") = Some [(); 'A']);
+  assert (parse syntax (String.to_seq "B") = Some [(); 'B']);
+  assert (parse syntax (String.to_seq "C") = None);
+  assert (parse syntax (String.to_seq "AB") = None)
 
 (* Ambiguous alternations *)
 
 let () =
-  assert (Option.is_none (parse (alts [char 'A'; char 'A'])))
+  match alts [char 'A'; char 'A'] with
+  | exception First_conflict -> ()
+  | _ -> failwith "expected First_conflict"
 
 let () =
-  assert (Option.is_none (parse (alts [
+  match alts [
     cat [pure (); char 'A'];
     char 'A' |> map (fun x -> [(); x]);
-  ])))
+  ] with
+  | exception First_conflict -> ()
+  | _ -> failwith "expected First_conflict"
 
 let () =
-  assert (Option.is_none (parse (alts [
+  match alts [
     cat [pure (); char 'A'; char 'B'];
     cat [char 'A'; char 'C'] |> map (fun xs -> () :: xs);
-  ])))
+  ] with
+  | exception First_conflict -> ()
+  | _ -> failwith "expected First_conflict"

@@ -67,6 +67,10 @@ module Make (T : Set.S) : S
     | Map : ('a -> 'b) * 'a syntax -> 'b syntax_data
     (* TODO: variables *)
 
+  (** Returns [true] if the syntax might parse an empty sequence of tokens. *)
+  let is_nullable s =
+    Option.is_some s.nullable
+
   exception Nullable_conflict
   exception First_conflict
   exception Follow_conflict
@@ -97,7 +101,7 @@ module Make (T : Set.S) : S
 
   let alt (type a) (s1 : a syntax) (s2 : a syntax) : a syntax =
     (* There should only be one nullable branch *)
-    if Option.is_some s1.nullable && Option.is_some s2.nullable then
+    if is_nullable s1 && is_nullable s2 then
       raise Nullable_conflict;
 
     (* The branches of the alternation must be disjoint *)
@@ -113,8 +117,8 @@ module Make (T : Set.S) : S
       should_not_follow =
         T.union s1.should_not_follow s2.should_not_follow
         (* Elements of the should-not-follow set are introduced below *)
-        |> T.union (if Option.is_some s2.nullable then s1.first else T.empty)
-        |> T.union (if Option.is_some s1.nullable then s2.first else T.empty);
+        |> T.union (if is_nullable s2 then s1.first else T.empty)
+        |> T.union (if is_nullable s1 then s2.first else T.empty);
     }
 
   let seq (type a b) (s1 : a syntax) (s2 : b syntax) : (a * b) syntax =
@@ -130,14 +134,14 @@ module Make (T : Set.S) : S
 
       first =
         T.union
-          (if Option.is_some s1.nullable then s2.first else T.empty)
+          (if is_nullable s1 then s2.first else T.empty)
           (if s2.is_productive then s1.first else T.empty);
 
       should_not_follow =
         T.union
           (* If the trailing syntax is nullable, take the should-not-follow set
             from the preceding syntax *)
-          (if Option.is_some s2.nullable then s1.should_not_follow else T.empty)
+          (if is_nullable s2 then s1.should_not_follow else T.empty)
           (* If the preceding syntax has a chance of succeeding, then take the
             should-not-follow set of the trailing syntax *)
           (if s1.is_productive then s2.should_not_follow else T.empty);

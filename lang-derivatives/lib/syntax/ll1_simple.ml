@@ -15,16 +15,18 @@ module type S = sig
 
   type _ syntax
 
+  exception Nullable_conflict
+  exception First_conflict
+  exception Follow_conflict
+
   val elem : token_set -> token syntax
   val fail : 'a syntax
   val pure : 'a -> 'a syntax
-  val alt : 'a syntax -> 'a syntax -> 'a syntax
-  val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax
+  val alt : 'a syntax -> 'a syntax -> 'a syntax (* Nullable_conflict, First_conflict *)
+  val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax (* Follow_conflict *)
   val map : ('a -> 'b) -> 'a syntax -> 'b syntax
 
-  val parse : 'a syntax -> (token Seq.t -> 'a option) option
-  (** Returns a parse function for the provided syntax, provided it is free from
-      LL(1) conflicts. *)
+  val parse : 'a syntax -> token Seq.t -> 'a option
 
   module Det : sig
 
@@ -34,7 +36,7 @@ module type S = sig
 
   end
 
-  val compile : 'a syntax -> 'a Det.syntax option
+  val compile : 'a syntax -> 'a Det.syntax
 
 end
 
@@ -54,13 +56,6 @@ module Make (T : Set.S) : S
     | Seq : 'a syntax * 'b syntax -> ('a * 'b) syntax
     | Map : ('a -> 'b) * 'a syntax -> 'b syntax
     (* TODO: variables *)
-
-  let elem t = Elem t
-  let fail = Fail
-  let pure x = Pure x
-  let alt s1 s2 = Alt (s1, s2)
-  let seq s1 s2 = Seq (s1, s2)
-  let map f s = Map (f, s)
 
   (** Returns a value if the syntax associates an empty sequence of tokens with
       that value. In the case of multiple possibilities, the first is chosen,
@@ -130,25 +125,34 @@ module Make (T : Set.S) : S
     | Map (_, s) ->
         should_not_follow s
 
-  (** Returns [true] if an LL1 conflict was found in the syntax *)
-  let rec has_conflict : type a. a syntax -> bool =
-    function
-    | Elem _ -> false
-    | Fail -> false
-    | Pure _ -> false
-    | Alt (s1, s2) ->
-        (has_conflict s1 || has_conflict s2)
-          (* There should only be one nullable branch *)
-          || (is_nullable s1 && is_nullable s2)
-          (* The branches of the alternation must be disjoint *)
-          || not (T.disjoint (first s1) (first s2))
-    | Seq (s1, s2) ->
-        (has_conflict s1 || has_conflict s2)
-          (* The first set of the trailing syntax should not contain any element
-             from the should-not-follow set of the preceding syntax. s *)
-          || not (T.disjoint (should_not_follow s1) (first s2))
-    | Map (_, s) ->
-        has_conflict s
+  exception Nullable_conflict
+  exception First_conflict
+  exception Follow_conflict
+
+  let elem t = Elem t
+  let fail = Fail
+  let pure x = Pure x
+
+  let alt s1 s2 =
+    (* There should only be one nullable branch *)
+    if is_nullable s1 && is_nullable s2 then
+      raise Nullable_conflict;
+
+    (* The branches of the alternation must be disjoint *)
+    if not (T.disjoint (first s1) (first s2)) then
+      raise First_conflict;
+
+    Alt (s1, s2)
+
+  let seq s1 s2 =
+    (* The first set of the trailing syntax should not contain any element
+      from the should-not-follow set of the preceding syntax. s *)
+    if not (T.disjoint (should_not_follow s1) (first s2)) then
+      raise Follow_conflict;
+
+    Seq (s1, s2)
+
+  let map f s = Map (f, s)
 
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
@@ -180,21 +184,17 @@ module Make (T : Set.S) : S
           let+ s' = derive s t in
           Map (f, s')
 
-  let parse (type a) (s : a syntax) : (token Seq.t -> a option) option =
+  let rec parse : type a. a syntax -> token Seq.t -> a option =
     let open Option.Notation in
-    let rec parse : type a. a syntax -> token Seq.t -> a option =
-      fun s ts ->
-        match Seq.uncons ts with
-        | None -> nullable s
-        | Some (t, ts) ->
-            if T.mem t (first s) then
-              let* s' = derive s t in
-              (parse [@tailcall]) s' ts
-            else
-              None
-    in
-    if has_conflict s then None else
-      Some (parse s)
+    fun s ts ->
+      match Seq.uncons ts with
+      | None -> nullable s
+      | Some (t, ts) ->
+          if T.mem t (first s) then
+            let* s' = derive s t in
+            (parse [@tailcall]) s' ts
+          else
+            None
 
   (** Deterministic syntax descriptions.
 
@@ -247,37 +247,32 @@ module Make (T : Set.S) : S
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)
-  let compile (type a) (s : a syntax) : a Det.syntax option =
-    let rec compile : type a. a syntax -> a Det.syntax =
-      fun s -> {
-        pure = nullable s;
-        alt = compile_branches s;
-      }
+  let rec compile : type a. a syntax -> a Det.syntax =
+    fun s -> {
+      pure = nullable s;
+      alt = compile_branches s;
+    }
 
-    and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
-      function
-      | Elem tk -> [(tk, Elem)]
-      | Fail -> []
-      | Pure _ -> []
-      | Alt (s1, s2) ->
-          compile_branches s1 @ compile_branches s2
-      | Seq (s1, s2) ->
-          let branches1 =
-            match nullable s1 with
-            | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq1 (x, s2)))
-            | None -> []
-          and branches2 =
-            (* TODO: Adding a join-point would avoid duplication in the generated code *)
-            let s2 = compile s2 in
-            compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq2 (s1, s2)))
-          in
-          branches1 @ branches2
-      | Map (f, s) ->
-          compile_branches s |> List.map Det.(fun (tk, s) -> (tk, Map (f, s)))
-    in
-
-    if has_conflict s then None else
-      Some (compile s)
+  and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
+    function
+    | Elem tk -> [(tk, Elem)]
+    | Fail -> []
+    | Pure _ -> []
+    | Alt (s1, s2) ->
+        compile_branches s1 @ compile_branches s2
+    | Seq (s1, s2) ->
+        let branches1 =
+          match nullable s1 with
+          | Some x -> compile_branches s2 |> List.map Det.(fun (tk, s2) -> (tk, Seq1 (x, s2)))
+          | None -> []
+        and branches2 =
+          (* TODO: Adding a join-point would avoid duplication in the generated code *)
+          let s2 = compile s2 in
+          compile_branches s1 |> List.map Det.(fun (tk, s1) -> (tk, Seq2 (s1, s2)))
+        in
+        branches1 @ branches2
+    | Map (f, s) ->
+        compile_branches s |> List.map Det.(fun (tk, s) -> (tk, Map (f, s)))
 
 end
 
