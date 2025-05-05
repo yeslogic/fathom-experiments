@@ -3,11 +3,12 @@
     or compiled to {!Ll1_det} syntax descriptions for improved performance.
 
     The implementation is very similar to the one used in {!LL1_simple}, but we
-    precompute the LL(1) properties of syntax descriptions ahead of time, in
-    order to avoid computing them multiple times during parsing or compilation.
-    Note that the implementation of {{: https://doi.org/10.1145/3385412.3385992}
-    “Zippy LL(1) parsing with derivatives”} uses {i propagator networks} to
-    account for cyclic syntaxes arising from top-level mutual recursion.
+    precompute the LL(1) properties of syntax descriptions ahead of time,
+    storing them in a mutually defined record in  order to avoid recomputing
+    them multiple times during parsing or compilation. Note that the
+    implementation of {{: https://doi.org/10.1145/3385412.3385992} “Zippy LL(1)
+    parsing with derivatives”} uses {i propagator networks} to account for
+    cyclic syntaxes arising from top-level mutual recursion.
 *)
 
 module type S = sig
@@ -46,6 +47,15 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
+  (** LL(1) properties for syntax descriptions *)
+  type 'a properties = {
+    nullable : 'a option;
+    is_productive : bool;
+    first : token_set;
+    should_not_follow : token_set;
+    (* visited : int list; *)
+  }
+
   (** Syntax descriptions along with properties about these descriptions.
 
       We could have implemented these properties as separate functions on
@@ -55,11 +65,7 @@ module Make (T : Set.S) : S
   *)
   type 'a syntax = {
     data : 'a syntax_data;
-    nullable : 'a option;
-    is_productive : bool;
-    first : token_set;
-    should_not_follow : token_set;
-    (* visited : int list; *)
+    properties : 'a properties;
   }
 
   (** Syntax descriptions *)
@@ -72,9 +78,11 @@ module Make (T : Set.S) : S
     | Map : ('a -> 'b) * 'a syntax -> 'b syntax_data
     (* TODO: variables *)
 
-  (** Returns [true] if the syntax might parse an empty sequence of tokens. *)
-  let is_nullable s =
-    Option.is_some s.nullable
+  let nullable s = s.properties.nullable
+  let is_nullable s = Option.is_some (nullable s)
+  let is_productive s = s.properties.is_productive
+  let first s = s.properties.first
+  let should_not_follow s = s.properties.should_not_follow
 
   exception Nullable_conflict
   exception First_conflict
@@ -82,26 +90,32 @@ module Make (T : Set.S) : S
 
   let elem (tk : token_set) : token syntax = {
     data = Elem tk;
-    nullable = None;
-    is_productive = true;
-    first = tk;
-    should_not_follow = T.empty;
+    properties = {
+      nullable = None;
+      is_productive = true;
+      first = tk;
+      should_not_follow = T.empty;
+    };
   }
 
   let fail (type a) : a syntax = {
     data = Fail;
-    nullable = None;
-    is_productive = false;
-    first = T.empty;
-    should_not_follow = T.empty;
+    properties = {
+      nullable = None;
+      is_productive = false;
+      first = T.empty;
+      should_not_follow = T.empty;
+    };
   }
 
   let pure (type a) (x : a) : a syntax = {
     data = Pure x;
-    nullable = Some x;
-    is_productive = true;
-    first = T.empty;
-    should_not_follow = T.empty;
+    properties = {
+      nullable = Some x;
+      is_productive = true;
+      first = T.empty;
+      should_not_follow = T.empty;
+    };
   }
 
   let alt (type a) (s1 : a syntax) (s2 : a syntax) : a syntax =
@@ -110,54 +124,60 @@ module Make (T : Set.S) : S
       raise Nullable_conflict;
 
     (* The branches of the alternation must be disjoint *)
-    if not (T.disjoint s1.first s2.first) then
+    if not (T.disjoint (first s1) (first s2)) then
       raise First_conflict;
 
     {
       data = Alt (s1, s2);
-      nullable = Option.alt s1.nullable (fun () -> s2.nullable);
-      is_productive = s1.is_productive || s2.is_productive;
-      first = T.union s1.first s2.first;
+      properties = {
+        nullable = Option.alt (nullable s1) (fun () -> nullable s2);
+        is_productive = is_productive s1 || is_productive s2;
+        first = T.union (first s1) (first s2);
 
-      should_not_follow =
-        T.union s1.should_not_follow s2.should_not_follow
-        (* Elements of the should-not-follow set are introduced below *)
-        |> T.union (if is_nullable s2 then s1.first else T.empty)
-        |> T.union (if is_nullable s1 then s2.first else T.empty);
+        should_not_follow =
+          T.union (should_not_follow s1) (should_not_follow s2)
+          (* Elements of the should-not-follow set are introduced below *)
+          |> T.union (if is_nullable s2 then first s1 else T.empty)
+          |> T.union (if is_nullable s1 then first s2 else T.empty);
+      };
     }
 
   let seq (type a b) (s1 : a syntax) (s2 : b syntax) : (a * b) syntax =
     (* The first set of the trailing syntax should not contain any element
       from the should-not-follow set of the preceding syntax. s *)
-    if not (T.disjoint s1.should_not_follow s2.first) then
+    if not (T.disjoint (should_not_follow s1) (first s2)) then
       raise Follow_conflict;
 
     {
       data = Seq (s1, s2);
-      nullable = Option.both s1.nullable s2.nullable;
-      is_productive = s1.is_productive && s2.is_productive;
+      properties = {
+        nullable = Option.both (nullable s1) (nullable s2);
+        is_productive = is_productive s1 && is_productive s2;
 
-      first =
-        T.union
-          (if is_nullable s1 then s2.first else T.empty)
-          (if s2.is_productive then s1.first else T.empty);
+        first =
+          T.union
+            (if is_nullable s1 then first s2 else T.empty)
+            (if is_productive s2 then first s1 else T.empty);
 
-      should_not_follow =
-        T.union
-          (* If the trailing syntax is nullable, take the should-not-follow set
-            from the preceding syntax *)
-          (if is_nullable s2 then s1.should_not_follow else T.empty)
-          (* If the preceding syntax has a chance of succeeding, then take the
-            should-not-follow set of the trailing syntax *)
-          (if s1.is_productive then s2.should_not_follow else T.empty);
+        should_not_follow =
+          T.union
+            (* If the trailing syntax is nullable, take the should-not-follow set
+              from the preceding syntax *)
+            (if is_nullable s2 then should_not_follow s1 else T.empty)
+            (* If the preceding syntax has a chance of succeeding, then take the
+              should-not-follow set of the trailing syntax *)
+            (if is_productive s1 then should_not_follow s2 else T.empty);
+      };
     }
 
   let map (type a b) (f : a -> b) (s : a syntax) : b syntax = {
     data = Map (f, s);
-    nullable = s.nullable |> Option.map f;
-    is_productive = s.is_productive;
-    first = s.first;
-    should_not_follow = s.should_not_follow;
+    properties = {
+      nullable = nullable s |> Option.map f;
+      is_productive = is_productive s;
+      first = first s;
+      should_not_follow = should_not_follow s;
+    };
   }
 
   (** Returns the state of the syntax after seeing a token. This operation is
@@ -173,13 +193,13 @@ module Make (T : Set.S) : S
       | Fail -> None
       | Pure _ -> None
       | Alt (s1, s2) ->
-          begin match T.mem t s1.first with
+          begin match T.mem t (first s1) with
           | true -> derive s1 t
           | false -> derive s2 t
           end
       | Seq (s1, s2) ->
-          begin match s1.nullable with
-          | Some x when T.mem t (s2.first) ->
+          begin match (nullable s1) with
+          | Some x when T.mem t ((first s2)) ->
               let* s2' = derive s2 t in
               Some (seq (pure x) s2')
           | Some _ | None ->
@@ -194,9 +214,9 @@ module Make (T : Set.S) : S
       let open Option.Notation in
       fun s ts ->
         match Seq.uncons ts with
-        | None -> s.nullable
+        | None -> nullable s
         | Some (t, ts) ->
-            if T.mem t s.first then
+            if T.mem t (first s) then
               let* s' = derive s t in
               (parse [@tailcall]) s' ts
             else
@@ -209,7 +229,7 @@ module Make (T : Set.S) : S
       the derivative at runtime. *)
   let rec compile : type a. a syntax -> a Det.syntax =
     fun s ->
-      Det.syntax s.nullable (compile_branches s)
+      Det.syntax (nullable s) (compile_branches s)
 
   and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
     fun s ->
@@ -221,7 +241,7 @@ module Make (T : Set.S) : S
           compile_branches s1 @ compile_branches s2
       | Seq (s1, s2) ->
           let branches1 =
-            match s1.nullable with
+            match (nullable s1) with
             | Some x -> compile_branches s2 |> List.map (fun (tk, s2) -> (tk, Det.seq1 x s2))
             | None -> []
           and branches2 =
