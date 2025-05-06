@@ -18,6 +18,7 @@ module type S = sig
   val parse : 'a syntax -> token Seq.t -> 'a option
 
   (* TODO: Compile to Rust *)
+  (* TODO: Compile to Graphvis *)
 
 end
 
@@ -29,23 +30,20 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
-  (** Deterministic syntax descriptions *)
+  (** LL(1) syntax descriptions *)
   type 'a syntax = {
-    pure : 'a option;
-    (** Value associated with the empty token stream *)
-
-    alt : (token_set * 'a syntax_k) list;
-    (** Syntaxes associated a token stream of one or more tokens *)
+    null : 'a option;
+    cases : (token_set * 'a syntax_k) list;
   }
 
-  (** Syntax descriptions with a “hole” in them *)
+  (** Syntax descriptions that can have a token applied to them *)
   and 'a syntax_k =
     | Elem : token syntax_k
     | Seq1 : 'a * 'b syntax_k -> ('a * 'b) syntax_k
     | Seq2 : 'a syntax_k * 'b syntax -> ('a * 'b) syntax_k
     | Map : ('a -> 'b) * 'a syntax_k -> 'b syntax_k
 
-  let syntax pure alt = { pure; alt }
+  let syntax null cases = { null; cases }
   let elem = Elem
   let seq1 x1 sk = Seq1 (x1, sk)
   let seq2 sk s = Seq2 (sk, s)
@@ -55,9 +53,9 @@ module Make (T : Set.S) : S
     let open Option.Notation in
     fun s ts ->
       match Seq.uncons ts with
-      | None -> s.pure |> Option.map (fun x -> x, Seq.empty)
+      | None -> s.null |> Option.map (fun x -> x, Seq.empty)
       | Some (t, ts) ->
-          let* (_, sk) = s.alt |> List.find_opt (fun (tk, _) -> T.mem t tk) in
+          let* (_, sk) = s.cases |> List.find_opt (fun (tk, _) -> T.mem t tk) in
           parse_k sk t ts
 
   and parse_k : type a. a syntax_k -> token -> token Seq.t -> (a * token Seq.t) option =
