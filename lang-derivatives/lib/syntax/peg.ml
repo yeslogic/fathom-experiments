@@ -14,6 +14,8 @@ module type S = sig
   val pure : 'a -> 'a syntax
   val alt : 'a syntax -> 'a syntax -> 'a syntax
   val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax
+  val many0 : 'a syntax -> 'a list syntax
+  val many1 : 'a syntax -> 'a list syntax
   val map : ('a -> 'b) -> 'a syntax -> 'b syntax
 
   val parse : 'a syntax -> token Seq.t -> 'a option
@@ -34,6 +36,7 @@ module Make (T : Set.S) : S
     | Pure : 'a -> 'a syntax
     | Alt : 'a syntax * 'a syntax -> 'a syntax
     | Seq : 'a syntax * 'b syntax -> ('a * 'b) syntax
+    | Many : 'a syntax -> 'a list syntax
     | Map : ('a -> 'b) * 'a syntax -> 'b syntax
     (* TODO: variables *)
 
@@ -43,6 +46,9 @@ module Make (T : Set.S) : S
   let alt s1 s2 = Alt (s1, s2)
   let seq s1 s2 = Seq (s1, s2)
   let map f s = Map (f, s)
+
+  let many0 s = Many s
+  let many1 s = seq s (many0 s) |> map (fun (x, xs) -> x :: xs)
 
   let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
     let open Option.Notation in
@@ -59,9 +65,17 @@ module Make (T : Set.S) : S
           let* (x1, ts) = parse s1 ts in
           let+ (x2, ts) = parse s2 ts in
           ((x1, x2), ts)
+      | Many s ->
+          let rec go ts rev_xs =
+            let* (x, ts) = parse s ts in
+            go ts (x :: rev_xs)
+          in
+          let+ (xs, ts) = go ts [] in
+          (List.rev xs, ts)
       | Map (f, s) ->
           let+ (x, ts) = parse s ts in
           (f x, ts)
+
 
   let parse (type a) (s : a syntax) (ts : token Seq.t) : a option =
     let open Option.Notation in
