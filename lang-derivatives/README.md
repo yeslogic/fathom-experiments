@@ -1,8 +1,7 @@
 # Derivative-based parser experiments
 
-The hope for this project is to experiment with parsing-with-derivatives, e
-xploring compiling NFA-style syntax descriptions to DFA-style syntax
-descriptions, as is implemented in Daedalus[^daedalus-paper][^daedalus-code].
+This project is centered around parsing with derivatives, currently with a focus
+on exploring the background behind Daedalus’ determinization pass[^daedalus-paper][^daedalus-code].
 
 ## Project overview
 
