@@ -8,32 +8,32 @@ module type S = sig
   type token
   type token_set
 
-  type _ syntax
+  type _ t
 
-  val nullable : 'a syntax -> 'a option
-  val is_nullable : 'a syntax -> bool
-  val is_productive : 'a syntax -> bool
-  val first : 'a syntax -> token_set
-  val should_not_follow : 'a syntax -> token_set
+  val nullable : 'a t -> 'a option
+  val is_nullable : 'a t -> bool
+  val is_productive : 'a t -> bool
+  val first : 'a t -> token_set
+  val should_not_follow : 'a t -> token_set
 
   exception Nullable_conflict
   exception First_conflict
   exception Follow_conflict
 
-  val elem : token_set -> token syntax
-  val fail : 'a syntax
-  val pure : 'a -> 'a syntax
-  val alt : 'a syntax -> 'a syntax -> 'a syntax (* Nullable_conflict, First_conflict *)
-  val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax (* Follow_conflict *)
-  val map : ('a -> 'b) -> 'a syntax -> 'b syntax
+  val elem : token_set -> token t
+  val fail : 'a t
+  val pure : 'a -> 'a t
+  val alt : 'a t -> 'a t -> 'a t (* Nullable_conflict, First_conflict *)
+  val seq : 'a t -> 'b t -> ('a * 'b) t (* Follow_conflict *)
+  val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val parse : 'a syntax -> token Seq.t -> 'a option
+  val parse : 'a t -> token Seq.t -> 'a option
 
   module Det : Ll1.S
     with type token = token
     with type token_set = token_set
 
-  val compile : 'a syntax -> 'a Det.syntax
+  val compile : 'a t -> 'a Det.t
 
 end
 
@@ -50,23 +50,23 @@ module Make (T : Set.S) : S
   (** Syntax descriptions along with properties about these descriptions.
 
       We could have implemented these properties as separate functions on
-      {!syntax_data}, but because we use them multiple times, it’s probably
+      {!node}, but because we use them multiple times, it’s probably
       more efficient to compute them eagerly and store them for later use as
       we build the syntax descriptions.
   *)
-  type 'a syntax = {
-    data : 'a syntax_data;
+  type 'a t = {
+    node : 'a node;
     properties : 'a Properties.t;
   }
 
   (** Syntax descriptions *)
-  and 'a syntax_data =
-    | Elem : token_set -> token syntax_data
-    | Fail : 'a syntax_data
-    | Pure : 'a -> 'a syntax_data
-    | Alt : 'a syntax * 'a syntax -> 'a syntax_data
-    | Seq : 'a syntax * 'b syntax -> ('a * 'b) syntax_data
-    | Map : ('a -> 'b) * 'a syntax -> 'b syntax_data
+  and 'a node =
+    | Elem : token_set -> token node
+    | Fail : 'a node
+    | Pure : 'a -> 'a node
+    | Alt : 'a t * 'a t -> 'a node
+    | Seq : 'a t * 'b t -> ('a * 'b) node
+    | Map : ('a -> 'b) * 'a t -> 'b node
     (* TODO: variables *)
 
   let nullable s = s.properties |> Properties.nullable
@@ -79,43 +79,43 @@ module Make (T : Set.S) : S
   exception First_conflict = Properties.First_conflict
   exception Follow_conflict = Properties.Follow_conflict
 
-  let elem (tk : token_set) : token syntax = {
-    data = Elem tk;
+  let elem (tk : token_set) : token t = {
+    node = Elem tk;
     properties = Properties.elem tk;
   }
 
-  let fail (type a) : a syntax = {
-    data = Fail;
+  let fail (type a) : a t = {
+    node = Fail;
     properties = Properties.fail;
   }
 
-  let pure (type a) (x : a) : a syntax = {
-    data = Pure x;
+  let pure (type a) (x : a) : a t = {
+    node = Pure x;
     properties = Properties.pure x;
   }
 
-  let alt (type a) (s1 : a syntax) (s2 : a syntax) : a syntax = {
-    data = Alt (s1, s2);
+  let alt (type a) (s1 : a t) (s2 : a t) : a t = {
+    node = Alt (s1, s2);
     properties = Properties.alt s1.properties s2.properties;
   }
 
-  let seq (type a b) (s1 : a syntax) (s2 : b syntax) : (a * b) syntax = {
-    data = Seq (s1, s2);
+  let seq (type a b) (s1 : a t) (s2 : b t) : (a * b) t = {
+    node = Seq (s1, s2);
     properties = Properties.seq s1.properties s2.properties;
   }
 
-  let map (type a b) (f : a -> b) (s : a syntax) : b syntax = {
-    data = Map (f, s);
+  let map (type a b) (f : a -> b) (s : a t) : b t = {
+    node = Map (f, s);
     properties = Properties.map f s.properties;
   }
 
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
       the original syntax. *)
-  let rec derive : type a. a syntax -> token -> a syntax option =
+  let rec derive : type a. a t -> token -> a t option =
     let open Option.Notation in
     fun s t ->
-      match s.data with
+      match s.node with
       | Elem tk when T.mem t tk ->
           Some (pure t)
       | Elem _ -> None
@@ -139,7 +139,7 @@ module Make (T : Set.S) : S
           let+ s' = derive s t in
           map f s'
 
-  let rec parse : type a. a syntax -> token Seq.t -> a option =
+  let rec parse : type a. a t -> token Seq.t -> a option =
     let open Option.Notation in
     fun s ts ->
       match Seq.uncons ts with
@@ -156,13 +156,13 @@ module Make (T : Set.S) : S
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)
-  let rec compile : type a. a syntax -> a Det.syntax =
+  let rec compile : type a. a t -> a Det.t =
     fun s ->
-      Det.syntax (nullable s) (compile_branches s)
+      Det.make (nullable s) (compile_branches s)
 
-  and compile_branches : type a. a syntax -> (token_set * a Det.syntax_k) list =
+  and compile_branches : type a. a t -> (token_set * a Det.cont) list =
     fun s ->
-      match s.data with
+      match s.node with
       | Elem tk -> [(tk, Det.elem)]
       | Fail -> []
       | Pure _ -> []

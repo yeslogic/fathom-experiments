@@ -2,7 +2,7 @@ open Derivatives.Syntax.Ll1_derive.Char
 
 type _ cat =
   | [] : unit cat
-  | ( :: ) : 'hd syntax * 'tl cat -> ('hd * 'tl) cat
+  | ( :: ) : 'hd t * 'tl cat -> ('hd * 'tl) cat
 
 type _ tuple =
   | [] : unit tuple
@@ -11,13 +11,13 @@ type _ tuple =
 let char ch = elem (Byte_set.singleton ch)
 let char_of s = elem (Byte_set.of_string s)
 
-let rec alts : 'a syntax list -> 'a syntax =
+let rec alts : 'a t list -> 'a t =
   function
   | [] -> invalid_arg "alts"
   | [s] -> s
   | s :: ss -> alt s (alts ss)
 
-let rec cat : type a. a cat -> a tuple syntax =
+let rec cat : type a. a cat -> a tuple t =
   function
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)

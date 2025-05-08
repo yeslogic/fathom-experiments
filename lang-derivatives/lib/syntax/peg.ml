@@ -7,18 +7,18 @@ module type S = sig
   type token
   type token_set
 
-  type _ syntax
+  type _ t
 
-  val elem : token_set -> token syntax
-  val fail : 'a syntax
-  val pure : 'a -> 'a syntax
-  val alt : 'a syntax -> 'a syntax -> 'a syntax
-  val seq : 'a syntax -> 'b syntax -> ('a * 'b) syntax
-  val many0 : 'a syntax -> 'a list syntax
-  val many1 : 'a syntax -> 'a list syntax
-  val map : ('a -> 'b) -> 'a syntax -> 'b syntax
+  val elem : token_set -> token t
+  val fail : 'a t
+  val pure : 'a -> 'a t
+  val alt : 'a t -> 'a t -> 'a t
+  val seq : 'a t -> 'b t -> ('a * 'b) t
+  val many0 : 'a t -> 'a list t
+  val many1 : 'a t -> 'a list t
+  val map : ('a -> 'b) -> 'a t -> 'b t
 
-  val parse : 'a syntax -> token Seq.t -> 'a option
+  val parse : 'a t -> token Seq.t -> 'a option
 
 end
 
@@ -30,14 +30,14 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
-  type _ syntax =
-    | Elem : token_set -> token syntax
-    | Fail : 'a syntax
-    | Pure : 'a -> 'a syntax
-    | Alt : 'a syntax * 'a syntax -> 'a syntax
-    | Seq : 'a syntax * 'b syntax -> ('a * 'b) syntax
-    | Many : 'a syntax -> 'a list syntax
-    | Map : ('a -> 'b) * 'a syntax -> 'b syntax
+  type _ t =
+    | Elem : token_set -> token t
+    | Fail : 'a t
+    | Pure : 'a -> 'a t
+    | Alt : 'a t * 'a t -> 'a t
+    | Seq : 'a t * 'b t -> ('a * 'b) t
+    | Many : 'a t -> 'a list t
+    | Map : ('a -> 'b) * 'a t -> 'b t
     (* TODO: variables *)
 
   let elem t = Elem t
@@ -50,7 +50,7 @@ module Make (T : Set.S) : S
   let many0 s = Many s
   let many1 s = seq s (many0 s) |> map (fun (x, xs) -> x :: xs)
 
-  let rec parse : type a. a syntax -> token Seq.t -> (a * token Seq.t) option =
+  let rec parse : type a. a t -> token Seq.t -> (a * token Seq.t) option =
     let open Option.Notation in
     fun s ts ->
       match s with
@@ -77,7 +77,7 @@ module Make (T : Set.S) : S
           (f x, ts)
 
 
-  let parse (type a) (s : a syntax) (ts : token Seq.t) : a option =
+  let parse (type a) (s : a t) (ts : token Seq.t) : a option =
     let open Option.Notation in
     let* (x, ts) = parse s ts in
     if Seq.is_empty ts then Some x else None
