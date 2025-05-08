@@ -18,7 +18,8 @@ module type S = sig
   val parse : 'a syntax -> token Seq.t -> 'a option
 
   (* TODO: Compile to Rust *)
-  (* TODO: Compile to Graphvis *)
+
+  val emit_dot : 'a syntax -> (token_set -> string) -> unit
 
 end
 
@@ -78,5 +79,50 @@ module Make (T : Set.S) : S
     let open Option.Notation in
     let* (x, ts) = parse s ts in
     if Seq.is_empty ts then Some x else None
+
+  (* TODO: Test that this actually works! *)
+  let emit_dot (type a) (s : a syntax) (token_set : token_set -> string) : unit =
+    let fresh_node =
+      let next_id = ref 0 in
+      fun () ->
+        let id = !next_id in
+        incr next_id;
+        id
+    in
+
+    let rec emit_syntax : type a. a syntax -> start:int -> stop:int -> unit =
+      fun s ~start ~stop ->
+        if Option.is_some s.null then
+          Printf.printf "  %i -> %i [label = \"ε\"];\n" start stop;
+
+        s.cases |> List.iter @@ fun (tk, sk) ->
+          let next = fresh_node () in
+          Printf.printf "  %i -> %i [label = \"%s\"];\n" start next (token_set tk);
+          emit_syntax_k sk ~start:next ~stop
+
+    and emit_syntax_k : type a. a syntax_k -> start:int -> stop:int -> unit =
+      fun sk ~start ~stop ->
+        match sk with
+        | Elem -> ()
+        | Seq1 (_, sk) ->
+            emit_syntax_k sk ~start ~stop
+        | Seq2 (sk, s) ->
+            let next = fresh_node () in
+            emit_syntax_k sk ~start ~stop:next;
+            emit_syntax s ~start:next ~stop
+        | Map (_, sk) ->
+            emit_syntax_k sk ~start ~stop
+
+    in
+
+    let start = fresh_node () in
+    let stop = fresh_node () in
+
+    Printf.printf "digraph ll1 {\n";
+    Printf.printf "  rankdir=LR;\n";
+    Printf.printf "  node [shape = doublecircle]; %i %i;\n" start stop;
+    Printf.printf "  node [shape = circle];\n";
+    emit_syntax s ~start ~stop;
+    Printf.printf "}\n"
 
 end
