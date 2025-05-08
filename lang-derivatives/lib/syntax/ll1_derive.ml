@@ -14,7 +14,7 @@ module type S = sig
   exception First_conflict
   exception Follow_conflict
 
-  val elem : token_set -> token t
+  val token : token_set -> token t
   val fail : 'a t
   val pure : 'a -> 'a t
   val alt : 'a t -> 'a t -> 'a t (* Nullable_conflict, First_conflict *)
@@ -59,7 +59,7 @@ module Make (T : Set.S) : S
 
   (** Syntax descriptions *)
   and 'a node =
-    | Elem : token_set -> token node
+    | Token : token_set -> token node
     | Fail : 'a node
     | Pure : 'a -> 'a node
     | Alt : 'a t * 'a t -> 'a node
@@ -74,9 +74,9 @@ module Make (T : Set.S) : S
   exception First_conflict = Properties.First_conflict
   exception Follow_conflict = Properties.Follow_conflict
 
-  let elem (tk : token_set) : token t = {
-    node = Elem tk;
-    properties = Properties.elem tk;
+  let token (tk : token_set) : token t = {
+    node = Token tk;
+    properties = Properties.token tk;
   }
 
   let fail (type a) : a t = {
@@ -111,9 +111,9 @@ module Make (T : Set.S) : S
     let open Option.Notation in
     fun s t ->
       match s.node with
-      | Elem tk when T.mem t tk ->
+      | Token tk when T.mem t tk ->
           Some (pure t)
-      | Elem _ -> None
+      | Token _ -> None
       | Fail -> None
       | Pure _ -> None
       | Alt (s1, s2) ->
@@ -158,7 +158,7 @@ module Make (T : Set.S) : S
   and compile_cases : type a. a t -> (token_set * a Case_tree.cont) list =
     fun s ->
       match s.node with
-      | Elem tk -> [(tk, Case_tree.elem)]
+      | Token tk -> [(tk, Case_tree.token)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->

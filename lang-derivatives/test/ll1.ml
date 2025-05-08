@@ -8,14 +8,14 @@ type _ tuple =
   | [] : unit tuple
   | ( :: ) : 'hd * 'tl tuple -> ('hd * 'tl) tuple
 
-let char ch = elem (Byte_set.singleton ch)
-let char_of s = elem (Byte_set.of_string s)
-
 let rec alts : 'a t list -> 'a t =
   function
   | [] -> invalid_arg "alts"
   | [s] -> s
   | s :: ss -> alt s (alts ss)
+
+let char ch = token (Byte_set.singleton ch)
+let char_of s = token (Byte_set.of_string s)
 
 let rec cat : type a. a cat -> a tuple t =
   function

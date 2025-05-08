@@ -9,7 +9,7 @@ module type S = sig
 
   type _ t
 
-  val elem : token_set -> token t
+  val token : token_set -> token t
   val fail : 'a t
   val pure : 'a -> 'a t
   val alt : 'a t -> 'a t -> 'a t
@@ -31,7 +31,7 @@ module Make (T : Set.S) : S
   type token_set = T.t
 
   type _ t =
-    | Elem : token_set -> token t
+    | Token : token_set -> token t
     | Fail : 'a t
     | Pure : 'a -> 'a t
     | Alt : 'a t * 'a t -> 'a t
@@ -40,7 +40,7 @@ module Make (T : Set.S) : S
     | Map : ('a -> 'b) * 'a t -> 'b t
     (* TODO: variables *)
 
-  let elem t = Elem t
+  let token t = Token t
   let fail = Fail
   let pure x = Pure x
   let alt s1 s2 = Alt (s1, s2)
@@ -54,7 +54,7 @@ module Make (T : Set.S) : S
     let open Option.Notation in
     fun s ts ->
       match s with
-      | Elem tk ->
+      | Token tk ->
           let* (t, ts) = Seq.uncons ts in
           if T.mem t tk then Some (t, ts) else None
       | Fail -> None

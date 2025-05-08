@@ -10,7 +10,7 @@ module type S = sig
 
   val make : 'a option -> (token_set * 'a cont) list -> 'a t
 
-  val elem : token cont
+  val token : token cont
   val seq1 : 'a -> 'b cont -> ('a * 'b) cont
   val seq2 : 'a cont -> 'b t -> ('a * 'b) cont
   val map : ('a -> 'b) -> 'a cont -> 'b cont
@@ -38,13 +38,13 @@ module Make (T : Set.S) : S
 
   (** Syntax descriptions that can have a token applied to them *)
   and 'a cont =
-    | Elem : token cont
+    | Token : token cont
     | Seq1 : 'a * 'b cont -> ('a * 'b) cont
     | Seq2 : 'a cont * 'b t -> ('a * 'b) cont
     | Map : ('a -> 'b) * 'a cont -> 'b cont
 
   let make null cases = { null; cases }
-  let elem = Elem
+  let token = Token
   let seq1 x1 sk = Seq1 (x1, sk)
   let seq2 sk s = Seq2 (sk, s)
   let map f s = Map (f, s)
@@ -62,7 +62,7 @@ module Make (T : Set.S) : S
     let open Option.Notation in
     fun sk t ts ->
       match sk with
-      | Elem -> Some (t, ts)
+      | Token -> Some (t, ts)
       | Seq1 (x1, sk) ->
           let+ (x2, ts) = parse_cont sk t ts in
           ((x1, x2), ts)
@@ -102,7 +102,7 @@ module Make (T : Set.S) : S
     and emit_cont : type a. a cont -> start:int -> stop:int -> unit =
       fun sk ~start ~stop ->
         match sk with
-        | Elem -> ()
+        | Token -> ()
         | Seq1 (_, sk) ->
             emit_cont sk ~start ~stop
         | Seq2 (sk, s) ->

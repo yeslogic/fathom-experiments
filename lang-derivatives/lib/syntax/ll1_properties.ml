@@ -22,7 +22,7 @@ module type S = sig
   exception First_conflict
   exception Follow_conflict
 
-  val elem : token_set -> token t
+  val token : token_set -> token t
   val fail : 'a t
   val pure : 'a -> 'a t
   val alt : 'a t -> 'a t -> 'a t (* Nullable_conflict, First_conflict *)
@@ -57,7 +57,7 @@ module Make (T : Set.S) : S
   let first s = s.first
   let should_not_follow s = s.should_not_follow
 
-  let elem (tk : token_set) : token t = {
+  let token (tk : token_set) : token t = {
     nullable = None;
     is_productive = true;
     first = tk;
