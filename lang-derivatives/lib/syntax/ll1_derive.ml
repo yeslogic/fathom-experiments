@@ -21,6 +21,12 @@ module type S = sig
   val seq : 'a t -> 'b t -> ('a * 'b) t (* Follow_conflict *)
   val map : ('a -> 'b) -> 'a t -> 'b t
 
+  (** Derived syntax descriptions *)
+
+  val app : ('a -> 'b) t -> 'a t -> 'b t
+  val opt : 'a t -> 'a -> 'a t
+  val alts : 'a t list -> 'a t
+
   (** Parsing with derivatives *)
 
   val parse : 'a t -> token Seq.t -> 'a option
@@ -103,6 +109,20 @@ module Make (T : Set.S) : S
     node = Map (f, s);
     properties = Properties.map f s.properties;
   }
+
+  (** Derived syntax descriptions *)
+
+  let app (type a b) (s1 : (a -> b) t) (s2 : a t) : b t =
+    seq s1 s2 |> map (fun (f, x) -> f x)
+
+  let opt (type a) (s : a t) (x : a) : a t =
+    alt s (pure x)
+
+  let rec alts : type a. a t list -> a t =
+    function
+    | [] -> fail
+    | [s] -> s
+    | s :: ss -> alt s (alts ss)
 
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
