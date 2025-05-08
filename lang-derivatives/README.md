@@ -10,14 +10,14 @@ The main modules of interest are:
 | Name | Description |
 | ---- | ----------- |
 | [`Peg`] | Top-down parsers with full backtracking and left-biased alternation. |
-| [`Ll1_derive`] | Top-down parsing with derivatives. Compiles to the [`Ll1`] language. |
 | [`Ll1_properties`] | LL(1) properties of syntaxes, used in [`Ll1_derive`]. |
-| [`Ll1`] | Top-down parsers with a single token of lookahead. |
+| [`Ll1_derive`] | Top-down parsing with derivatives. Compiles to the [`Ll1_case_tree`] language. |
+| [`Ll1_case_tree`] | Top-down parsers with a single token of lookahead, expressed as case trees. |
 
 [`Peg`]: lib/syntax/ll.ml
 [`Ll1_derive`]: lib/syntax/ll1_derive.ml
 [`Ll1_properties`]: lib/syntax/ll1_properties.ml
-[`Ll1`]: lib/syntax/ll1.ml
+[`Ll1_case_tree`]: lib/syntax/ll1_case_tree.ml
 
 ## Resources
 

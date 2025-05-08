@@ -10,12 +10,6 @@ module type S = sig
 
   type _ t
 
-  val nullable : 'a t -> 'a option
-  val is_nullable : 'a t -> bool
-  val is_productive : 'a t -> bool
-  val first : 'a t -> token_set
-  val should_not_follow : 'a t -> token_set
-
   exception Nullable_conflict
   exception First_conflict
   exception Follow_conflict
@@ -27,13 +21,17 @@ module type S = sig
   val seq : 'a t -> 'b t -> ('a * 'b) t (* Follow_conflict *)
   val map : ('a -> 'b) -> 'a t -> 'b t
 
+  (** Parsing with derivatives *)
+
   val parse : 'a t -> token Seq.t -> 'a option
 
-  module Det : Ll1.S
+  (** Compiling to case trees *)
+
+  module Case_tree : Ll1_case_tree.S
     with type token = token
     with type token_set = token_set
 
-  val compile : 'a t -> 'a Det.t
+  val compile : 'a t -> 'a Case_tree.t
 
 end
 
@@ -70,10 +68,7 @@ module Make (T : Set.S) : S
     (* TODO: variables *)
 
   let nullable s = s.properties |> Properties.nullable
-  let is_nullable s = s.properties |> Properties.is_nullable
-  let is_productive s = s.properties |> Properties.is_productive
   let first s = s.properties |> Properties.first
-  let should_not_follow s = s.properties |> Properties.should_not_follow
 
   exception Nullable_conflict = Properties.Nullable_conflict
   exception First_conflict = Properties.First_conflict
@@ -152,18 +147,18 @@ module Make (T : Set.S) : S
             None
 
   (** Deterministic syntax descriptions *)
-  module Det = Ll1.Make (T)
+  module Case_tree = Ll1_case_tree.Make (T)
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)
-  let rec compile : type a. a t -> a Det.t =
+  let rec compile : type a. a t -> a Case_tree.t =
     fun s ->
-      Det.make (nullable s) (compile_cases s)
+      Case_tree.make (nullable s) (compile_cases s)
 
-  and compile_cases : type a. a t -> (token_set * a Det.cont) list =
+  and compile_cases : type a. a t -> (token_set * a Case_tree.cont) list =
     fun s ->
       match s.node with
-      | Elem tk -> [(tk, Det.elem)]
+      | Elem tk -> [(tk, Case_tree.elem)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
@@ -171,16 +166,16 @@ module Make (T : Set.S) : S
       | Seq (s1, s2) ->
           let branches1 =
             match (nullable s1) with
-            | Some x -> compile_cases s2 |> List.map (fun (tk, s2) -> (tk, Det.seq1 x s2))
+            | Some x -> compile_cases s2 |> List.map (fun (tk, s2) -> (tk, Case_tree.seq1 x s2))
             | None -> []
           and branches2 =
             (* TODO: Adding a join-point would avoid duplication in the generated code *)
             let s2 = compile s2 in
-            compile_cases s1 |> List.map (fun (tk, s1) -> (tk, Det.seq2 s1 s2))
+            compile_cases s1 |> List.map (fun (tk, s1) -> (tk, Case_tree.seq2 s1 s2))
           in
           branches1 @ branches2
       | Map (f, s) ->
-          compile_cases s |> List.map (fun (tk, s) -> (tk, Det.map f s))
+          compile_cases s |> List.map (fun (tk, s) -> (tk, Case_tree.map f s))
 
 end
 

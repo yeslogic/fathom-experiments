@@ -1,4 +1,4 @@
-(** Top-down parsers with a single token of lookahead. *)
+(** Top-down parsers with a single token of lookahead, expressed as case trees. *)
 
 module type S = sig
 

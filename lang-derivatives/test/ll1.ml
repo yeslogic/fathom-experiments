@@ -29,7 +29,7 @@ let make_parser s =
   fun ts ->
     let ts = String.to_seq ts in
     let x = parse s ts in
-    let y = Det.parse det_s ts in
+    let y = Case_tree.parse det_s ts in
     assert (x = y);
     x
 
