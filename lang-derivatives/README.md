@@ -1,7 +1,7 @@
 # Derivative-based parser experiments
 
 This project is centered around parsing with derivatives, currently with a focus
-on exploring the background behind Daedalus’ determinization pass[^daedalus-paper][^daedalus-code].
+on exploring the background behind Daedalus’ determinization pass.
 
 ## Project overview
 
@@ -21,9 +21,15 @@ The main modules of interest are:
 
 ## Resources
 
-- Romain Edelmann, Jad Hamza, Viktor Kunčak, “Zippy LL(1) parsing with derivatives”, PLDI 2020, [[DOI](https://doi.org/10.1145/3385412.3385992)]
-- [epfl-lara/scallion](https://github.com/epfl-lara/scallion) on Github
-- [epfl-lara/scallion-proofs](https://github.com/epfl-lara/scallion-proofs) on Github
-
-[^daedalus-paper]: Iavor S. Diatchki et. al. “Daedalus: Safer Document Parsing”, PLDI 2024 [[DOI](https://doi.org/10.1145/3656410)]
-[^daedalus-code]: [Daedalus/Core/Determinize.hs](https://github.com/GaloisInc/daedalus/blob/347ab98b175201e5e41ee5a935fa2a6ed5d89cb2/daedalus-core/src/Daedalus/Core/Determinize.hs)
+- Iavor S. Diatchki et. al. “Daedalus: Safer Document Parsing”, PLDI 2024.
+  [[DOI](https://doi.org/10.1145/3656410)]
+  [[PDF](https://dl.acm.org/doi/pdf/10.1145/3656410)]
+  - [Daedalus/Core/Determinize.hs](https://github.com/GaloisInc/daedalus/blob/347ab98b175201e5e41ee5a935fa2a6ed5d89cb2/daedalus-core/src/Daedalus/Core/Determinize.hs)
+- Romain Edelmann, Jad Hamza, and Viktor Kunčak, “Zippy LL(1) parsing with derivatives”, PLDI 2020.
+  [[DOI](https://doi.org/10.1145/3385412.3385992)]
+  [[PDF](https://lara.epfl.ch/~kuncak/papers/EdelmannETAL20ZippyLLParsingDerivatives.pdf)]
+  - [epfl-lara/scallion](https://github.com/epfl-lara/scallion)
+  - [epfl-lara/scallion-proofs](https://github.com/epfl-lara/scallion-proofs)
+- S. Doaitse Swierstra, and Luc Duponcheel, “Deterministic, error-correcting combinator parsers”, Advanced Functional Programming, 1996.
+  [[DOI](https://doi.org/10.1007/3-540-61628-4_7)]
+  [[PDF](https://www.cs.tufts.edu/~nr/cs257/archive/doaitse-swierstra/LL1.pdf)]
