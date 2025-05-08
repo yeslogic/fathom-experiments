@@ -128,7 +128,7 @@ module Make (T : Set.S) : S
           end
       | Seq (s1, s2) ->
           begin match (nullable s1) with
-          | Some x when T.mem t ((first s2)) ->
+          | Some x when T.mem t (first s2) ->
               let* s2' = derive s2 t in
               Some (seq (pure x) s2')
           | Some _ | None ->
@@ -158,29 +158,29 @@ module Make (T : Set.S) : S
       the derivative at runtime. *)
   let rec compile : type a. a t -> a Det.t =
     fun s ->
-      Det.make (nullable s) (compile_branches s)
+      Det.make (nullable s) (compile_cases s)
 
-  and compile_branches : type a. a t -> (token_set * a Det.cont) list =
+  and compile_cases : type a. a t -> (token_set * a Det.cont) list =
     fun s ->
       match s.node with
       | Elem tk -> [(tk, Det.elem)]
       | Fail -> []
       | Pure _ -> []
       | Alt (s1, s2) ->
-          compile_branches s1 @ compile_branches s2
+          compile_cases s1 @ compile_cases s2
       | Seq (s1, s2) ->
           let branches1 =
             match (nullable s1) with
-            | Some x -> compile_branches s2 |> List.map (fun (tk, s2) -> (tk, Det.seq1 x s2))
+            | Some x -> compile_cases s2 |> List.map (fun (tk, s2) -> (tk, Det.seq1 x s2))
             | None -> []
           and branches2 =
             (* TODO: Adding a join-point would avoid duplication in the generated code *)
             let s2 = compile s2 in
-            compile_branches s1 |> List.map (fun (tk, s1) -> (tk, Det.seq2 s1 s2))
+            compile_cases s1 |> List.map (fun (tk, s1) -> (tk, Det.seq2 s1 s2))
           in
           branches1 @ branches2
       | Map (f, s) ->
-          compile_branches s |> List.map (fun (tk, s) -> (tk, Det.map f s))
+          compile_cases s |> List.map (fun (tk, s) -> (tk, Det.map f s))
 
 end
 
