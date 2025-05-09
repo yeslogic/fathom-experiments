@@ -129,6 +129,7 @@ module Make (T : Set.S) : S
       the original syntax. *)
   let rec derive : type a. a t -> token -> a t option =
     let open Option.Notation in
+    (* TODO: Avoid recomputing LL(1) properties over and over? *)
     fun s t ->
       match s.node with
       | Token tk when T.mem t tk ->
