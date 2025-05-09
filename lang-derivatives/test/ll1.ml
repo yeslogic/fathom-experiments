@@ -8,13 +8,14 @@ type _ tuple =
   | [] : unit tuple
   | ( :: ) : 'hd * 'tl tuple -> ('hd * 'tl) tuple
 
-let char ch = token (Byte_set.singleton ch)
-let char_of s = token (Byte_set.of_string s)
-
 let rec cat : type a. a cat -> a tuple t =
   function
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
+
+let char ch = token (Byte_set.singleton ch)
+let char_of s = token (Byte_set.of_string s)
+let string s = list (String.to_seq s |> Seq.map char |> List.of_seq)
 
 (** Create a parser that asserts that both the derivative-based and compiled
     parsers produce the same result. *)
@@ -100,8 +101,8 @@ let () =
 
 let () =
   match alts [
-    cat [pure (); char 'A'; char 'B'];
-    cat [char 'A'; char 'C'] |> map (fun xs -> () :: xs);
+    cat [pure (); string "AB"];
+    cat [string "AC"] |> map (fun xs -> () :: xs);
   ] with
   | exception First_conflict -> ()
   | _ -> failwith "expected First_conflict"

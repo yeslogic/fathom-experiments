@@ -14,6 +14,8 @@ module type S = sig
   exception First_conflict
   exception Follow_conflict
 
+  (** Core syntax descriptions *)
+
   val token : token_set -> token t
   val fail : 'a t
   val pure : 'a -> 'a t
@@ -26,6 +28,17 @@ module type S = sig
   val app : ('a -> 'b) t -> 'a t -> 'b t
   val opt : 'a t -> 'a -> 'a t
   val alts : 'a t list -> 'a t
+  val list : 'a t list -> 'a list t
+
+  module Notation : sig
+
+    val ( <|> ) : 'a t -> 'a t -> 'a t
+    val ( <$> ) : ('a -> 'b) -> 'a t -> 'b t
+    val ( <*> ) : ('a -> 'b) t -> 'a t -> 'b t
+    val ( let+ ) : ('a -> 'b) -> 'a t -> 'b t
+    val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
+
+  end
 
   (** Parsing with derivatives *)
 
@@ -123,6 +136,21 @@ module Make (T : Set.S) : S
     | [] -> fail
     | [s] -> s
     | s :: ss -> alt s (alts ss)
+
+  let rec list : type a. a t list -> a list t =
+    function
+    | [] -> pure []
+    | s :: ss -> seq s (list ss) |> map (fun (x, xs) -> x :: xs)
+
+  module Notation = struct
+
+    let ( <|> ) = alt
+    let ( <$> ) = map
+    let ( <*> ) = app
+    let ( let+ ) = map
+    let ( and+ ) = seq
+
+  end
 
   (** Returns the state of the syntax after seeing a token. This operation is
       {i not} tail-recursive, and the resulting derivative can grow larger than
