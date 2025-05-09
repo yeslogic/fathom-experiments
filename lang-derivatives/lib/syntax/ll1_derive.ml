@@ -228,4 +228,24 @@ module Make (T : Set.S) : S
 
 end
 
-module Char = Make (Set.Char)
+module Char : sig
+
+  include S
+    with type token = char
+    with type token_set = Byte_set.t
+
+  (** Additional syntax descriptions, specific to character tokens *)
+
+  val char : char -> token t
+  val char_of : string -> token t
+  val string : string -> token list t
+
+end = struct
+
+  include Make (Set.Char)
+
+  let char ch = token (Byte_set.singleton ch)
+  let char_of s = token (Byte_set.of_string s)
+  let string s = list (String.to_seq s |> Seq.map char |> List.of_seq)
+
+end

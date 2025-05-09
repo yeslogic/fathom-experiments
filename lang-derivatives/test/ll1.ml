@@ -13,10 +13,6 @@ let rec cat : type a. a cat -> a tuple t =
   | [] -> pure []
   | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
 
-let char ch = token (Byte_set.singleton ch)
-let char_of s = token (Byte_set.of_string s)
-let string s = list (String.to_seq s |> Seq.map char |> List.of_seq)
-
 (** Create a parser that asserts that both the derivative-based and compiled
     parsers produce the same result. *)
 let make_parser s =
