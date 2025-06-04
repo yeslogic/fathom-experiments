@@ -73,7 +73,7 @@ your [`./.vscode/settings.json`] file:
     // https://github.com/ocamllabs/vscode-ocaml-platform/issues/984
     "ocaml.sandbox": {
         "kind": "custom",
-        "template": "nix develop ${firstWorkspaceFolder} --command $prog $args",
+        "template": "direnv exec ${firstWorkspaceFolder} --command $prog $args",
     },
 }
 ```
