@@ -1,9 +1,9 @@
 %token <int> INT
 %token <string> NAME
 
-%token KEWORD_FORMAT "format"
-%token KEWORD_TYPE "type"
-%token KEWORD_DEF "def"
+%token KEYWORD_FORMAT "format"
+%token KEYWORD_TYPE "type"
+%token KEYWORD_DEF "def"
 
 %token BANG "!"
 %token COLON ":"

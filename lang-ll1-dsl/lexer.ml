@@ -28,7 +28,7 @@ let rec token lexbuf =
   | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf
   | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
   | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
-  | "def" -> KEWORD_DEF
+  | "def" -> KEYWORD_DEF
   | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
   | "!" -> BANG
   | ":" -> COLON

@@ -1,7 +1,7 @@
 %token <int> INT
 %token <string> NAME
 
-%token KEWORD_DEF "def"
+%token KEYWORD_DEF "def"
 
 %token BANG "!"
 %token COLON ":"
