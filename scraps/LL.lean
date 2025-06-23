@@ -129,3 +129,10 @@ macro_rules
 example : Grammar := [Grammar| u8]
 example : Grammar := [Grammar| u8; u8; u8]
 example : Grammar := [Grammar| repeat-count 3 u8]
+
+-- example : Grammar :=
+--   [Grammar| {
+--     width ← u8;
+--     height ← u8;
+--     data ← repeat-count (width * height) u8
+--   }]
