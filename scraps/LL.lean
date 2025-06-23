@@ -90,13 +90,14 @@ def sig (g₁ : Grammar) (g₂ : g₁.type → Grammar) : Grammar where
     pure ⟨i, ⟨v₁, v₂⟩⟩
 
 def repeatCount (n : Nat) (g : Grammar) : Grammar where
-  type := Array g.type
-  decode := decodeArray n #[] where
-    decodeArray : Nat → Array g.type → Decode (Array g.type)
-      | 0, xs, _, i => some ⟨i, xs⟩
-      | n + 1, xs, bytes, i => do
-        let ⟨i, v⟩ ← g.decode bytes i
-        decodeArray n (xs.push v) bytes i
+  type := Vector g.type n
+  decode := decodeVector #v[] where
+    decodeVector : {n m : Nat} → Vector g.type m → Decode (Vector g.type (n + m))
+      | 0, _, xs, _, i =>
+          by rw [Nat.add_comm]; exact some ⟨i, xs⟩
+      | n + 1, _, xs, bytes, i => do
+          let ⟨i, v⟩ ← g.decode bytes i
+          by rw [Nat.add_right_comm]; exact decodeVector (xs.push v) bytes i
 
 
 /-! ## Examples -/
