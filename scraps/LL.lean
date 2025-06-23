@@ -2,7 +2,7 @@
   # Binary decoder DSL
 -/
 
-inductive Either α β :=
+inductive Either α β where
 | left : α → Either α β
 | right : β → Either α β
 
@@ -57,9 +57,7 @@ def byte : Grammar where
   decode bytes i :=
     match Nat.decLt i bytes.size with
     | isFalse _ => none
-    | isTrue prf =>
-      let v := bytes.get ⟨i, prf⟩
-      pure ⟨i + 1, v⟩
+    | isTrue _ => pure ⟨i + 1, bytes.get i⟩
 
 def alt (g₁ : GrammarOf α) (g₂ : GrammarOf α) : Grammar where
   type := α
@@ -105,7 +103,7 @@ def repeatCount (n : Nat) (g : Grammar) : Grammar where
 
 example : Grammar :=
   sig (pair byte byte) fun ⟨width, height⟩ =>
-    repeatCount (width.val * height.val) byte
+    repeatCount (width.toFin * height.toFin) byte
 
 
 /-! ## Grammar DSL -/
