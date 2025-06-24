@@ -94,7 +94,7 @@ def repeatCount (n : Nat) (g : Grammar) : Grammar where
   decode := decodeVector #v[] where
     decodeVector : {n m : Nat} → Vector g.type m → Decode (Vector g.type (n + m))
       | 0, _, xs, _, i =>
-          by rw [Nat.add_comm]; exact some ⟨i, xs⟩
+          by rw [Nat.zero_add]; exact some ⟨i, xs⟩
       | n + 1, _, xs, bytes, i => do
           let ⟨i, v⟩ ← g.decode bytes i
           by rw [Nat.add_right_comm]; exact decodeVector (xs.push v) bytes i
