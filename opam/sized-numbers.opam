@@ -6,7 +6,7 @@ homepage: "https://github.com/yeslogic/fathom-experiments"
 bug-reports: "https://github.com/yeslogic/fathom-experiments/issues"
 depends: [
   "dune" {>= "3.17"}
-  "alcotest" {>= "1.8" & with-test}
+  "alcotest" {>= "1.9" & with-test}
   "fmt" {>= "0.9" & with-test}
   "odoc" {with-doc}
 ]

@@ -7,7 +7,7 @@ bug-reports: "https://github.com/yeslogic/fathom-experiments/issues"
 depends: [
   "dune" {>= "3.17"}
   "sized-numbers"
-  "mdx" {>= "0.4" & with-test}
+  "mdx" {>= "2.5" & with-test}
   "odoc" {with-doc}
 ]
 build: [

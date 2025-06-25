@@ -9,7 +9,7 @@ depends: [
   "byte-set"
   "menhir" {>= "20240715" & build}
   "menhirLib" {>= "20240715"}
-  "sedlex" {>= "3.3"}
+  "sedlex" {>= "3.6"}
   "odoc" {with-doc}
 ]
 build: [

@@ -24,7 +24,7 @@
 (package
   (name sized-numbers)
   (depends
-    (alcotest (and (>= "1.8") :with-test))
+    (alcotest (and (>= "1.9") :with-test))
     (fmt (and (>= "0.9") :with-test))))
 
 
@@ -34,7 +34,7 @@
   (name bidi-combinators)
   (depends
     sized-numbers
-    (mdx (and (>= "0.4") :with-test))))
+    (mdx (and (>= "2.5") :with-test))))
 
 (package
   (name derivatives)
@@ -52,7 +52,7 @@
     byte-set
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
-    (sedlex (>= "3.3"))))
+    (sedlex (>= "3.6"))))
 
 (package
   (name ll1-dsl2)
@@ -60,8 +60,8 @@
     byte-set
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
-    (sedlex (>= "3.3"))
-    (tsort (>= "2.1"))))
+    (sedlex (>= "3.6"))
+    (tsort (>= "2.2"))))
 
 (package
   (name llk-simple)
@@ -82,12 +82,12 @@
 
     ; Web interface
     (brr (>= "0.0.7"))
-    (js_of_ocaml-compiler (>= "5.9.1"))
-    (js_of_ocaml (>= "5.9.1"))
+    (js_of_ocaml-compiler (>= "6.0.1"))
+    (js_of_ocaml (>= "6.0.1"))
 
     ; Core library
     case-conv
     (menhir (and (>= "20240715") :build))
-    (sedlex (>= "3.3"))
+    (sedlex (>= "3.6"))
     sized-numbers
-    (tsort (>= "2.1"))))
+    (tsort (>= "2.2"))))
