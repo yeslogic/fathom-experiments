@@ -31,7 +31,7 @@ module Make (T : Set.S) : S
   type token = T.elt
   type token_set = T.t
 
-  type 'a t = {
+  type 'a branches = {
     null : 'a option;
     cases : (token_set * 'a cont) list;
   }
@@ -40,8 +40,10 @@ module Make (T : Set.S) : S
   and 'a cont =
     | Token : token cont
     | Seq1 : 'a * 'b cont -> ('a * 'b) cont
-    | Seq2 : 'a cont * 'b t -> ('a * 'b) cont
+    | Seq2 : 'a cont * 'b branches -> ('a * 'b) cont
     | Map : ('a -> 'b) * 'a cont -> 'b cont
+
+  type 'a t = 'a branches
 
   let make null cases = { null; cases }
   let token = Token

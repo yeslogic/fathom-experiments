@@ -46,7 +46,7 @@ module type S = sig
 
   (** Compiling to case trees *)
 
-  module Case_tree : Ll1_case_tree.S
+  module Case_tree : Case_tree.S
     with type token = token
     with type token_set = token_set
 
@@ -59,7 +59,7 @@ module Make (T : Set.S) : S
   with type token_set = T.t
 = struct
 
-  module Properties = Ll1_properties.Make (T)
+  module Properties = Peg_ll1_properties.Make (T)
 
   type token = T.elt
   type token_set = T.t
@@ -196,7 +196,7 @@ module Make (T : Set.S) : S
             None
 
   (** Deterministic syntax descriptions *)
-  module Case_tree = Ll1_case_tree.Make (T)
+  module Case_tree = Case_tree.Make (T)
 
   (** Compile to a deterministic syntax description, avoiding the need compute
       the derivative at runtime. *)
