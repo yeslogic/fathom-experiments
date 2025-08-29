@@ -35,8 +35,13 @@ module type S = sig
     val ( <|> ) : 'a t -> 'a t -> 'a t
     val ( <$> ) : ('a -> 'b) -> 'a t -> 'b t
     val ( <*> ) : ('a -> 'b) t -> 'a t -> 'b t
+
     val ( let+ ) : ('a -> 'b) -> 'a t -> 'b t
     val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
+
+    val ( ++ ) : 'a t -> 'b t -> ('a * 'b) t
+    val ( +< ) : 'a t -> 'b t -> 'a t
+    val ( +> ) : 'a t -> 'b t -> 'b t
 
   end
 
@@ -147,8 +152,13 @@ module Make (T : Set.S) : S
     let ( <|> ) = alt
     let ( <$> ) = map
     let ( <*> ) = app
+
     let ( let+ ) = map
     let ( and+ ) = seq
+
+    let ( ++ ) = seq
+    let ( +< ) x y = x ++ y |> map fst
+    let ( +> ) x y = x ++ y |> map snd
 
   end
 

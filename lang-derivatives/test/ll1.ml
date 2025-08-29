@@ -1,18 +1,5 @@
 open Derivatives.Syntax.Peg_ll1.Char
 
-type _ cat =
-  | [] : unit cat
-  | ( :: ) : 'hd t * 'tl cat -> ('hd * 'tl) cat
-
-type _ tuple =
-  | [] : unit tuple
-  | ( :: ) : 'hd * 'tl tuple -> ('hd * 'tl) tuple
-
-let rec cat : type a. a cat -> a tuple t =
-  function
-  | [] -> pure []
-  | s :: ss -> seq s (cat ss) |> map (fun (x, xs) -> x :: xs)
-
 (** Create a parser that asserts that both the derivative-based and compiled
     parsers produce the same result. *)
 let make_parser s =
@@ -28,10 +15,7 @@ let () =
   Printexc.record_backtrace true
 
 let () =
-  let parser = make_parser @@ alts [
-    char_of "A";
-    char_of "B";
-  ] in
+  let parser = make_parser Notation.(char 'A' <|> char 'B') in
 
   assert (parser "A" = Some 'A');
   assert (parser "B" = Some 'B');
@@ -40,10 +24,7 @@ let () =
 
 (* nullable left *)
 let () =
-  let parser = make_parser @@ alts [
-    pure 'A' |> map Fun.id;
-    char 'B';
-  ] in
+  let parser = make_parser Notation.(pure 'A' <|> char 'B') in
 
   assert (parser "" = Some 'A');
   assert (parser "B" = Some 'B');
@@ -51,10 +32,9 @@ let () =
 
 (* nullable right *)
 let () =
-  let parser = make_parser @@ alts [
-    char 'A';
-    pure 'B' |> map Fun.id;
-  ] in
+  let parser = make_parser Notation.(
+    char 'A' <|> pure 'B'
+  ) in
 
   assert (parser "A" = Some 'A');
   assert (parser "" = Some 'B');
@@ -62,43 +42,40 @@ let () =
 
 (* nullable both *)
 let () =
-  match alts [
-    alt (pure 'B') (char 'A');
-    pure 'B';
-  ] with
+  match Notation.(
+    (pure 'B' <|> char 'A') <|> pure 'B'
+  ) with
   | exception Nullable_conflict -> ()
   | _ -> failwith "expected Nullable_conflict"
 
 let () =
-  let parser = make_parser @@ alts [
-    cat [pure (); char 'B'];
-    char 'A' |> map (fun x -> [(); x]);
-  ] in
+  let parser = make_parser Notation.(
+    pure () +> char 'B' <|> char 'A'
+  ) in
 
-  assert (parser "A" = Some [(); 'A']);
-  assert (parser "B" = Some [(); 'B']);
+  assert (parser "A" = Some 'A');
+  assert (parser "B" = Some 'B');
   assert (parser "C" = None);
   assert (parser "AB" = None)
 
 (* Ambiguous alternations *)
 
 let () =
-  match alts [char 'A'; char 'A'] with
+  match Notation.(char 'A' <|> char 'A') with
   | exception First_conflict -> ()
   | _ -> failwith "expected First_conflict"
 
 let () =
-  match alts [
-    cat [pure (); char 'A'];
-    char 'A' |> map (fun x -> [(); x]);
-  ] with
+  match Notation.(pure () +> char 'A' <|> char 'A') with
   | exception First_conflict -> ()
   | _ -> failwith "expected First_conflict"
 
 let () =
-  match alts [
-    cat [pure (); string "AB"];
-    cat [string "AC"] |> map (fun xs -> () :: xs);
-  ] with
+  match Notation.(char 'A' <|> pure () +> char 'A') with
+  | exception First_conflict -> ()
+  | _ -> failwith "expected First_conflict"
+
+let () =
+  match Notation.(pure () +> string "AB" <|> string "AC") with
   | exception First_conflict -> ()
   | _ -> failwith "expected First_conflict"
