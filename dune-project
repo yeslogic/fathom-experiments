@@ -81,8 +81,8 @@
     (menhirLib (>= "20240715"))
 
     ; Web interface
-    (brr (>= "0.0.7"))
     (js_of_ocaml-compiler (>= "6.0.1"))
+    (js_of_ocaml-ppx (>= "6.0.1"))
     (js_of_ocaml (>= "6.0.1"))
 
     ; Core library

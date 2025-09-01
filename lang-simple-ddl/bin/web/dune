@@ -3,13 +3,15 @@
   (package simple-ddl))
 
 (executable
-  (name index)
+  (name main)
   (modes js)
   (libraries
-    brr
+    js_of_ocaml
     menhirLib
     sedlex
-    simple-ddl))
+    simple-ddl)
+  (preprocess
+    (pps js_of_ocaml-ppx)))
 
 ; TODO: autogenerate examples rule
 (rule
@@ -29,11 +31,11 @@ let simple_image = {|") (cat ../../examples/simple-image.txt) (echo "|}
 
 let stl_binary = {|") (cat ../../examples/stl-binary.txt) (echo "|}
 
-let all = [
+let all = [|
   (\"base\", base);
   (\"edid\", edid);
   (\"object-id\", object_id);
   (\"simple-image\", simple_image);
   (\"stl-binary\", stl_binary);
-]
+|]
 "))))

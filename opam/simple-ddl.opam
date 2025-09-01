@@ -8,8 +8,8 @@ depends: [
   "dune" {>= "3.17"}
   "cmdliner" {>= "1.3"}
   "menhirLib" {>= "20240715"}
-  "brr" {>= "0.0.7"}
   "js_of_ocaml-compiler" {>= "6.0.1"}
+  "js_of_ocaml-ppx" {>= "6.0.1"}
   "js_of_ocaml" {>= "6.0.1"}
   "case-conv"
   "menhir" {>= "20240715" & build}
