@@ -48,8 +48,6 @@ class Main extends HTMLElement {
   constructor() {
     super();
 
-    this.id = 'main';
-
     this.#toolbar = document.createElement('app-toolbar');
     this.#editorPane = document.createElement('app-editor-pane');
     this.#outputPane = document.createElement('app-output-pane');
@@ -82,8 +80,6 @@ class Main extends HTMLElement {
 class Toolbar extends HTMLElement {
   constructor() {
     super();
-
-    this.id = 'toolbar';
 
     const exampleSelect = document.createElement('select');
     exampleSelect.replaceChildren(
@@ -128,7 +124,6 @@ class EditorPane extends HTMLElement {
 
   constructor() {
     super();
-    this.id = 'editor';
     this.#editorInput = this.appendChild(document.createElement('textarea'));
     this.#editorInput.wrap = 'off';
     this.#editorInput.spellcheck = false;
@@ -150,7 +145,6 @@ class OutputPane extends HTMLElement {
 
   constructor() {
     super();
-    this.id = 'output';
     this.#outputDisplay = this.appendChild(document.createElement('pre'));
   }
 

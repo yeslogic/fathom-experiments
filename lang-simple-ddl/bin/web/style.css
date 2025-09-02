@@ -18,7 +18,7 @@
   --monospace-font: 13px monospace;
 }
 
-#main {
+app-main {
   height: 100vh;
   display: grid;
   grid-template:
@@ -27,24 +27,24 @@
     / 1fr 1fr;
 }
 
-#toolbar {
+app-toolbar {
   grid-area: toolbar;
   border-bottom: var(--border);
   padding: var(--gap);
 }
 
-#toolbar > :not(:last-child) {
+app-toolbar > :not(:last-child) {
   margin-right: calc(var(--gap) / 4);
 }
 
-#editor {
+app-editor-pane {
   grid-area: editor;
   border-right: var(--border);
   width: 100%;
   height: 100%;
 }
 
-#editor textarea {
+app-editor-pane textarea {
   display: block;
   border: none;
   font: var(--monospace-font);
@@ -54,14 +54,14 @@
   resize: none;
 }
 
-#output {
+app-output-pane {
   grid-area: output;
   position: relative; /* for `overflow: scroll` */
   width: 100%;
   height: 100%;
 }
 
-#output pre {
+app-output-pane pre {
   position: absolute; /* for `overflow: scroll` */
   font: var(--monospace-font);
   width: 100%;
