@@ -31,12 +31,6 @@ declare global {
     'app-editor-pane': EditorPane;
     'app-output-pane': OutputPane;
   }
-
-  interface HTMLElementEventMap {
-    'selectExample': CustomEvent;
-    'elaborate': CustomEvent;
-    'compile': CustomEvent;
-  }
 }
 
 @customElement('app-main')
@@ -48,19 +42,13 @@ class Main extends HTMLElement {
   constructor() {
     super();
 
-    this.#toolbar = document.createElement('app-toolbar');
-    this.#editorPane = document.createElement('app-editor-pane');
-    this.#outputPane = document.createElement('app-output-pane');
+    this.#toolbar = this.appendChild(document.createElement('app-toolbar'));
+    this.#editorPane = this.appendChild(document.createElement('app-editor-pane'));
+    this.#outputPane = this.appendChild(document.createElement('app-output-pane'));
 
-    this.#toolbar.addEventListener('selectExample', this.#handleSelectExample.bind(this));
-    this.#toolbar.addEventListener('elaborate', this.#handleElaborate.bind(this));
-    this.#toolbar.addEventListener('compile', this.#handleCompile.bind(this));
-
-    this.replaceChildren(
-      this.#toolbar,
-      this.#editorPane,
-      this.#outputPane,
-    );
+    this.#toolbar.addEventListener('selectExample', this.#handleSelectExample.bind(this) as EventListener);
+    this.#toolbar.addEventListener('elaborate', this.#handleElaborate.bind(this) as EventListener);
+    this.#toolbar.addEventListener('compile', this.#handleCompile.bind(this) as EventListener);
   }
 
   #handleSelectExample(event: CustomEvent) {
@@ -81,40 +69,33 @@ class Toolbar extends HTMLElement {
   constructor() {
     super();
 
-    const exampleSelect = document.createElement('select');
+    const exampleSelect = this.appendChild(document.createElement('select'));
     exampleSelect.replaceChildren(
       ...lang.examples.all.map((example) => {
         const option = document.createElement('option');
         option.value = example.name;
         option.textContent = example.name;
-        option.selected = example.name === lang.examples.initial;
-        exampleSelect.appendChild(option);
         return option;
       }),
     );
+    exampleSelect.value = lang.examples.initial;
     exampleSelect.addEventListener('input', () => {
       this.dispatchEvent(new CustomEvent('selectExample', {
         detail: exampleSelect.value,
       }));
     });
 
-    const elabButton = document.createElement('button');
+    const elabButton = this.appendChild(document.createElement('button'));
     elabButton.textContent = 'Elaborate';
     elabButton.addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('elaborate'));
     });
 
-    const compileButton = document.createElement('button');
+    const compileButton = this.appendChild(document.createElement('button'));
     compileButton.textContent = 'Compile';
     compileButton.addEventListener('click', () => {
       this.dispatchEvent(new CustomEvent('compile'));
     });
-
-    this.replaceChildren(
-      exampleSelect,
-      elabButton,
-      compileButton,
-    );
   }
 }
 
