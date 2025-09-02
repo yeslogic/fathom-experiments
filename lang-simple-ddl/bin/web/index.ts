@@ -46,13 +46,13 @@ class Main extends HTMLElement {
     this.#editorPane = this.appendChild(document.createElement('app-editor-pane'));
     this.#outputPane = this.appendChild(document.createElement('app-output-pane'));
 
-    this.#toolbar.addEventListener('selectExample', this.#handleSelectExample.bind(this) as EventListener);
+    this.#toolbar.addEventListener('replaceSource', this.#handleReplaceSource.bind(this) as EventListener);
     this.#toolbar.addEventListener('elaborate', this.#handleElaborate.bind(this) as EventListener);
     this.#toolbar.addEventListener('compile', this.#handleCompile.bind(this) as EventListener);
   }
 
-  #handleSelectExample(event: CustomEvent) {
-    this.#editorPane.source = getExample(event.detail);
+  #handleReplaceSource(event: CustomEvent) {
+    this.#editorPane.source = event.detail;
   }
 
   #handleElaborate() {
@@ -80,8 +80,8 @@ class Toolbar extends HTMLElement {
     );
     exampleSelect.value = lang.examples.initial;
     exampleSelect.addEventListener('input', () => {
-      this.dispatchEvent(new CustomEvent('selectExample', {
-        detail: exampleSelect.value,
+      this.dispatchEvent(new CustomEvent('replaceSource', {
+        detail: getExample(exampleSelect.value),
       }));
     });
 
