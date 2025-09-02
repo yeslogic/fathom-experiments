@@ -25,47 +25,47 @@ app-main {
     "toolbar toolbar" auto
     "editor output" 1fr
     / 1fr 1fr;
-}
 
-app-toolbar {
-  grid-area: toolbar;
-  border-bottom: var(--border);
-  padding: var(--gap);
-}
+  app-toolbar {
+    grid-area: toolbar;
+    border-bottom: var(--border);
+    padding: var(--gap);
 
-app-toolbar > :not(:last-child) {
-  margin-right: calc(var(--gap) / 4);
-}
+    > :not(:last-child) {
+      margin-right: calc(var(--gap) / 4);
+    }
+  }
 
-app-editor-pane {
-  grid-area: editor;
-  border-right: var(--border);
-  width: 100%;
-  height: 100%;
-}
+  app-editor-pane {
+    grid-area: editor;
+    border-right: var(--border);
+    width: 100%;
+    height: 100%;
 
-app-editor-pane textarea {
-  display: block;
-  border: none;
-  font: var(--monospace-font);
-  width: 100%;
-  height: 100%;
-  padding: var(--gap);
-  resize: none;
-}
+    textarea {
+      display: block;
+      border: none;
+      font: var(--monospace-font);
+      width: 100%;
+      height: 100%;
+      padding: var(--gap);
+      resize: none;
+    }
+  }
 
-app-output-pane {
-  grid-area: output;
-  position: relative; /* for `overflow: scroll` */
-  width: 100%;
-  height: 100%;
-}
+  app-output-pane {
+    grid-area: output;
+    position: relative; /* for `overflow: scroll` */
+    width: 100%;
+    height: 100%;
 
-app-output-pane pre {
-  position: absolute; /* for `overflow: scroll` */
-  font: var(--monospace-font);
-  width: 100%;
-  height: 100%;
-  padding: var(--gap);
-  overflow: scroll;
+    pre {
+      position: absolute; /* for `overflow: scroll` */
+      font: var(--monospace-font);
+      width: 100%;
+      height: 100%;
+      padding: var(--gap);
+      overflow: scroll;
+    }
+  }
 }
