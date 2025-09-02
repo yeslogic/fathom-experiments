@@ -49,7 +49,7 @@ let format_diagnostic (source : Source_file.t) (severity : string) (start, stop 
 
   Buffer.contents buffer
 
-let elab_program (source : Source_file.t) =
+let elab_program (source : Source_file.t) : (Core.program, Surface.loc * string) result =
   Printexc.record_backtrace true;
 
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
@@ -66,49 +66,51 @@ let elab_program (source : Source_file.t) =
   | Parser.Error -> Error (Sedlexing.lexing_positions lexbuf, "syntax error")
   | Surface.Elab.Error (loc, message) -> Error (loc, message)
 
-open Js_of_ocaml
+let () =
+  let module Js = Js_of_ocaml.Js in
 
-let _ = begin
+  Js.export "lang" object%js
 
-  Js.export "examples" object%js
+    val examples = object%js
 
-    val initial = Js.string Examples.initial
+      val initial =
+        Js.string Examples.initial
 
-    val all =
-      Examples.all
-      |> Array.map (fun (name, source) -> object%js
-        val name = Js.string name
-        val source = Js.string source
-      end)
-      |> Js.array
+      val all =
+        Examples.all
+        |> Array.map (fun (name, source) -> object%js
+          val name = Js.string name
+          val source = Js.string source
+        end)
+        |> Js.array
 
-  end;
+    end
 
-  Js.export "driver" object%js
+    val driver = object%js
 
-    method elabProgram (source : Js.js_string Js.t) : Js.js_string Js.t =
-      let source = Source_file.create "<input>" (Js.to_string source) in
+      method elabProgram (source : Js.(js_string t)) : Js.(js_string t) =
+        let source = Source_file.create "<input>" (Js.to_string source) in
 
-      match elab_program source with
-      | Ok program ->
-          Format.asprintf "%a\n" Core.pp_program program
-          |> Js.string
-      | Error (loc, message) ->
-          format_diagnostic source "error" loc message
-          |> Js.string
+        match elab_program source with
+        | Ok program ->
+            Format.asprintf "%a\n" Core.pp_program program
+            |> Js.string
+        | Error (loc, message) ->
+            format_diagnostic source "error" loc message
+            |> Js.string
 
-    method compileProgram (source : Js.js_string Js.t) : Js.js_string Js.t =
-      let source = Source_file.create "<input>" (Js.to_string source) in
+      method compileProgram (source : Js.(js_string t)) : Js.(js_string t) =
+        let source = Source_file.create "<input>" (Js.to_string source) in
 
-      match elab_program source with
-      | Ok program ->
-          Core.Compile.compile_program program
-          |> Format.asprintf "%a\n" Rust.pp_program
-          |> Js.string
-      | Error (loc, message) ->
-          format_diagnostic source "error" loc message
-          |> Js.string
+        match elab_program source with
+        | Ok program ->
+            Core.Compile.compile_program program
+            |> Format.asprintf "%a\n" Rust.pp_program
+            |> Js.string
+        | Error (loc, message) ->
+            format_diagnostic source "error" loc message
+            |> Js.string
+
+    end
 
   end
-
-end

@@ -3,7 +3,7 @@
   (package simple-ddl))
 
 (executable
-  (name main)
+  (name lang)
   (modes js)
   (libraries
     js_of_ocaml
